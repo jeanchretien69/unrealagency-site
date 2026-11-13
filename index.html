@@ -220,10 +220,7 @@
 <main id="v-home" class="view">
   <section class="hero" id="hero">
     <div class="glow" id="glow"></div>
-    <div class="side l">
-      <div class="word l">UN<span>REAL</span></div>
-      <p class="tagline">We run AI models that post, chat and sell 24/7. Now we coach you to build yours, step by step.</p>
-    </div>
+    <h1 class="title">UN<span>REAL</span> AGEN<span>CY</span></h1>
 
     <div class="stage" id="stage">
       <div class="backword" id="backword" aria-hidden="true">KAYA</div>
@@ -239,11 +236,11 @@
       <div class="chip c">AI chatter replied in <b>8s</b></div>
     </div>
 
-    <div class="side r">
-      <div class="word r">AGEN<span>CY</span></div>
+    <div class="below">
+      <p class="tagline">We run AI models that post, chat and sell 24/7. Now we coach you to build yours, step by step.</p>
       <div class="row">
         <a class="btn" href="#packages">See the packages</a>
-        <a class="btn ghost" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">WhatsApp me</a>
+        <a class="btn ghost" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">Text us on WhatsApp</a>
       </div>
     </div>
   </section>
@@ -284,7 +281,7 @@
           <li>Tools, prompts and settings</li>
           <li>Group calls</li>
         </ul>
-        <a class="btn ghost" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">WhatsApp me</a>
+        <a class="btn ghost" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">Text us on WhatsApp</a>
       </div>
       <div class="card pack hot">
         <span class="tag">Premium · most complete</span>
@@ -297,7 +294,7 @@
           <li>Chatting &amp; sales playbook (PPV, price drops, scripts)</li>
           <li>1-on-1 calls until you're live</li>
         </ul>
-        <a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">WhatsApp me</a>
+        <a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">Text us on WhatsApp</a>
       </div>
     </div>
   </section>
@@ -306,7 +303,7 @@
     <div class="section ctain">
       <div class="eyebrow">Unreal Agency</div>
       <p class="bigline">AI Model.<br><span>Keep 100% of the profits.</span><br>Invest in your future.</p>
-      <a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">Text me on WhatsApp</a>
+      <a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">Text us on WhatsApp</a>
       <p class="note">WhatsApp · +1 438-364-4558</p>
     </div>
   </section>
@@ -327,7 +324,7 @@
       <div class="card pack"><span class="tag">Normal</span><h3>Unreal Starter</h3><div class="price">$2,449</div><p>Create your model, her content and accounts, with the tools and prompts we use.</p></div>
       <div class="card pack hot"><span class="tag">Premium</span><h3>Unreal Premium</h3><div class="price">$3,949</div><p>Everything in Starter plus funnel, payments, our AI chatter and 1-on-1 calls until you're live.</p></div>
     </div>
-    <div class="row" style="margin-top:28px"><a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">WhatsApp me</a></div>
+    <div class="row" style="margin-top:28px"><a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">Text us on WhatsApp</a></div>
   </section>
 </main>
 
@@ -481,6 +478,15 @@
 <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet">
 <style>
   :root{--chat--color-primary:#ff5fa2;--chat--color-primary-shade-50:#e2367f;--chat--color-primary-shade-100:#c92a6e;--chat--color-secondary:#ff5fa2;--chat--color-secondary-shade-50:#e2367f;--chat--toggle--background:#ff5fa2;--chat--toggle--hover--background:#e2367f;--chat--toggle--active--background:#e2367f;--chat--header--background:#2a1420;--chat--header--color:#fff;--chat--message--user--background:#ff5fa2;--chat--message--user--color:#fff;--chat--border-radius:16px;--chat--font-family:"DM Sans",system-ui,sans-serif;--chat--window--width:380px;--chat--window--height:560px}
+
+  /* Centered hero: title on top, model in the middle, text + buttons below */
+  .hero{grid-template-columns:1fr !important;justify-items:center;text-align:center;gap:8px;padding-top:28px}
+  .hero .title{position:relative;z-index:3;font-family:var(--display);font-weight:800;font-size:clamp(40px,7.2vw,108px);line-height:.95;letter-spacing:-.03em;color:var(--ink);margin:0}
+  .hero .title span{color:var(--pink)}
+  .hero .stage{max-width:460px}
+  .hero .below{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;gap:16px;margin-top:-6px}
+  .hero .below .tagline{max-width:46ch;font-size:16px}
+  .hero .below .row{justify-content:center}
 </style>
 <script type="module">
   import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';

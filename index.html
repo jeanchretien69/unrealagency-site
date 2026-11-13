@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unreal Agency</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* Layout idea: one centred AI model whose head follows the cursor, wrapped in a pink/white agency site; the Studio pages (chatbot back office) sit behind the same nav. */
+  :root{
+    --white:#ffffff;
+    --blush:#fff1f6;
+    --pink:#ff5fa2;
+    --pink-deep:#e2367f;
+    --pink-soft:#ffc7dd;
+    --ink:#2a1420;
+    --muted:#8a6577;
+    --line:#f6d3e2;
+    --surface:#ffffff;
+    --nav:rgba(255,255,255,.82);
+    --bubble:#f4eef1;
+    --display:"Unbounded", "Arial Black", system-ui, sans-serif;
+    --body:"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: light;
+  }
+
+  :root[data-mode="dark"]{
+    --surface:#120a0f;
+    --nav:rgba(18,10,15,.82);
+    --bubble:#2a1a23;
+    --blush:#1d1118;
+    --pink-soft:#5a2440;
+    --ink:#fbeef4;
+    --muted:#b993a6;
+    --line:#341f2b;
+    color-scheme: dark;
+  }
+  :root[data-mode="dark"] .links a[aria-current="page"]{background:var(--pink);color:#fff}
+  :root[data-mode="dark"] .card.hot{background:#2a1220;border-color:var(--pink-soft)}
+  :root[data-mode="dark"] .card.hot .price{color:var(--pink)}
+  :root[data-mode="dark"] .card.hot p{color:#d9b3c5}
+  :root[data-mode="dark"] .btn.ghost{color:var(--ink)}
+  :root[data-mode="dark"] .pill.live{background:#12331f;color:#5fe39a}
+  :root[data-mode="dark"] .pill.wait{background:#3a2a0a;color:#ffc861}
+  :root[data-mode="dark"] .pill.off{background:#2a1d24;color:var(--muted)}
+  :root[data-mode="dark"] .hero .glow{background:radial-gradient(circle,rgba(255,95,162,.35),transparent 65%)}
+  .mode{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:8px}
+  .mode i{width:14px;height:14px;border-radius:50%;background:linear-gradient(90deg,var(--ink) 50%,transparent 50%);border:2px solid var(--ink)}
+  body,.nav,.card,.box,.tile,.side-nav,.step{transition:background-color .3s,color .3s,border-color .3s}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--surface);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;overflow-x:hidden}
+  a{color:inherit}
+  button{font:inherit;cursor:pointer}
+  :focus-visible{outline:3px solid var(--pink);outline-offset:3px;border-radius:8px}
+
+  /* NAV */
+  .nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px clamp(16px,4vw,48px);background:var(--nav);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .logo{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.02em;text-decoration:none;display:flex;align-items:center;gap:10px}
+  .logo i{width:12px;height:12px;border-radius:50%;background:var(--pink);box-shadow:0 0 0 4px var(--pink-soft)}
+  .links{display:flex;gap:6px;flex-wrap:wrap}
+  .links a{text-decoration:none;font-weight:500;font-size:14px;padding:8px 14px;border-radius:999px;color:var(--muted)}
+  .links a:hover{color:var(--ink);background:var(--blush)}
+  .links a[aria-current="page"]{color:var(--white);background:var(--ink)}
+  .links a.studio{border:1px solid var(--line);color:var(--pink-deep)}
+  .links a.studio[aria-current="page"]{background:var(--pink);border-color:var(--pink);color:var(--white)}
+
+  .view{display:none}
+  .view.on{display:block}
+
+  /* HERO */
+  .hero{position:relative;display:grid;grid-template-columns:1fr minmax(280px,520px) 1fr;align-items:center;gap:24px;padding:32px clamp(16px,4vw,48px) 56px;background:radial-gradient(1200px 600px at 50% 40%,var(--blush),var(--surface) 70%);overflow:hidden}
+  .hero .glow{position:absolute;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(255,95,162,.28),transparent 65%);pointer-events:none;transform:translate(-50%,-50%);left:50%;top:50%;transition:opacity .4s}
+  .word{font-family:var(--display);font-weight:800;font-size:clamp(44px,8vw,120px);line-height:.9;letter-spacing:-.03em;color:var(--ink)}
+  .word.r{text-align:left}
+  .word.l{text-align:right}
+  .word span{color:var(--pink);display:block}
+  .side{display:flex;flex-direction:column;gap:18px}
+  .side.l{align-items:flex-end;text-align:right}
+  .tagline{max-width:30ch;color:var(--muted);font-size:15px}
+  .stage{position:relative;perspective:1100px;justify-self:center;width:100%;max-width:500px}
+  .stage::before{content:"";position:absolute;left:50%;top:44%;width:92%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 50% 45%,var(--pink-soft),rgba(255,199,221,0) 68%);z-index:0}
+  .head{position:relative;z-index:1;aspect-ratio:1086/1448;transform-style:preserve-3d;will-change:transform}
+  .head canvas,.head img{position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 30px 40px rgba(226,54,127,.28))}
+  .head img{object-fit:contain}
+  .head .shine{display:none}
+  .backword{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;font-size:clamp(120px,19vw,260px);letter-spacing:-.04em;color:transparent;-webkit-text-stroke:2px var(--pink-soft);opacity:.55;z-index:0;pointer-events:none;white-space:nowrap}
+  .ring{position:absolute;left:50%;top:42%;width:86%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:2px dashed var(--pink-soft);z-index:0;pointer-events:none}
+  .floor{position:absolute;left:50%;bottom:-10px;width:70%;height:40px;transform:translateX(-50%);background:radial-gradient(ellipse at center,rgba(226,54,127,.28),transparent 70%);filter:blur(6px);z-index:0}
+  .chip{position:absolute;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:500;box-shadow:0 10px 30px -12px rgba(42,20,32,.25);white-space:nowrap;z-index:3}
+  .chip b{color:var(--pink-deep)}
+  .chip .dot{width:8px;height:8px;border-radius:50%;background:#2ecc71}
+  .chip.a{left:-8%;top:18%}
+  .chip.b{right:-18%;top:40%}
+  .chip.c{left:-14%;bottom:22%}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 22px;border-radius:999px;border:0;background:var(--pink);color:var(--white);font-weight:700;text-decoration:none;box-shadow:0 12px 24px -10px rgba(226,54,127,.7);transition:transform .15s,background .15s}
+  .btn:hover{background:var(--pink-deep);transform:translateY(-1px)}
+  .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .btn.ghost:hover{background:var(--blush)}
+
+  /* SECTIONS */
+  .section{padding:72px clamp(16px,4vw,48px);max-width:1200px;margin:0 auto}
+  .eyebrow{font-family:var(--display);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--pink-deep)}
+  h2{font-family:var(--display);font-weight:600;font-size:clamp(26px,3.4vw,40px);line-height:1.1;letter-spacing:-.02em;margin:10px 0 14px;text-wrap:balance}
+  .lead{color:var(--muted);max-width:60ch}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:32px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:24px;display:flex;flex-direction:column;gap:10px}
+  .card h3{font-size:18px;font-weight:700}
+  .card p{color:var(--muted);font-size:15px}
+  .card .price{font-family:var(--display);font-size:22px;color:var(--ink);margin-top:auto}
+  .card.hot{background:var(--ink);color:var(--white);border-color:var(--ink)}
+  .card.hot p{color:#e9c9d8}
+  .card.hot .price{color:var(--pink-soft)}
+  .tag{align-self:flex-start;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--blush);color:var(--pink-deep)}
+  .card.hot .tag{background:var(--pink);color:var(--white)}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:32px}
+  .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:32px;max-width:860px}
+  .pack{padding:28px;gap:14px}
+  .pack .price{margin:0;font-size:34px}
+  .incl{list-style:none;display:flex;flex-direction:column;gap:8px;font-size:15px;margin-bottom:8px}
+  .incl li{padding-left:24px;position:relative}
+  .incl li::before{content:"";position:absolute;left:0;top:7px;width:12px;height:12px;border-radius:50%;background:var(--pink)}
+  .pack .btn{align-self:flex-start;margin-top:auto}
+  .cta{background:radial-gradient(900px 400px at 50% 0%,var(--pink-soft),var(--surface) 75%);border-top:1px solid var(--line)}
+  .ctain{text-align:center;display:flex;flex-direction:column;align-items:center;gap:18px;padding-top:88px;padding-bottom:88px}
+  .bigline{font-family:var(--display);font-weight:800;font-size:clamp(30px,5vw,64px);line-height:1.05;letter-spacing:-.03em;text-wrap:balance}
+  .bigline span{color:var(--pink)}
+  .strip{background:var(--blush);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .stat b{display:block;font-family:var(--display);font-size:clamp(26px,3vw,38px);color:var(--pink-deep);font-variant-numeric:tabular-nums}
+  .stat span{color:var(--muted);font-size:14px}
+  footer{padding:32px clamp(16px,4vw,48px);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+
+  /* STUDIO (back office) */
+  .studio-wrap{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 70px);background:var(--blush)}
+  .side-nav{background:var(--surface);border-right:1px solid var(--line);padding:20px 12px;display:flex;flex-direction:column;gap:4px}
+  .side-nav .label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);padding:12px 12px 6px}
+  .side-nav a{text-decoration:none;padding:10px 12px;border-radius:12px;font-size:14px;font-weight:500;color:var(--muted)}
+  .side-nav a:hover{background:var(--blush);color:var(--ink)}
+  .side-nav a[aria-current="page"]{background:var(--pink);color:var(--white)}
+  .panel{padding:28px clamp(16px,3vw,36px);display:flex;flex-direction:column;gap:20px;min-width:0}
+  .panel h1{font-family:var(--display);font-weight:600;font-size:26px;letter-spacing:-.01em}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  .tile{flex:1 1 180px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}
+  .tile span{font-size:13px;color:var(--muted)}
+  .tile b{display:block;font-family:var(--display);font-size:26px;font-variant-numeric:tabular-nums;margin-top:4px}
+  .note{font-size:12px;color:var(--muted)}
+  .pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+  .pill.live{background:#e3f8ec;color:#178a4c}
+  .pill.wait{background:#fff3dc;color:#a06a00}
+  .pill.off{background:#f1e9ee;color:var(--muted)}
+  .box{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line)}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500}
+  tr:last-child td{border-bottom:0}
+  .inbox{display:grid;grid-template-columns:280px 1fr;min-height:420px}
+  .threads{border-right:1px solid var(--line)}
+  .thread{display:flex;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
+  .thread:hover,.thread.on{background:var(--blush)}
+  .av{width:36px;height:36px;border-radius:50%;background:var(--pink-soft);display:grid;place-items:center;font-weight:700;color:var(--pink-deep);flex:0 0 36px}
+  .thread .t{flex:1;min-width:0}
+  .thread .t b{display:block;font-size:14px}
+  .thread .t span{display:block;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chat{display:flex;flex-direction:column}
+  .msgs{flex:1;padding:18px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+  .m{max-width:70%;padding:10px 14px;border-radius:16px;font-size:14px}
+  .m.in{background:var(--bubble);align-self:flex-start;border-bottom-left-radius:4px}
+  .m.out{background:var(--pink);color:var(--white);align-self:flex-end;border-bottom-right-radius:4px}
+  .m.draft{background:var(--surface);border:2px dashed var(--pink);color:var(--ink);align-self:flex-end}
+  .m small{display:block;font-size:11px;opacity:.75;margin-top:4px}
+  .approve{display:flex;gap:8px;justify-content:flex-end;padding:0 18px 18px}
+  .approve button{padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:13px}
+  .approve button.ok{background:var(--pink);border-color:var(--pink);color:var(--white)}
+  .persona{display:grid;grid-template-columns:140px 1fr;gap:20px;align-items:start}
+  .persona img{width:140px;height:140px;object-fit:cover;object-position:top;border-radius:20px;border:1px solid var(--line)}
+  dl.kv{display:grid;grid-template-columns:150px 1fr;gap:8px 16px;font-size:14px}
+  dl.kv dt{color:var(--muted)}
+  .steps{display:flex;flex-direction:column;gap:10px}
+  .step{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px;font-size:14px}
+  .step .n{font-family:var(--display);font-size:13px;color:var(--pink-deep);width:22px}
+  .step .grow{flex:1}
+
+  @media (max-width:900px){
+    .hero{grid-template-columns:1fr;text-align:center;padding-top:24px}
+    .word.l,.word.r{text-align:center}
+    .side.l{align-items:center;text-align:center;order:-1}
+    .side.r{align-items:center}
+    .chip.a{left:0}.chip.b{right:0}.chip.c{left:4%}
+    .grid3,.grid4,.grid2{grid-template-columns:1fr}
+    .stats{grid-template-columns:repeat(3,1fr)}
+    .studio-wrap{grid-template-columns:1fr}
+    .side-nav{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}
+    .side-nav .label{display:none}
+    .inbox{grid-template-columns:1fr}
+    .threads{border-right:0;border-bottom:1px solid var(--line)}
+    .persona{grid-template-columns:1fr}
+    dl.kv{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .head,.head img{transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <a class="logo" href="#home"><i></i>UNREAL AGENCY</a>
+  <nav class="links" aria-label="Main">
+    <a href="#home">Home</a>
+    <a href="#formations">Coaching</a>
+    <a href="#models">Models</a>
+    <a href="/members.html" class="studio">Members 🔒</a>
+    <button type="button" class="mode" id="modeBtn" aria-pressed="true"><i></i><span id="modeLbl">Light</span></button>
+  </nav>
+</header>
+
+<!-- ========== HOME ========== -->
+<main id="v-home" class="view">
+  <section class="hero" id="hero">
+    <div class="glow" id="glow"></div>
+    <div class="side l">
+      <div class="word l">UN<span>REAL</span></div>
+      <p class="tagline">We run AI models that post, chat and sell 24/7. Now we coach you to build yours, step by step.</p>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="backword" id="backword" aria-hidden="true">KAYA</div>
+      <div class="ring" id="ring" aria-hidden="true"></div>
+      <div class="floor"></div>
+      <div class="head" id="head">
+        <canvas id="gl" aria-label="Kaya, an Unreal Agency AI model, in 3D following your cursor"></canvas>
+        <img id="face" src="kaya_cut.webp" alt="Kaya, an Unreal Agency AI model" hidden>
+        <div class="shine" id="shine"></div>
+      </div>
+      <div class="chip a"><span class="dot"></span>Kaya · online now</div>
+      <div class="chip b"><b>+$412</b> PPV today</div>
+      <div class="chip c">AI chatter replied in <b>8s</b></div>
+    </div>
+
+    <div class="side r">
+      <div class="word r">AGEN<span>CY</span></div>
+      <div class="row">
+        <a class="btn" href="#packages">See the packages</a>
+        <a class="btn ghost" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">WhatsApp me</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="strip">
+    <div class="section stats" style="padding-top:36px;padding-bottom:36px">
+      <div class="stat"><b>24/7</b><span>AI chatting on every account</span></div>
+      <div class="stat"><b>5 yrs</b><span>running online businesses</span></div>
+      <div class="stat"><b>14</b><span>AI models in production</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="eyebrow">The coaching</div>
+    <h2>Build your own AI model business</h2>
+    <p class="lead">You get the exact system we use on our own models: the face, the content, the accounts, the funnel and the AI chatter that sells while you sleep. No agency taking a cut. You own the model and you keep the money.</p>
+    <div class="grid4">
+      <div class="card"><span class="tag">01</span><h3>Create your model</h3><p>A unique face that stays the same in every photo and video, her persona, and a bank of reels ready to post.</p></div>
+      <div class="card"><span class="tag">02</span><h3>Accounts &amp; warm-up</h3><p>IG, X, Snap and TikTok set up the right way: real devices, clean IPs, warm-up routines that avoid bans.</p></div>
+      <div class="card"><span class="tag">03</span><h3>Funnel &amp; payments</h3><p>Link in bio, Telegram funnel, payment links and the platforms that pay out without freezing your money.</p></div>
+      <div class="card hot"><span class="tag">04</span><h3>AI chatter</h3><p>Our chatbot answers in her voice, sends PPV and passes the big spenders to you. 24/7 sales.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="packages">
+    <div class="eyebrow">Packages</div>
+    <h2>Pick your package</h2>
+    <p class="lead">Every package includes live calls with us and lifetime access to the material.</p>
+    <div class="grid2">
+      <div class="card pack">
+        <span class="tag">Normal</span>
+        <h3>Unreal Starter</h3>
+        <div class="price">$2,449</div>
+        <ul class="incl">
+          <li>Create your AI model from zero</li>
+          <li>Face, persona and first 30 reels</li>
+          <li>Account setup &amp; warm-up method</li>
+          <li>Tools, prompts and settings</li>
+          <li>Group calls</li>
+        </ul>
+        <a class="btn ghost" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">WhatsApp me</a>
+      </div>
+      <div class="card pack hot">
+        <span class="tag">Premium · most complete</span>
+        <h3>Unreal Premium</h3>
+        <div class="price">$3,949</div>
+        <ul class="incl">
+          <li>Everything in Starter</li>
+          <li>Funnel, Telegram &amp; payment links</li>
+          <li>Our AI chatter set up on your model</li>
+          <li>Chatting &amp; sales playbook (PPV, price drops, scripts)</li>
+          <li>1-on-1 calls until you're live</li>
+        </ul>
+        <a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">WhatsApp me</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="book">
+    <div class="section ctain">
+      <div class="eyebrow">Unreal Agency</div>
+      <p class="bigline">AI Model.<br><span>Keep 100% of the profits.</span><br>Invest in your future.</p>
+      <a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">Text me on WhatsApp</a>
+      <p class="note">WhatsApp · +1 438-364-4558</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>© 2026 Unreal Agency</span>
+    <span>unrealagency.ai · WhatsApp +1 438-364-4558</span>
+  </footer>
+</main>
+
+<!-- ========== COACHING ========== -->
+<main id="v-formations" class="view">
+  <section class="section">
+    <div class="eyebrow">Coaching</div>
+    <h2>Learn the Unreal system</h2>
+    <p class="lead">The same playbook we run on our 14 models. Pick a package, or book a call and we'll show you the system live.</p>
+    <div class="grid2">
+      <div class="card pack"><span class="tag">Normal</span><h3>Unreal Starter</h3><div class="price">$2,449</div><p>Create your model, her content and accounts, with the tools and prompts we use.</p></div>
+      <div class="card pack hot"><span class="tag">Premium</span><h3>Unreal Premium</h3><div class="price">$3,949</div><p>Everything in Starter plus funnel, payments, our AI chatter and 1-on-1 calls until you're live.</p></div>
+    </div>
+    <div class="row" style="margin-top:28px"><a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">WhatsApp me</a></div>
+  </section>
+</main>
+
+<!-- ========== MODELS ========== -->
+<main id="v-models" class="view">
+  <section class="section">
+    <div class="eyebrow">Models</div>
+    <h2>The Unreal roster</h2>
+    <div class="grid3">
+      <div class="card"><span class="tag">Live</span><h3>Kaya</h3><p>20 · platinum blonde · pink girly GFE · photographer. Italy setting.</p></div>
+    </div>
+  </section>
+</main>
+
+<!-- ========== STUDIO (back office) ========== -->
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+
+  /* ---------- Dark / light mode (dark by default) ---------- */
+  var root = document.documentElement, mb = document.getElementById('modeBtn'), ml = document.getElementById('modeLbl');
+  function setMode(m){ root.setAttribute('data-mode', m); ml.textContent = m === 'dark' ? 'Light' : 'Dark'; mb.setAttribute('aria-pressed', m === 'dark'); try{ localStorage.setItem('unreal-mode', m); }catch(e){} }
+  var saved = null; try{ saved = localStorage.getItem('unreal-mode'); }catch(e){}
+  setMode(saved || 'dark');
+  mb.addEventListener('click', function(){ setMode(root.getAttribute('data-mode') === 'dark' ? 'light' : 'dark'); });
+  /* ---------- Hash routing ---------- */
+  var views = {home:'v-home', formations:'v-formations', models:'v-models'};
+  function route(){
+    var h = (location.hash || '#home').slice(1) || 'home';
+    if (h.indexOf('studio') === 0) { location.href = '/members.html'; return; }
+    var base = views[h] ? h : 'home';
+    Object.keys(views).forEach(function(k){
+      document.getElementById(views[k]).classList.toggle('on', k === base);
+    });
+    document.querySelectorAll('.links a').forEach(function(a){
+      var t = a.getAttribute('href').slice(1);
+      if (t === base) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
+    });
+    if (base === 'studio'){
+      var sub = document.getElementById('p-' + h) ? h : 'studio';
+      document.querySelectorAll('.sp').forEach(function(p){ p.style.display = (p.id === 'p-' + sub) ? 'flex' : 'none'; });
+      document.querySelectorAll('.side-nav a').forEach(function(a){
+        if (a.getAttribute('href') === '#' + sub) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
+      });
+    }
+    var anchor = (base === 'home' && h !== 'home') ? document.getElementById(h) : null;
+    if (anchor) { setTimeout(function(){ anchor.scrollIntoView({behavior:'smooth', block:'start'}); }, 30); }
+    else window.scrollTo(0,0);
+  }
+  window.addEventListener('hashchange', route);
+  route();
+
+  /* ---------- Inbox thread selection (demo) ---------- */
+  document.querySelectorAll('.thread').forEach(function(t){
+    t.addEventListener('click', function(){
+      document.querySelectorAll('.thread').forEach(function(x){ x.classList.remove('on'); });
+      t.classList.add('on');
+    });
+  });
+
+  /* ---------- Head follows the cursor ---------- */
+  var head = document.getElementById('head');
+  var face = document.getElementById('face');
+  var shine = document.getElementById('shine');
+  var glow = document.getElementById('glow');
+  var hero = document.getElementById('hero');
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var tx = 0, ty = 0, cx = 0, cy = 0, lastMove = 0;
+
+  function setTarget(clientX, clientY){
+    var r = head.getBoundingClientRect();
+    var mx = r.left + r.width/2, my = r.top + r.height*0.38; // aim from her eyes
+    tx = Math.max(-1, Math.min(1, (clientX - mx) / (window.innerWidth/2)));
+    ty = Math.max(-1, Math.min(1, (clientY - my) / (window.innerHeight/2)));
+    lastMove = performance.now();
+    var hr = hero.getBoundingClientRect();
+    glow.style.left = (clientX - hr.left) + 'px';
+    glow.style.top = (clientY - hr.top) + 'px';
+  }
+  window.addEventListener('mousemove', function(e){ setTarget(e.clientX, e.clientY); });
+  window.addEventListener('touchmove', function(e){ if(e.touches[0]) setTarget(e.touches[0].clientX, e.touches[0].clientY); }, {passive:true});
+
+  /* Real 3D: a dense mesh pushed out by an AI depth map (Depth Anything V2), turned by the cursor */
+  function fallback(){ canvas.style.display='none'; face.hidden=false; }
+  var canvas = document.getElementById('gl');
+  function start3D(){
+    if (!window.THREE) { fallback(); return; }
+    var renderer;
+    try { renderer = new THREE.WebGLRenderer({canvas:canvas, alpha:true, antialias:true}); } catch(e){ fallback(); return; }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+    renderer.setClearColor(0x000000, 0);
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(28, 1086/1448, 0.1, 100);
+    camera.position.set(0, 0, 3.05);
+    var loader = new THREE.TextureLoader();
+    var colorTex = loader.load('kaya_cut.webp');
+    var depthTex = loader.load('kaya_depth.png');
+    [colorTex, depthTex].forEach(function(t){ t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; });
+    if (colorTex.encoding !== undefined) colorTex.encoding = THREE.sRGBEncoding;
+    if (renderer.outputEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+    var H = 1.448, W = 1.086;
+    var geo = new THREE.PlaneGeometry(W, H, 420, 560);
+    var mat = new THREE.ShaderMaterial({
+      transparent: true,
+      uniforms: { uColor:{value:colorTex}, uDepth:{value:depthTex}, uScale:{value:0.38}, uLight:{value:new THREE.Vector3(0.3,0.4,1.0)}, uTexel:{value:new THREE.Vector2(1/1086,1/1448)} },
+      vertexShader: [
+        'uniform sampler2D uDepth; uniform float uScale; varying vec2 vUv;',
+        'void main(){ vUv = uv; float d = texture2D(uDepth, uv).r;',
+        ' d = smoothstep(0.0, 1.0, d);',
+        ' vec3 p = position; p.z += (d - 0.55) * uScale;',
+        ' gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }'
+      ].join('\n'),
+      fragmentShader: [
+        'uniform sampler2D uColor; uniform sampler2D uDepth; uniform vec3 uLight; uniform vec2 uTexel; varying vec2 vUv;',
+        'void main(){ vec4 c = texture2D(uColor, vUv); if (c.a < 0.02) discard;',
+        ' float dx = texture2D(uDepth, vUv + vec2(uTexel.x*3.0,0.)).r - texture2D(uDepth, vUv - vec2(uTexel.x*3.0,0.)).r;',
+        ' float dy = texture2D(uDepth, vUv + vec2(0.,uTexel.y*3.0)).r - texture2D(uDepth, vUv - vec2(0.,uTexel.y*3.0)).r;',
+        ' vec3 n = normalize(vec3(-dx*6.0, dy*6.0, 1.0));',
+        ' float l = clamp(dot(n, normalize(uLight)), 0.0, 1.0);',
+        ' float rim = pow(1.0 - clamp(n.z,0.0,1.0), 2.0);',
+        ' vec3 col = c.rgb * (0.82 + 0.3*l) + vec3(1.0,0.55,0.75)*rim*0.10*c.a*c.a;',
+        ' gl_FragColor = vec4(col, c.a); }'
+      ].join('\n')
+    });
+    var back = document.getElementById('backword'), ring = document.getElementById('ring');
+    var mesh = new THREE.Mesh(geo, mat);
+    scene.add(mesh);
+    function size(){ var r = canvas.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
+    size(); window.addEventListener('resize', size);
+    function tick(t){
+      if (performance.now() - lastMove > 2500){ tx = Math.sin(t/1700)*0.45; ty = Math.sin(t/2400)*0.2; }
+      cx += (tx - cx) * 0.06; cy += (ty - cy) * 0.06;
+      mesh.rotation.y = cx * 0.5;
+      mesh.rotation.x = cy * 0.24;
+      camera.position.x = -cx*0.08; camera.lookAt(0,0,0);
+      if (back){ back.style.transform = 'translate(-50%,-50%) translate(' + (-cx*40).toFixed(1) + 'px,' + (-cy*24).toFixed(1) + 'px)'; }
+      if (ring){ ring.style.transform = 'translate(-50%,-50%) translate(' + (-cx*18).toFixed(1) + 'px,' + (-cy*12).toFixed(1) + 'px) rotate(' + (t/90%360).toFixed(1) + 'deg)'; }
+      mesh.position.y = Math.sin(t/1400) * 0.012;
+      mat.uniforms.uLight.value.set(cx*0.9, -cy*0.9, 1.0);
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
+    if (reduce){ renderer.render(scene, camera); setTimeout(function(){ renderer.render(scene, camera); }, 600); }
+    else requestAnimationFrame(tick);
+  }
+  start3D();
+})();
+</script>
+<link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet">
+<style>
+  :root{--chat--color-primary:#ff5fa2;--chat--color-primary-shade-50:#e2367f;--chat--color-primary-shade-100:#c92a6e;--chat--color-secondary:#ff5fa2;--chat--color-secondary-shade-50:#e2367f;--chat--toggle--background:#ff5fa2;--chat--toggle--hover--background:#e2367f;--chat--toggle--active--background:#e2367f;--chat--header--background:#2a1420;--chat--header--color:#fff;--chat--message--user--background:#ff5fa2;--chat--message--user--color:#fff;--chat--border-radius:16px;--chat--font-family:"DM Sans",system-ui,sans-serif;--chat--window--width:380px;--chat--window--height:560px}
+</style>
+<script type="module">
+  import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+  createChat({
+    webhookUrl: 'https://jeanchretien.app.n8n.cloud/webhook/5af2ca2e-4889-4466-836c-6c150bd225b1/chat',
+    mode: 'window',
+    showWelcomeScreen: false,
+    loadPreviousSession: true,
+    initialMessages: ['hey 👋 questions about building your own AI model? ask me anything about the coaching.'],
+    i18n: { en: { title: 'Unreal Agency', subtitle: 'Ask anything about the coaching', footer: '', getStarted: 'New conversation', inputPlaceholder: 'Type your question…' } }
+  });
+</script>
+</body>
+</html>

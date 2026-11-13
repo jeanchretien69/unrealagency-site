@@ -223,15 +223,15 @@
     <h1 class="title">UN<span>REAL</span> AGEN<span>CY</span></h1>
 
     <div class="stage" id="stage">
-      <div class="backword" id="backword" aria-hidden="true">KAYA</div>
+      <div class="backword" id="backword" aria-hidden="true">JADE</div>
       <div class="ring" id="ring" aria-hidden="true"></div>
       <div class="floor"></div>
       <div class="head" id="head">
-        <canvas id="gl" aria-label="Kaya, an Unreal Agency AI model, in 3D following your cursor"></canvas>
-        <img id="face" src="kaya_cut.webp" alt="Kaya, an Unreal Agency AI model" hidden>
+        <canvas id="gl" aria-label="Jade, an Unreal Agency AI model, in 3D following your cursor"></canvas>
+        <img id="face" src="jade_cut.webp" alt="Jade, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
       </div>
-      <div class="chip a"><span class="dot"></span>Kaya · online now</div>
+      <div class="chip a"><span class="dot"></span>Jade · online now</div>
       <div class="chip b"><b>+$412</b> PPV today</div>
       <div class="chip c">AI chatter replied in <b>8s</b></div>
     </div>
@@ -422,8 +422,8 @@
     var camera = new THREE.PerspectiveCamera(28, 1086/1448, 0.1, 100);
     camera.position.set(0, 0, 3.05);
     var loader = new THREE.TextureLoader();
-    var colorTex = loader.load('kaya_cut.webp');
-    var depthTex = loader.load('kaya_depth.png');
+    var colorTex = loader.load('jade_cut.webp');
+    var depthTex = loader.load('jade_depth.png');
     [colorTex, depthTex].forEach(function(t){ t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; });
     if (colorTex.encoding !== undefined) colorTex.encoding = THREE.sRGBEncoding;
     if (renderer.outputEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;

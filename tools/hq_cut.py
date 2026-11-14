@@ -19,6 +19,10 @@ ms = np.stack([np.array(Image.open(f'{d}/mask/' + os.path.basename(f))) for f in
 med = np.median(ms, axis=0)
 lim = np.array(Image.fromarray((med * 255).astype('uint8')).filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.GaussianBlur(2))).astype(float) / 255
 H, W = med.shape
+if not pingpong:  # action clip: allow the moving hand in front of her
+    zone = np.zeros_like(lim); zone[int(H*.2):int(H*.85), int(W*.22):int(W*.72)] = 1
+    zone = np.array(Image.fromarray((zone*255).astype('uint8')).filter(ImageFilter.GaussianBlur(15))).astype(float) / 255
+    lim = np.maximum(lim, zone)
 fade = np.clip((H - np.arange(H)) / (H * 0.2), 0, 1)
 xs = np.arange(W); side = np.clip(np.minimum(xs, W - 1 - xs) / (W * 0.07), 0, 1)
 for i, f in enumerate(files):

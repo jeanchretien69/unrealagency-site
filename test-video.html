@@ -427,7 +427,7 @@
     var loader = new THREE.TextureLoader();
     var colorTex = loader.load('kaya_cut.webp');
     /* Gaze: 11x11 photos of Kaya looking in every direction (gaze/g_x_y.webp) */
-    var GN = 41, GFX = 1, GFY = -1, gazeFade = 0, gazeTarget = null, gazeImgs = {}, gazeCanvas = document.createElement('canvas'), gazeTex = null, gazeCur = '';
+    var GN = 41, GFX = -1, GFY = -1, gazeFade = 0, gazeTarget = null, gazeImgs = {}, gazeCanvas = document.createElement('canvas'), gazeTex = null, gazeCur = '';
     gazeCanvas.width = 543; gazeCanvas.height = 724;
     var gctx = gazeCanvas.getContext('2d');
     function gazeKey(ix, iy){ return '' + ix; }
@@ -441,7 +441,7 @@
       if (k !== gazeCur){ var im = gazeImgs[k]; if (im && im.complete && im.naturalWidth){ gazeTarget = im; gazeCur = k; gazeFade = 6; } }
       if (gazeFade <= 0 || !gazeTarget) return;
       if (!gazeTex){ gctx.drawImage(gazeTarget, 0, 0, 543, 724); gazeTex = new THREE.CanvasTexture(gazeCanvas); gazeTex.minFilter = THREE.LinearFilter; gazeTex.magFilter = THREE.LinearFilter; gazeTex.generateMipmaps = false; if (gazeTex.encoding !== undefined) gazeTex.encoding = THREE.sRGBEncoding; mat.uniforms.uColor.value = gazeTex; }
-      gctx.globalAlpha = gazeFade === 1 ? 1 : 0.45; gctx.drawImage(gazeTarget, 0, 0, 543, 724); gctx.globalAlpha = 1;
+      if (gazeFade === 1) gctx.clearRect(0, 0, 543, 724); gctx.globalAlpha = gazeFade === 1 ? 1 : 0.45; gctx.drawImage(gazeTarget, 0, 0, 543, 724); gctx.globalAlpha = 1;
       gazeFade--; gazeTex.needsUpdate = true;
     }
     var depthTex = loader.load('kaya_depth.png');

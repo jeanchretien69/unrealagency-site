@@ -1,0 +1,42 @@
+name: HQ cutout of a Kaya clip
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "output name (live/<name>.webm)"
+        default: "idle4"
+        required: true
+      src:
+        description: "input clip in the repo"
+        default: "tools/clips/idle2.mp4"
+        required: true
+      pingpong:
+        description: "1 = play forward then backward (seamless loop)"
+        default: "1"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  cut:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: pip install "rembg[cpu]" onnxruntime pillow numpy
+      - name: Cut out
+        run: python tools/hq_cut.py "${{ github.event.inputs.name }}" "${{ github.event.inputs.src }}" "${{ github.event.inputs.pingpong }}"
+      - name: Commit
+        run: |
+          git config user.name "hqcut-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add live
+          git commit -m "HQ cutout: ${{ github.event.inputs.name }}" || echo "nothing to commit"
+          git pull --rebase origin main
+          git push origin HEAD:main

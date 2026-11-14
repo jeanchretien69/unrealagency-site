@@ -42,10 +42,12 @@ def run(version, image_url, yaw, pitch, px, py, tries=4):
         "image": image_url, "rotate_yaw": yaw, "rotate_pitch": pitch,
         "pupil_x": px, "pupil_y": py, "output_format": "png", "output_quality": 95,
     }}
-    for t in range(tries):
+    for t in range(tries * 6):
         r = requests.post(f"{API}/predictions", headers={**H, "Prefer": "wait=60"}, json=body, timeout=120)
-        if r.status_code == 429:
-            time.sleep(5 + 5 * t); continue
+        if r.status_code == 429:  # low-credit accounts: ~6 predictions/minute
+            try: wait = float(r.json().get("retry_after", 10))
+            except Exception: wait = 10
+            time.sleep(wait + 1); continue
         r.raise_for_status()
         p = r.json()
         while p["status"] not in ("succeeded", "failed", "canceled"):
@@ -123,11 +125,18 @@ def main():
         return cell, raw
 
     done = 0
-    with cf.ThreadPoolExecutor(max_workers=6) as ex:
-        for (ix, iy), raw in ex.map(job, cells):
-            cutout(raw).save(f"{OUT}/g_{ix}_{iy}.webp", "WEBP", quality=88)
-            done += 1
-            print(f"saved {done}/{len(cells)}: g_{ix}_{iy}.webp", flush=True)
+    for cell in cells:
+        ix, iy = cell
+        if os.path.exists(f"{OUT}/g_{ix}_{iy}.webp"):
+            done += 1; continue
+        try:
+            _, raw = job(cell)
+        except Exception as e:
+            print("skip", cell, e, flush=True); continue
+        cutout(raw).save(f"{OUT}/g_{ix}_{iy}.webp", "WEBP", quality=88)
+        done += 1
+        print(f"saved {done}/{len(cells)}: g_{ix}_{iy}.webp", flush=True)
+        time.sleep(9)  # stay under the low-credit rate limit
     with open(f"{OUT}/grid.json", "w") as f:
         json.dump({"n": N, "mode": MODE, "w": 543, "h": 724, "box": BOX}, f)
 

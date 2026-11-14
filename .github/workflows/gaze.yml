@@ -32,6 +32,7 @@ jobs:
           GRID: ${{ github.event.inputs.grid }}
         run: python tools/gaze_grid.py
       - name: Commit images
+        if: always()
         run: |
           git config user.name "gaze-bot"
           git config user.email "actions@users.noreply.github.com"

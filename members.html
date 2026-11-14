@@ -326,7 +326,7 @@ async function planView(){
     const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
     const buf = new Uint8Array(await (await fetch('/plan-assets/plan.bin?v=' + Date.now(), {cache:'no-store'})).arrayBuffer());
     const html = new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:buf.slice(0,12)}, key, buf.slice(12)));
-    v.innerHTML = '<iframe id="planFrame" title="My plan" style="width:100%;border:0;border-radius:18px;min-height:80vh;background:transparent;display:block"></iframe>';
+    v.innerHTML = '<iframe id="planFrame" title="My plan" style="width:100%;border:0;border-radius:18px;min-height:80vh;background:var(--surface);display:block"></iframe>';
     planFrame = v.querySelector('#planFrame');
     planFrame.onload = () => applyPlanTheme();
     planFrame.srcdoc = html;
@@ -334,8 +334,9 @@ async function planView(){
 }
 
 const PLAN_THEME = `
-html[data-mode="dark"]{--bg:transparent;--card:#1a0f15;--line:#341f2b;--text:#fbeef4;--muted:#b993a6;--pink:#ff5fa2;--pink2:#ffc7dd;--green:#5fe39a;--amber:#ffc861}
-html[data-mode="light"]{--bg:transparent;--card:#fff;--line:#f6d3e2;--text:#2a1420;--muted:#8a6577;--pink:#e2367f;--pink2:#ff5fa2;--green:#1f8a4c;--amber:#9a6a00}
+html[data-mode="dark"]{color-scheme:dark;--bg:#120a0f;--card:#1a0f15;--line:#341f2b;--text:#fbeef4;--muted:#b993a6;--pink:#ff5fa2;--pink2:#ffc7dd;--green:#5fe39a;--amber:#ffc861}
+html[data-mode="light"]{color-scheme:light;--bg:#fff;--card:#fff;--line:#f6d3e2;--text:#2a1420;--muted:#8a6577;--pink:#e2367f;--pink2:#ff5fa2;--green:#1f8a4c;--amber:#9a6a00}
+html,body{background:var(--bg)!important}
 body{padding:0 0 40px!important;font-family:"DM Sans",system-ui,sans-serif!important}
 .wrap{max-width:none!important}
 html[data-mode="dark"] .model{background:linear-gradient(180deg,#22121b,#1a0f15)!important}
@@ -355,7 +356,7 @@ function applyPlanTheme(){
   let st = d.getElementById('siteTheme');
   if (!st){ st = d.createElement('style'); st.id = 'siteTheme'; st.textContent = PLAN_THEME; d.head.appendChild(st); }
   d.documentElement.dataset.mode = document.documentElement.dataset.mode || 'dark';
-  planFrame.style.background = 'transparent';
+  planFrame.style.background = 'var(--surface)';
 }
 new MutationObserver(applyPlanTheme).observe(document.documentElement, { attributes:true, attributeFilter:['data-mode'] });
 

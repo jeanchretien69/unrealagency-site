@@ -431,7 +431,7 @@
     var gctx = gazeCanvas.getContext('2d');
     function gazeKey(ix, iy){ return ix + '_' + iy; }
     function loadGaze(ix, iy){ var k = gazeKey(ix, iy); if (gazeImgs[k]) return; var im = new Image(); im.crossOrigin = 'anonymous'; im.decoding = 'async'; im.src = 'gaze/g_' + k + '.webp'; gazeImgs[k] = im; }
-    loadGaze(5, 5); window.__g = { imgs: gazeImgs, cur: function(){ return gazeCur; }, tex: function(){ return !!gazeTex; } };
+    loadGaze(5, 5); window.__g = { imgs: gazeImgs, cur: function(){ return gazeCur; }, tex: function(){ return gazeTex; }, mat: function(){ return mat; }, gc: gazeCanvas, r: function(){ return renderer; } };
     setTimeout(function(){ for (var r = 0; r <= 5; r++) for (var ix = 5 - r; ix <= 5 + r; ix++) for (var iy = 5 - r; iy <= 5 + r; iy++) if (ix >= 0 && iy >= 0 && ix < GN && iy < GN) loadGaze(ix, iy); }, 600);
     function showGaze(fx, fy){
       var ix = Math.max(0, Math.min(GN - 1, Math.round((GFX * fx + 1) / 2 * (GN - 1))));

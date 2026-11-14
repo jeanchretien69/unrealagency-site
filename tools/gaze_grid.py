@@ -40,7 +40,7 @@ def upload_source():
 def run(version, image_url, yaw, pitch, px, py, tries=4):
     body = {"version": version, "input": {
         "image": image_url, "rotate_yaw": yaw, "rotate_pitch": pitch,
-        "pupil_x": px, "pupil_y": py, "output_format": "png", "output_quality": 95,
+        "pupil_x": px, "pupil_y": py, "crop_factor": 2.5, "output_format": "png", "output_quality": 95,
     }}
     for t in range(tries):
         r = requests.post(f"{API}/predictions", headers={**H, "Prefer": "wait=60"}, json=body, timeout=120)
@@ -60,17 +60,42 @@ def run(version, image_url, yaw, pitch, px, py, tries=4):
     raise RuntimeError("prediction kept failing")
 
 _session = None
+SRC = None
+BOX = None  # (x, y, size) of the model's square crop inside the source photo
+
+def find_box(neutral_bytes):
+    """Find where the model's 512x512 crop sits inside the source photo."""
+    import cv2, numpy as np
+    src = cv2.cvtColor(np.array(SRC), cv2.COLOR_RGB2GRAY)
+    tpl0 = cv2.cvtColor(np.array(Image.open(io.BytesIO(neutral_bytes)).convert("RGB")), cv2.COLOR_RGB2GRAY)
+    best = (-1, None)
+    for size in range(500, min(SRC.size) + 1, 4):
+        tpl = cv2.resize(tpl0, (size, size), interpolation=cv2.INTER_AREA)
+        r = cv2.matchTemplate(src, tpl, cv2.TM_CCOEFF_NORMED)
+        _, mx, _, loc = cv2.minMaxLoc(r)
+        if mx > best[0]:
+            best = (mx, (loc[0], loc[1], size))
+    print("crop box", best[1], "score", round(best[0], 3), flush=True)
+    return best[1]
+
+def paste_back(png_bytes):
+    from PIL import ImageFilter, ImageDraw
+    x, y, size = BOX
+    face = Image.open(io.BytesIO(png_bytes)).convert("RGB").resize((size, size), Image.LANCZOS)
+    m = Image.new("L", (size, size), 0)
+    d = ImageDraw.Draw(m)
+    pad = int(size * 0.16)
+    d.ellipse((pad, int(pad * 0.7), size - pad, size - int(pad * 0.9)), fill=255)
+    m = m.filter(ImageFilter.GaussianBlur(size * 0.06))
+    out = SRC.copy()
+    out.paste(face, (x, y), m)
+    return out
 def cutout(png_bytes):
     global _session
     from rembg import remove, new_session
     if _session is None:
         _session = new_session("isnet-general-use")
-    im = Image.open(io.BytesIO(png_bytes)).convert("RGB")
-    RAW["size"] = im.size
-    if MODE == "test" and not os.path.exists(f"{OUT}/raw_sample.jpg"): im.save(f"{OUT}/raw_sample.jpg", quality=85)
-    if im.size != (1086, 1448):
-        print("note: output size", im.size, "-> resizing to 1086x1448")
-        im = im.resize((1086, 1448), Image.LANCZOS)
+    im = paste_back(png_bytes)
     cut = remove(im, session=_session)
     W, Hh = cut.size
     c = Image.new("RGBA", (W, Hh), (0, 0, 0, 0))
@@ -79,8 +104,11 @@ def cutout(png_bytes):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
+    global SRC, BOX
     version = latest_version()
     src = upload_source()
+    SRC = Image.open("tools/kaya_src.png").convert("RGB")
+    BOX = find_box(run(version, src, 0, 0, 0, 0))
     vals = [round(-1 + 2 * i / (N - 1), 3) for i in range(N)]  # -1..1
     cells = [(ix, iy) for iy in range(N) for ix in range(N)]
     if MODE == "test":
@@ -101,7 +129,7 @@ def main():
             done += 1
             print(f"saved {done}/{len(cells)}: g_{ix}_{iy}.webp", flush=True)
     with open(f"{OUT}/grid.json", "w") as f:
-        json.dump({"n": N, "mode": MODE, "w": 543, "h": 724, "raw": RAW.get("size"), "schema": SCHEMA}, f)
+        json.dump({"n": N, "mode": MODE, "w": 543, "h": 724, "box": BOX}, f)
 
 if __name__ == "__main__":
     main()

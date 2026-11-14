@@ -233,18 +233,14 @@
     <h1 class="title">UN<span>REAL</span> AGEN<span>CY</span></h1>
 
     <div class="stage" id="stage">
-      <div class="backword" id="backword" aria-hidden="true">KAYA</div>
       <div class="ring" id="ring" aria-hidden="true"></div>
       <div class="floor"></div>
       <div class="head" id="head">
         <canvas id="gl" aria-label="Kaya, an Unreal Agency AI model, in 3D following your cursor"></canvas>
-        <img id="face" src="kaya_cut.webp" alt="Kaya, an Unreal Agency AI model" hidden>
+        <img id="face" src="live/idle2_first.webp" alt="Kaya, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
       <div class="moves" id="moves" hidden>
-        <button data-m="wave">👋 Wave</button>
         <button data-m="kiss">😘 Blow a kiss</button>
-        <button data-m="wink">😉 Wink</button>
-        <button data-m="boat">⛵ Construction la semaine</button>
       </div>
       </div>
       <div class="chip a"><span class="dot"></span>Kaya · online now</div>
@@ -495,7 +491,6 @@
         ' gl_FragColor = vec4(col, c.a); }'
       ].join('\n')
     });
-    var back = document.getElementById('backword'), ring = document.getElementById('ring');
     var mesh = new THREE.Mesh(geo, mat);
     scene.add(mesh);
     function size(){ var r = canvas.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
@@ -529,10 +524,9 @@
     if (safari) return; /* Safari can't show see-through WebM yet: keep the photo for now */
     var wrap = document.createElement('div'); wrap.className = 'live'; head.appendChild(wrap);
     function mk(n, loop){ var v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.loop = !!loop; v.preload = 'auto'; v.className = 'lv'; v.src = 'live/' + n + '.webm'; wrap.appendChild(v); return v; }
-    var idle = mk('idle', true), acts = { wave: mk('wave'), kiss: mk('kiss'), wink: mk('wink'), boat: mk('boat') };
+    var idle = mk('idle2', true), acts = { kiss: mk('kiss2') };
     var look = document.createElement('img'); look.className = 'lv'; look.alt = ''; wrap.appendChild(look);
-    var frames = []; for (var i = 0; i < 41; i++){ var im = new Image(); im.src = 'gaze_video/v_' + i + '.webp'; frames.push(im); }
-    var all = [idle, look, acts.wave, acts.kiss, acts.wink, acts.boat], cur = null, busy = false, lookIdx = -1;
+    var all = [idle, look, acts.kiss], cur = null, busy = false, lookIdx = -1;
     function show(el){ if (cur === el) return; all.forEach(function(e){ e.classList.toggle('on', e === el); }); cur = el; }
     idle.play().then(function(){ show(idle); setTimeout(function(){ face.hidden = true; }, 200); document.getElementById('moves').hidden = false; setTimeout(function(){ if (!busy){ var k = document.querySelector('#moves button[data-m="kiss"]'); if (k) k.click(); } }, 2000); }).catch(function(){});
     var btns = document.querySelectorAll('#moves button');
@@ -541,20 +535,10 @@
       v.currentTime = 0; v.play().then(function(){ show(v); }).catch(function(){ busy = false; });
       v.onended = function(){ idle.currentTime = 0; idle.play(); show(idle); busy = false; btns.forEach(function(x){ x.disabled = false; }); };
     }); });
-    var back = document.getElementById('backword'), ring = document.getElementById('ring');
+    var ring = document.getElementById('ring');
     function tick(t){
-      cx += (tx - cx) * 0.1; cy += (ty - cy) * 0.1;
-      if (!busy){
-        var active = performance.now() - lastMove < 2500 && Math.abs(cx) > 0.07;
-        if (active){
-          var k = Math.max(0, Math.min(40, Math.round((-cx + 1) / 2 * 40)));
-          if (k !== lookIdx && frames[k].complete && frames[k].naturalWidth){ look.src = frames[k].src; lookIdx = k; }
-          if (lookIdx >= 0) show(look);
-        } else { tx *= 0.9; show(idle); }
-      }
-      head.style.transform = 'rotateY(' + (cx * 6).toFixed(2) + 'deg) rotateX(' + (-cy * 4).toFixed(2) + 'deg)';
-      if (back){ back.style.transform = 'translate(-50%,-50%) translate(' + (-cx*40).toFixed(1) + 'px,' + (-cy*24).toFixed(1) + 'px)'; }
-      if (ring){ ring.style.transform = 'translate(-50%,-50%) translate(' + (-cx*18).toFixed(1) + 'px,' + (-cy*12).toFixed(1) + 'px) rotate(' + (t/90%360).toFixed(1) + 'deg)'; }
+      if (!busy) show(idle);
+      if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; }
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);

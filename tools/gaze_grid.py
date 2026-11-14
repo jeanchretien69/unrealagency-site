@@ -40,7 +40,7 @@ def upload_source():
 def run(version, image_url, yaw, pitch, px, py, tries=4):
     body = {"version": version, "input": {
         "image": image_url, "rotate_yaw": yaw, "rotate_pitch": pitch,
-        "pupil_x": px, "pupil_y": py, "crop_factor": 2.5, "output_format": "png", "output_quality": 95,
+        "pupil_x": px, "pupil_y": py, "output_format": "png", "output_quality": 95,
     }}
     for t in range(tries):
         r = requests.post(f"{API}/predictions", headers={**H, "Prefer": "wait=60"}, json=body, timeout=120)
@@ -69,7 +69,7 @@ def find_box(neutral_bytes):
     src = cv2.cvtColor(np.array(SRC), cv2.COLOR_RGB2GRAY)
     tpl0 = cv2.cvtColor(np.array(Image.open(io.BytesIO(neutral_bytes)).convert("RGB")), cv2.COLOR_RGB2GRAY)
     best = (-1, None)
-    for size in range(500, min(SRC.size) + 1, 4):
+    for size in range(400, min(SRC.size) + 1, 4):
         tpl = cv2.resize(tpl0, (size, size), interpolation=cv2.INTER_AREA)
         r = cv2.matchTemplate(src, tpl, cv2.TM_CCOEFF_NORMED)
         _, mx, _, loc = cv2.minMaxLoc(r)

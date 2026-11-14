@@ -237,7 +237,7 @@
       <div class="floor"></div>
       <div class="head" id="head">
         <canvas id="gl" aria-label="Kaya, an Unreal Agency AI model, in 3D following your cursor"></canvas>
-        <img id="face" src="live/idle2_first.webp" alt="Kaya, an Unreal Agency AI model" hidden>
+        <img id="face" src="live/idle3_first.webp" alt="Kaya, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
       <div class="moves" id="moves" hidden>
         <button data-m="kiss">😘 Blow a kiss</button>
@@ -524,7 +524,7 @@
     if (safari) return; /* Safari can't show see-through WebM yet: keep the photo for now */
     var wrap = document.createElement('div'); wrap.className = 'live'; head.appendChild(wrap);
     function mk(n, loop){ var v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.loop = !!loop; v.preload = 'auto'; v.className = 'lv'; v.src = 'live/' + n + '.webm'; wrap.appendChild(v); return v; }
-    var idle = mk('idle2', true), acts = { kiss: mk('kiss2') };
+    var idle = mk('idle3', true), acts = { kiss: mk('kiss3') };
     var look = document.createElement('img'); look.className = 'lv'; look.alt = ''; wrap.appendChild(look);
     var all = [idle, look, acts.kiss], cur = null, busy = false, lookIdx = -1;
     function show(el){ if (cur === el) return; all.forEach(function(e){ e.classList.toggle('on', e === el); }); cur = el; }

@@ -236,8 +236,11 @@
       <div class="floor"></div>
       <div class="head" id="head">
         <canvas id="gl" aria-label="Kaya, an Unreal Agency AI model, in 3D following your cursor"></canvas>
-        <img id="face" src="live/idle3_first.webp" alt="Kaya, an Unreal Agency AI model" hidden>
+        <img id="face" src="live/idle3L_first.webp" alt="Kaya, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
+      <div class="moves" id="moves" hidden>
+        <button data-m="kiss">😘 Blow a kiss</button>
+      </div>
       </div>
       <div class="chip a"><span class="dot"></span>Kaya · online now</div>
       <div class="chip b"><b>+$412</b> PPV today</div>
@@ -520,12 +523,12 @@
     if (safari) return; /* Safari can't show see-through WebM yet: keep the photo for now */
     var wrap = document.createElement('div'); wrap.className = 'live'; head.appendChild(wrap);
     function mk(n, loop){ var v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.loop = !!loop; v.preload = 'auto'; v.className = 'lv'; v.src = 'live/' + n + '.webm'; wrap.appendChild(v); return v; }
-    var idle = mk('idle3', true), acts = {};
+    var idle = mk('idle3L', true), acts = { kiss: mk('kiss3L') };
     var look = document.createElement('img'); look.className = 'lv'; look.alt = ''; wrap.appendChild(look);
-    var all = [idle, look], cur = null, busy = false, lookIdx = -1;
+    var all = [idle, look, acts.kiss], cur = null, busy = false, lookIdx = -1;
     function show(el){ if (cur === el) return; all.forEach(function(e){ e.classList.toggle('on', e === el); }); cur = el; }
-    idle.play().then(function(){ show(idle); setTimeout(function(){ face.hidden = true; }, 200); }).catch(function(){});
-    var btns = [];
+    idle.play().then(function(){ show(idle); setTimeout(function(){ face.hidden = true; }, 200); document.getElementById('moves').hidden = false; setTimeout(function(){ if (!busy){ var k = document.querySelector('#moves button[data-m="kiss"]'); if (k) k.click(); } }, 2000); }).catch(function(){});
+    var btns = document.querySelectorAll('#moves button');
     btns.forEach(function(b){ b.addEventListener('click', function(){
       if (busy) return; var v = acts[b.dataset.m]; busy = true; btns.forEach(function(x){ x.disabled = true; });
       v.currentTime = 0; v.play().then(function(){ show(v); }).catch(function(){ busy = false; });

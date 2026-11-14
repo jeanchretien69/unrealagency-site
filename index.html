@@ -84,6 +84,14 @@
   .head{position:relative;z-index:1;aspect-ratio:1086/1448;transform-style:preserve-3d;will-change:transform}
   .head canvas,.head img{position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 30px 40px rgba(226,54,127,.28))}
   .head img{object-fit:contain}
+  .head img[hidden]{display:none}
+  .head .live{position:absolute;inset:0}
+  .head .lv{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .18s ease;filter:none;pointer-events:none}
+  .head .lv.on{opacity:1}
+  .moves{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);width:max-content;max-width:100%;z-index:4;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .moves button{font:600 13px/1 inherit;font-family:inherit;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:10px 14px;cursor:pointer;backdrop-filter:blur(8px);transition:background .2s,transform .2s}
+  .moves button:hover{background:rgba(226,54,127,.35);transform:translateY(-1px)}
+  .moves button:disabled{opacity:.5;cursor:default}
   .head .shine{display:none}
   .backword{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;font-size:clamp(120px,19vw,260px);letter-spacing:-.04em;color:transparent;-webkit-text-stroke:2px var(--pink-soft);opacity:.55;z-index:0;pointer-events:none;white-space:nowrap}
   .ring{position:absolute;left:50%;top:42%;width:86%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:2px dashed var(--pink-soft);z-index:0;pointer-events:none}
@@ -224,12 +232,11 @@
     <h1 class="title">UN<span>REAL</span> AGEN<span>CY</span></h1>
 
     <div class="stage" id="stage">
-      <div class="backword" id="backword" aria-hidden="true">KAYA</div>
       <div class="ring" id="ring" aria-hidden="true"></div>
       <div class="floor"></div>
       <div class="head" id="head">
         <canvas id="gl" aria-label="Kaya, an Unreal Agency AI model, in 3D following your cursor"></canvas>
-        <img id="face" src="kaya_cut.webp" alt="Kaya, an Unreal Agency AI model" hidden>
+        <img id="face" src="live/idle3_first.webp" alt="Kaya, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
       </div>
       <div class="chip a"><span class="dot"></span>Kaya · online now</div>
@@ -424,6 +431,24 @@
     camera.position.set(0, 0, 3.05);
     var loader = new THREE.TextureLoader();
     var colorTex = loader.load('kaya_cut.webp');
+    /* Gaze: 11x11 photos of Kaya looking in every direction (gaze/g_x_y.webp) */
+    var GN = 41, GFX = -1, GFY = -1, gazeFade = 0, gazeTarget = null, gazeImgs = {}, gazeCanvas = document.createElement('canvas'), gazeTex = null, gazeCur = '';
+    gazeCanvas.width = 543; gazeCanvas.height = 724;
+    var gctx = gazeCanvas.getContext('2d');
+    function gazeKey(ix, iy){ return '' + ix; }
+    function loadGaze(ix, iy){ var k = gazeKey(ix, iy); if (gazeImgs[k]) return; var im = new Image(); im.crossOrigin = 'anonymous'; im.decoding = 'async'; im.src = 'gaze_video/v_' + k + '.webp'; gazeImgs[k] = im; }
+    loadGaze(20, 0); window.__g = { imgs: gazeImgs, cur: function(){ return gazeCur; }, tex: function(){ return gazeTex; }, mat: function(){ return mat; }, gc: gazeCanvas, r: function(){ return renderer; } };
+    setTimeout(function(){ for (var ix = 0; ix < GN; ix++) loadGaze(ix, 0); }, 600);
+    function showGaze(fx, fy){
+      var ix = Math.max(0, Math.min(GN - 1, Math.round((GFX * fx + 1) / 2 * (GN - 1))));
+      var iy = 0;
+      var k = gazeKey(ix, iy);
+      if (k !== gazeCur){ var im = gazeImgs[k]; if (im && im.complete && im.naturalWidth){ gazeTarget = im; gazeCur = k; gazeFade = 6; } }
+      if (gazeFade <= 0 || !gazeTarget) return;
+      if (!gazeTex){ gctx.drawImage(gazeTarget, 0, 0, 543, 724); gazeTex = new THREE.CanvasTexture(gazeCanvas); gazeTex.minFilter = THREE.LinearFilter; gazeTex.magFilter = THREE.LinearFilter; gazeTex.generateMipmaps = false; if (gazeTex.encoding !== undefined) gazeTex.encoding = THREE.sRGBEncoding; mat.uniforms.uColor.value = gazeTex; }
+      if (gazeFade === 1) gctx.clearRect(0, 0, 543, 724); gctx.globalAlpha = gazeFade === 1 ? 1 : 0.45; gctx.drawImage(gazeTarget, 0, 0, 543, 724); gctx.globalAlpha = 1;
+      gazeFade--; gazeTex.needsUpdate = true;
+    }
     var depthTex = loader.load('kaya_depth.png');
     [colorTex, depthTex].forEach(function(t){ t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter; t.generateMipmaps = false; });
     if (colorTex.encoding !== undefined) colorTex.encoding = THREE.sRGBEncoding;
@@ -432,7 +457,7 @@
     var geo = new THREE.PlaneGeometry(W, H, 420, 560);
     var mat = new THREE.ShaderMaterial({
       transparent: true,
-      uniforms: { uColor:{value:colorTex}, uDepth:{value:depthTex}, uScale:{value:0.38}, uLight:{value:new THREE.Vector3(0.3,0.4,1.0)}, uTexel:{value:new THREE.Vector2(1/1086,1/1448)}, uGlitch:{value:0}, uTime:{value:0} },
+      uniforms: { uColor:{value:colorTex}, uDepth:{value:depthTex}, uScale:{value:0.16}, uLight:{value:new THREE.Vector3(0.3,0.4,1.0)}, uTexel:{value:new THREE.Vector2(1/1086,1/1448)}, uGlitch:{value:0}, uTime:{value:0}, uEyeShift:{value:new THREE.Vector2(0,0)} },
       vertexShader: [
         'uniform sampler2D uDepth; uniform float uScale; varying vec2 vUv;',
         'void main(){ vUv = uv; float d = texture2D(uDepth, uv).r;',
@@ -441,7 +466,7 @@
         ' gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }'
       ].join('\n'),
       fragmentShader: [
-        'uniform sampler2D uColor; uniform sampler2D uDepth; uniform vec3 uLight; uniform vec2 uTexel; uniform float uGlitch; uniform float uTime; varying vec2 vUv;',
+        'uniform sampler2D uColor; uniform sampler2D uDepth; uniform vec3 uLight; uniform vec2 uTexel; uniform float uGlitch; uniform float uTime; uniform vec2 uEyeShift; varying vec2 vUv;',
         'float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }',
         'float eye(vec2 c){ vec2 d=(vUv-c)/vec2(0.024,0.018); return 1.0-smoothstep(0.6,1.0,length(d)); }',
         'void main(){ vec4 c = texture2D(uColor, vUv); if (c.a < 0.02) discard;',
@@ -451,7 +476,7 @@
         ' float l = clamp(dot(n, normalize(uLight)), 0.0, 1.0);',
         ' float rim = pow(1.0 - clamp(n.z,0.0,1.0), 2.0);',
         ' vec3 col = c.rgb * (0.82 + 0.3*l) + vec3(1.0,0.55,0.75)*rim*0.10*c.a*c.a;',
-        ' float e = max(eye(vec2(0.410,0.684)), eye(vec2(0.603,0.684))) * uGlitch;',
+        ' float e = max(eye(vec2(0.410,0.684)+uEyeShift), eye(vec2(0.603,0.684)+uEyeShift)) * uGlitch;',
         ' if (e > 0.001) {',
         '   vec2 cell = floor(vUv*vec2(420.0,560.0) + vec2(0.0, floor(uTime*18.0)));',
         '   float bit = step(0.55, h(cell)) * step(0.35, h(cell+7.3));',
@@ -462,16 +487,16 @@
         ' gl_FragColor = vec4(col, c.a); }'
       ].join('\n')
     });
-    var back = document.getElementById('backword'), ring = document.getElementById('ring');
     var mesh = new THREE.Mesh(geo, mat);
     scene.add(mesh);
     function size(){ var r = canvas.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
     size(); window.addEventListener('resize', size);
     function tick(t){
-      if (performance.now() - lastMove > 2500){ tx = Math.sin(t/1700)*0.45; ty = Math.sin(t/2400)*0.2; }
-      cx += (tx - cx) * 0.06; cy += (ty - cy) * 0.06;
-      mesh.rotation.y = cx * 0.5;
-      mesh.rotation.x = cy * 0.24;
+      if (performance.now() - lastMove > 3000){ tx = Math.sin(t/2600)*0.12; ty = Math.sin(t/3400)*0.06; }
+      cx += (tx - cx) * 0.08; cy += (ty - cy) * 0.08;
+      mesh.rotation.y = cx * 0.08;
+      mesh.rotation.x = cy * 0.04;
+      showGaze(cx, cy);
       camera.position.x = -cx*0.08; camera.lookAt(0,0,0);
       if (back){ back.style.transform = 'translate(-50%,-50%) translate(' + (-cx*40).toFixed(1) + 'px,' + (-cy*24).toFixed(1) + 'px)'; }
       if (ring){ ring.style.transform = 'translate(-50%,-50%) translate(' + (-cx*18).toFixed(1) + 'px,' + (-cy*12).toFixed(1) + 'px) rotate(' + (t/90%360).toFixed(1) + 'deg)'; }
@@ -487,7 +512,35 @@
     if (reduce){ renderer.render(scene, camera); setTimeout(function(){ renderer.render(scene, camera); }, 600); }
     else requestAnimationFrame(tick);
   }
-  start3D();
+
+  /* Living Kaya: real AI video clips (idle loop, head turn toward the cursor, button moves) */
+  function startLive(){
+    var ua = navigator.userAgent, safari = /Safari/.test(ua) && !/Chrome|Chromium|Edg|Firefox/.test(ua);
+    canvas.style.display = 'none'; face.hidden = false;
+    if (safari) return; /* Safari can't show see-through WebM yet: keep the photo for now */
+    var wrap = document.createElement('div'); wrap.className = 'live'; head.appendChild(wrap);
+    function mk(n, loop){ var v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.loop = !!loop; v.preload = 'auto'; v.className = 'lv'; v.src = 'live/' + n + '.webm'; wrap.appendChild(v); return v; }
+    var idle = mk('idle3', true), acts = {};
+    var look = document.createElement('img'); look.className = 'lv'; look.alt = ''; wrap.appendChild(look);
+    var all = [idle, look], cur = null, busy = false, lookIdx = -1;
+    function show(el){ if (cur === el) return; all.forEach(function(e){ e.classList.toggle('on', e === el); }); cur = el; }
+    idle.play().then(function(){ show(idle); setTimeout(function(){ face.hidden = true; }, 200); }).catch(function(){});
+    var btns = [];
+    btns.forEach(function(b){ b.addEventListener('click', function(){
+      if (busy) return; var v = acts[b.dataset.m]; busy = true; btns.forEach(function(x){ x.disabled = true; });
+      v.currentTime = 0; v.play().then(function(){ show(v); }).catch(function(){ busy = false; });
+      v.onended = function(){ idle.currentTime = 0; idle.play(); show(idle); busy = false; btns.forEach(function(x){ x.disabled = false; }); };
+    }); });
+    var ring = document.getElementById('ring');
+    function tick(t){
+      if (!busy) show(idle);
+      if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; }
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    window.__live = { cur: function(){ return cur && (cur.src || '').split('/').pop(); }, play: function(m){ document.querySelector('#moves button[data-m="' + m + '"]').click(); } };
+  }
+  startLive();
 })();
 </script>
 

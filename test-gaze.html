@@ -427,7 +427,7 @@
     var loader = new THREE.TextureLoader();
     var colorTex = loader.load('kaya_cut.webp');
     /* Gaze: 11x11 photos of Kaya looking in every direction (gaze/g_x_y.webp) */
-    var GN = 11, GFX = -1, GFY = -1, gazeImgs = {}, gazeCanvas = document.createElement('canvas'), gazeTex = null, gazeCur = '';
+    var GN = 11, GFX = 1, GFY = -1, gazeImgs = {}, gazeCanvas = document.createElement('canvas'), gazeTex = null, gazeCur = '';
     gazeCanvas.width = 543; gazeCanvas.height = 724;
     var gctx = gazeCanvas.getContext('2d');
     function gazeKey(ix, iy){ return ix + '_' + iy; }

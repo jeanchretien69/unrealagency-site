@@ -186,6 +186,7 @@
     </div>
     <div class="app">
       <aside class="side" id="side">
+        <button data-tab="plan" class="adm" hidden>📋 My plan</button>
         <button data-tab="personas">🎀 Personas</button>
         <button data-tab="docs">📚 Docs & scripts</button>
         <button data-tab="bot">🤖 AI chatbot</button>
@@ -289,7 +290,7 @@ async function boot(session){
   $('#whoRole').textContent = me.role; $('#whoRole').classList.toggle('admin', me.role==='admin');
   document.querySelectorAll('.adm').forEach(el => el.hidden = me.role !== 'admin');
   const h = location.hash.slice(1);
-  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : 'personas');
+  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'plan' : 'personas'));
 }
 
 let lastSession;
@@ -301,15 +302,49 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Members','Approve people and choose what they can see.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'] };
+const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Members','Approve people and choose what they can see.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView })[t]();
+  ({ plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView })[t]();
 }
+
+
+// ---------- private plan (admin only) ----------
+let planFrame = null;
+async function planView(){
+  const v = $('#view');
+  const { data, error } = await sb.from('admin_private').select('key,value').in('key',['plan_key','plan_checks']);
+  if (error || !data) return v.innerHTML = `<div class="msg err">${esc(error ? error.message : 'Not allowed')}</div>`;
+  const kRow = data.find(r => r.key==='plan_key');
+  if (!kRow) return v.innerHTML = `<div class="msg err">Plan not set up yet.</div>`;
+  try{
+    const raw = Uint8Array.from(atob(kRow.value.k), c => c.charCodeAt(0));
+    const key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']);
+    const buf = new Uint8Array(await (await fetch('/plan-assets/plan.bin?v=' + Date.now(), {cache:'no-store'})).arrayBuffer());
+    const html = new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:buf.slice(0,12)}, key, buf.slice(12)));
+    v.innerHTML = '<iframe id="planFrame" title="My plan" style="width:100%;border:0;border-radius:18px;min-height:80vh;background:#fff;display:block"></iframe>';
+    planFrame = v.querySelector('#planFrame');
+    planFrame.srcdoc = html;
+  }catch(e){ v.innerHTML = `<div class="msg err">Could not open the plan (${esc(e.message||String(e))})</div>`; }
+}
+window.addEventListener('message', async (e) => {
+  const m = e.data;
+  if (!m || !m.planShim || !planFrame || e.source !== planFrame.contentWindow) return;
+  const reply = (data, error) => planFrame.contentWindow.postMessage({ planShimReply:1, id:m.id, data, error }, '*');
+  if (m.type === 'height'){ planFrame.style.height = Math.max(600, m.data + 20) + 'px'; return; }
+  if (m.type === 'get'){
+    const { data, error } = await sb.from('admin_private').select('value').eq('key','plan_checks').maybeSingle();
+    return reply(error ? null : (data ? data.value : null), error ? (error.code || 'error') : null);
+  }
+  if (m.type === 'set'){
+    const { error } = await sb.from('admin_private').upsert({ key:'plan_checks', value:m.data, updated_at:new Date().toISOString() });
+    return reply(null, error ? (error.code || 'error') : null);
+  }
+});
 
 // ---------- docs ----------
 async function docList(cats){

@@ -87,6 +87,22 @@
   .head .shine{display:none}
   .backword{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;font-size:clamp(120px,19vw,260px);letter-spacing:-.04em;color:transparent;-webkit-text-stroke:2px var(--pink-soft);opacity:.55;z-index:0;pointer-events:none;white-space:nowrap}
   .ring{position:absolute;left:50%;top:42%;width:86%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:2px dashed var(--pink-soft);z-index:0;pointer-events:none}
+
+  /* Matrix glitch on Kaya */
+  .glitch{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0}
+  .glitch.on{opacity:1}
+  .glitch .g{position:absolute;inset:0;background:url(kaya_cut.webp) center/contain no-repeat}
+  .glitch .gr{filter:drop-shadow(0 0 0 #ff2a6d);mix-blend-mode:screen;opacity:.85}
+  .glitch .gc{mix-blend-mode:multiply;opacity:.9}
+  .glitch.on .gr{animation:gR .18s steps(2) infinite}
+  .glitch.on .gc{animation:gC .22s steps(2) infinite}
+  .glitch canvas{position:absolute;inset:0;width:100%;height:100%;-webkit-mask:url(kaya_cut.webp) center/contain no-repeat;mask:url(kaya_cut.webp) center/contain no-repeat;mix-blend-mode:screen}
+  .glitch .scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,255,120,.12) 0 2px,transparent 2px 4px);-webkit-mask:url(kaya_cut.webp) center/contain no-repeat;mask:url(kaya_cut.webp) center/contain no-repeat}
+  @keyframes gR{0%{transform:translate(-6px,0);clip-path:inset(12% 0 70% 0);filter:hue-rotate(-40deg) saturate(3)}50%{transform:translate(5px,2px);clip-path:inset(55% 0 25% 0)}100%{transform:translate(-3px,-1px);clip-path:inset(30% 0 50% 0)}}
+  @keyframes gC{0%{transform:translate(5px,0);clip-path:inset(60% 0 18% 0);filter:hue-rotate(120deg) saturate(4)}50%{transform:translate(-6px,-2px);clip-path:inset(8% 0 80% 0)}100%{transform:translate(3px,1px);clip-path:inset(40% 0 40% 0)}}
+  .head.glitching #gl{animation:shake .12s steps(2) infinite;filter:contrast(1.2) saturate(1.3)}
+  @keyframes shake{0%{transform:translate(2px,0)}50%{transform:translate(-3px,1px)}100%{transform:translate(1px,-1px)}}
+  @media (prefers-reduced-motion: reduce){.glitch{display:none}}
   .floor{position:absolute;left:50%;bottom:-10px;width:70%;height:40px;transform:translateX(-50%);background:radial-gradient(ellipse at center,rgba(226,54,127,.28),transparent 70%);filter:blur(6px);z-index:0}
   .chip{position:absolute;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:500;box-shadow:0 10px 30px -12px rgba(42,20,32,.25);white-space:nowrap;z-index:3}
   .chip b{color:var(--pink-deep)}
@@ -230,6 +246,7 @@
         <canvas id="gl" aria-label="Kaya, an Unreal Agency AI model, in 3D following your cursor"></canvas>
         <img id="face" src="kaya_cut.webp" alt="Kaya, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
+        <div class="glitch" id="glitch" aria-hidden="true"><div class="g gr"></div><div class="g gc"></div><canvas id="matrix"></canvas><div class="scan"></div></div>
       </div>
       <div class="chip a"><span class="dot"></span>Kaya · online now</div>
       <div class="chip b"><b>+$412</b> PPV today</div>
@@ -473,6 +490,34 @@
     else requestAnimationFrame(tick);
   }
   start3D();
+})();
+</script>
+
+<script>
+/* Matrix glitch: first at 2s, then every 8s */
+(function(){
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var g=document.getElementById('glitch'), head=document.getElementById('head'), cv=document.getElementById('matrix');
+  if(!g||!cv) return;
+  var ctx=cv.getContext('2d'), chars='アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789KAYA', drops=[], fs=14, raf=0;
+  function size(){ var r=cv.getBoundingClientRect(); cv.width=r.width; cv.height=r.height; drops=Array(Math.ceil(r.width/fs)).fill(0).map(function(){return Math.random()*-30}); }
+  function draw(){
+    ctx.fillStyle='rgba(0,0,0,.18)'; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.font=fs+'px monospace';
+    for(var i=0;i<drops.length;i++){
+      ctx.fillStyle = Math.random()>.9 ? '#d6ffe4' : '#00ff7b';
+      ctx.fillText(chars[Math.floor(Math.random()*chars.length)], i*fs, drops[i]*fs);
+      drops[i] = (drops[i]*fs > cv.height && Math.random()>.95) ? 0 : drops[i]+1;
+    }
+    raf=requestAnimationFrame(draw);
+  }
+  function burst(){
+    size(); ctx.clearRect(0,0,cv.width,cv.height);
+    g.classList.add('on'); head.classList.add('glitching'); draw();
+    var dur=650+Math.random()*350;
+    setTimeout(function(){ g.classList.remove('on'); head.classList.remove('glitching'); cancelAnimationFrame(raf); }, dur);
+  }
+  setTimeout(function(){ burst(); setInterval(burst, 8000); }, 2000);
 })();
 </script>
 <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet">

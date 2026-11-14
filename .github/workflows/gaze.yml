@@ -11,6 +11,10 @@ on:
         description: "grid size N (N x N images)"
         default: "11"
         required: true
+      style:
+        description: "head (turn head) or eyes (eyes only)"
+        default: "head"
+        required: true
 
 permissions:
   contents: write
@@ -30,13 +34,14 @@ jobs:
           REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
           MODE: ${{ github.event.inputs.mode }}
           GRID: ${{ github.event.inputs.grid }}
+          STYLE: ${{ github.event.inputs.style }}
         run: python tools/gaze_grid.py
       - name: Commit images
         if: always()
         run: |
           git config user.name "gaze-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add gaze
+          git add gaze gaze_eyes || true
           git commit -m "Kaya gaze grid (${{ github.event.inputs.mode }})" || echo "nothing to commit"
           git pull --rebase origin main
           git push origin HEAD:main

@@ -14,7 +14,8 @@ MODE = os.environ.get("MODE", "test")       # test = 3 images, full = whole grid
 N = int(os.environ.get("GRID", "11"))       # N x N grid
 H = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 API = "https://api.replicate.com/v1"
-OUT = "gaze"
+STYLE = os.environ.get("STYLE", "head")  # head = turn head, eyes = eyes only
+OUT = "gaze_eyes" if STYLE == "eyes" else "gaze"
 SHIFT = 22
 SCHEMA = {}
 RAW = {}  # same left shift as kaya_cut.webp, so the site framing matches
@@ -119,8 +120,12 @@ def main():
     def job(cell):
         ix, iy = cell
         nx, ny = vals[ix], vals[iy]          # nx: -1 left .. 1 right, ny: -1 up .. 1 down
-        yaw, pitch = round(nx * 14, 2), round(ny * 9, 2)
-        px, py = round(nx * 13, 2), round(ny * 10, 2)
+        if STYLE == "eyes":
+            yaw, pitch = round(nx * 3, 2), round(ny * 2, 2)
+            px, py = round(nx * 15, 2), round(ny * 12, 2)
+        else:
+            yaw, pitch = round(nx * 14, 2), round(ny * 9, 2)
+            px, py = round(nx * 13, 2), round(ny * 10, 2)
         raw = run(version, src, yaw, pitch, px, py)
         return cell, raw
 

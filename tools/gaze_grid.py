@@ -15,7 +15,9 @@ N = int(os.environ.get("GRID", "11"))       # N x N grid
 H = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
 API = "https://api.replicate.com/v1"
 OUT = "gaze"
-SHIFT = 22  # same left shift as kaya_cut.webp, so the site framing matches
+SHIFT = 22
+SCHEMA = {}
+RAW = {}  # same left shift as kaya_cut.webp, so the site framing matches
 
 def latest_version():
     r = requests.get(f"{API}/models/fofr/expression-editor", headers=H, timeout=60)
@@ -23,6 +25,8 @@ def latest_version():
     m = r.json()
     v = m["latest_version"]
     props = v["openapi_schema"]["components"]["schemas"]["Input"]["properties"]
+    global SCHEMA
+    SCHEMA = {k: {x: props[k].get(x) for x in ("minimum", "maximum", "default")} for k in props}
     print("inputs:", json.dumps({k: {x: props[k].get(x) for x in ("minimum", "maximum", "default")} for k in props}))
     return v["id"]
 
@@ -62,6 +66,8 @@ def cutout(png_bytes):
     if _session is None:
         _session = new_session("isnet-general-use")
     im = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+    RAW["size"] = im.size
+    if MODE == "test" and not os.path.exists(f"{OUT}/raw_sample.jpg"): im.save(f"{OUT}/raw_sample.jpg", quality=85)
     if im.size != (1086, 1448):
         print("note: output size", im.size, "-> resizing to 1086x1448")
         im = im.resize((1086, 1448), Image.LANCZOS)
@@ -95,7 +101,7 @@ def main():
             done += 1
             print(f"saved {done}/{len(cells)}: g_{ix}_{iy}.webp", flush=True)
     with open(f"{OUT}/grid.json", "w") as f:
-        json.dump({"n": N, "mode": MODE, "w": 543, "h": 724}, f)
+        json.dump({"n": N, "mode": MODE, "w": 543, "h": 724, "raw": RAW.get("size"), "schema": SCHEMA}, f)
 
 if __name__ == "__main__":
     main()

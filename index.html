@@ -88,21 +88,6 @@
   .backword{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;font-size:clamp(120px,19vw,260px);letter-spacing:-.04em;color:transparent;-webkit-text-stroke:2px var(--pink-soft);opacity:.55;z-index:0;pointer-events:none;white-space:nowrap}
   .ring{position:absolute;left:50%;top:42%;width:86%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:2px dashed var(--pink-soft);z-index:0;pointer-events:none}
 
-  /* Matrix glitch on Kaya */
-  .glitch{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0}
-  .glitch.on{opacity:1}
-  .glitch .g{position:absolute;inset:0;background:url(kaya_cut.webp) center/contain no-repeat}
-  .glitch .gr{filter:drop-shadow(0 0 0 #ff2a6d);mix-blend-mode:screen;opacity:.85}
-  .glitch .gc{mix-blend-mode:multiply;opacity:.9}
-  .glitch.on .gr{animation:gR .18s steps(2) infinite}
-  .glitch.on .gc{animation:gC .22s steps(2) infinite}
-  .glitch canvas{position:absolute;inset:0;width:100%;height:100%;-webkit-mask:url(kaya_cut.webp) center/contain no-repeat;mask:url(kaya_cut.webp) center/contain no-repeat;mix-blend-mode:screen}
-  .glitch .scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,255,120,.12) 0 2px,transparent 2px 4px);-webkit-mask:url(kaya_cut.webp) center/contain no-repeat;mask:url(kaya_cut.webp) center/contain no-repeat}
-  @keyframes gR{0%{transform:translate(-6px,0);clip-path:inset(12% 0 70% 0);filter:hue-rotate(-40deg) saturate(3)}50%{transform:translate(5px,2px);clip-path:inset(55% 0 25% 0)}100%{transform:translate(-3px,-1px);clip-path:inset(30% 0 50% 0)}}
-  @keyframes gC{0%{transform:translate(5px,0);clip-path:inset(60% 0 18% 0);filter:hue-rotate(120deg) saturate(4)}50%{transform:translate(-6px,-2px);clip-path:inset(8% 0 80% 0)}100%{transform:translate(3px,1px);clip-path:inset(40% 0 40% 0)}}
-  .head.glitching #gl{animation:shake .12s steps(2) infinite;filter:contrast(1.2) saturate(1.3)}
-  @keyframes shake{0%{transform:translate(2px,0)}50%{transform:translate(-3px,1px)}100%{transform:translate(1px,-1px)}}
-  @media (prefers-reduced-motion: reduce){.glitch{display:none}}
   .floor{position:absolute;left:50%;bottom:-10px;width:70%;height:40px;transform:translateX(-50%);background:radial-gradient(ellipse at center,rgba(226,54,127,.28),transparent 70%);filter:blur(6px);z-index:0}
   .chip{position:absolute;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:500;box-shadow:0 10px 30px -12px rgba(42,20,32,.25);white-space:nowrap;z-index:3}
   .chip b{color:var(--pink-deep)}
@@ -246,7 +231,6 @@
         <canvas id="gl" aria-label="Kaya, an Unreal Agency AI model, in 3D following your cursor"></canvas>
         <img id="face" src="kaya_cut.webp" alt="Kaya, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
-        <div class="glitch" id="glitch" aria-hidden="true"><div class="g gr"></div><div class="g gc"></div><canvas id="matrix"></canvas><div class="scan"></div></div>
       </div>
       <div class="chip a"><span class="dot"></span>Kaya · online now</div>
       <div class="chip b"><b>+$412</b> PPV today</div>
@@ -448,7 +432,7 @@
     var geo = new THREE.PlaneGeometry(W, H, 420, 560);
     var mat = new THREE.ShaderMaterial({
       transparent: true,
-      uniforms: { uColor:{value:colorTex}, uDepth:{value:depthTex}, uScale:{value:0.38}, uLight:{value:new THREE.Vector3(0.3,0.4,1.0)}, uTexel:{value:new THREE.Vector2(1/1086,1/1448)} },
+      uniforms: { uColor:{value:colorTex}, uDepth:{value:depthTex}, uScale:{value:0.38}, uLight:{value:new THREE.Vector3(0.3,0.4,1.0)}, uTexel:{value:new THREE.Vector2(1/1086,1/1448)}, uGlitch:{value:0}, uTime:{value:0} },
       vertexShader: [
         'uniform sampler2D uDepth; uniform float uScale; varying vec2 vUv;',
         'void main(){ vUv = uv; float d = texture2D(uDepth, uv).r;',
@@ -457,7 +441,9 @@
         ' gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }'
       ].join('\n'),
       fragmentShader: [
-        'uniform sampler2D uColor; uniform sampler2D uDepth; uniform vec3 uLight; uniform vec2 uTexel; varying vec2 vUv;',
+        'uniform sampler2D uColor; uniform sampler2D uDepth; uniform vec3 uLight; uniform vec2 uTexel; uniform float uGlitch; uniform float uTime; varying vec2 vUv;',
+        'float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }',
+        'float eye(vec2 c){ vec2 d=(vUv-c)/vec2(0.024,0.018); return 1.0-smoothstep(0.6,1.0,length(d)); }',
         'void main(){ vec4 c = texture2D(uColor, vUv); if (c.a < 0.02) discard;',
         ' float dx = texture2D(uDepth, vUv + vec2(uTexel.x*3.0,0.)).r - texture2D(uDepth, vUv - vec2(uTexel.x*3.0,0.)).r;',
         ' float dy = texture2D(uDepth, vUv + vec2(0.,uTexel.y*3.0)).r - texture2D(uDepth, vUv - vec2(0.,uTexel.y*3.0)).r;',
@@ -465,6 +451,14 @@
         ' float l = clamp(dot(n, normalize(uLight)), 0.0, 1.0);',
         ' float rim = pow(1.0 - clamp(n.z,0.0,1.0), 2.0);',
         ' vec3 col = c.rgb * (0.82 + 0.3*l) + vec3(1.0,0.55,0.75)*rim*0.10*c.a*c.a;',
+        ' float e = max(eye(vec2(0.410,0.684)), eye(vec2(0.603,0.684))) * uGlitch;',
+        ' if (e > 0.001) {',
+        '   vec2 cell = floor(vUv*vec2(420.0,560.0) + vec2(0.0, floor(uTime*18.0)));',
+        '   float bit = step(0.55, h(cell)) * step(0.35, h(cell+7.3));',
+        '   vec3 code = mix(vec3(1.0,0.22,0.3), vec3(0.6,1.0,0.75), step(0.7, h(cell+3.1)));',
+        '   col = mix(col, col*vec3(1.15,0.78,0.8), e*0.45);',
+        '   col += code * bit * e * 0.35;',
+        ' }',
         ' gl_FragColor = vec4(col, c.a); }'
       ].join('\n')
     });
@@ -483,6 +477,10 @@
       if (ring){ ring.style.transform = 'translate(-50%,-50%) translate(' + (-cx*18).toFixed(1) + 'px,' + (-cy*12).toFixed(1) + 'px) rotate(' + (t/90%360).toFixed(1) + 'deg)'; }
       mesh.position.y = Math.sin(t/1400) * 0.012;
       mat.uniforms.uLight.value.set(cx*0.9, -cy*0.9, 1.0);
+      mat.uniforms.uTime.value = t/1000;
+      var gp = t - 2000; var gg = 0;
+      if (gp > 0){ var ph = gp % 8000; if (ph < 900){ gg = Math.sin(Math.PI*ph/900); gg *= (0.75 + 0.25*Math.sin(t/23)); } }
+      mat.uniforms.uGlitch.value = gg;
       renderer.render(scene, camera);
       requestAnimationFrame(tick);
     }
@@ -493,33 +491,6 @@
 })();
 </script>
 
-<script>
-/* Matrix glitch: first at 2s, then every 8s */
-(function(){
-  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  var g=document.getElementById('glitch'), head=document.getElementById('head'), cv=document.getElementById('matrix');
-  if(!g||!cv) return;
-  var ctx=cv.getContext('2d'), chars='アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789KAYA', drops=[], fs=14, raf=0;
-  function size(){ var r=cv.getBoundingClientRect(); cv.width=r.width; cv.height=r.height; drops=Array(Math.ceil(r.width/fs)).fill(0).map(function(){return Math.random()*-30}); }
-  function draw(){
-    ctx.fillStyle='rgba(0,0,0,.18)'; ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.font=fs+'px monospace';
-    for(var i=0;i<drops.length;i++){
-      ctx.fillStyle = Math.random()>.9 ? '#d6ffe4' : '#00ff7b';
-      ctx.fillText(chars[Math.floor(Math.random()*chars.length)], i*fs, drops[i]*fs);
-      drops[i] = (drops[i]*fs > cv.height && Math.random()>.95) ? 0 : drops[i]+1;
-    }
-    raf=requestAnimationFrame(draw);
-  }
-  function burst(){
-    size(); ctx.clearRect(0,0,cv.width,cv.height);
-    g.classList.add('on'); head.classList.add('glitching'); draw();
-    var dur=650+Math.random()*350;
-    setTimeout(function(){ g.classList.remove('on'); head.classList.remove('glitching'); cancelAnimationFrame(raf); }, dur);
-  }
-  setTimeout(function(){ burst(); setInterval(burst, 8000); }, 2000);
-})();
-</script>
 <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet">
 <style>
   :root{--chat--color-primary:#ff5fa2;--chat--color-primary-shade-50:#e2367f;--chat--color-primary-shade-100:#c92a6e;--chat--color-secondary:#ff5fa2;--chat--color-secondary-shade-50:#e2367f;--chat--toggle--background:#ff5fa2;--chat--toggle--hover--background:#e2367f;--chat--toggle--active--background:#e2367f;--chat--header--background:#2a1420;--chat--header--color:#fff;--chat--message--user--background:#ff5fa2;--chat--message--user--color:#fff;--chat--border-radius:16px;--chat--font-family:"DM Sans",system-ui,sans-serif;--chat--window--width:380px;--chat--window--height:560px}

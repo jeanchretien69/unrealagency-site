@@ -49,6 +49,8 @@ def run(version, image_url, yaw, pitch, px, py, tries=4):
             try: wait = float(r.json().get("retry_after", 10))
             except Exception: wait = 10
             time.sleep(wait + 1); continue
+        if r.status_code >= 500:  # Replicate hiccup: wait and retry
+            time.sleep(15); continue
         r.raise_for_status()
         p = r.json()
         while p["status"] not in ("succeeded", "failed", "canceled"):

@@ -772,51 +772,92 @@ async function membersView(){
 }
 
 // ---------- Dropp (through its API, key stays on the server) ----------
-let drTab = 'links', drCreators = [], drPid = null, drCache = {};
+let drTab = 'links', drCreators = [], drPid = null, drPre = [], drLinkFilter = null, drUrls = {};
 async function dr(method, path, query, body){
   const { data, error } = await sb.functions.invoke('dropp', { body:{ method, path, query, body, idem: method === 'POST' ? crypto.randomUUID() : undefined } });
   if (error){ let m = error.message; try { m = (await error.context.json()).error || m; } catch(e){} return { ok:false, msg:m }; }
   if (data.error) return { ok:false, msg:data.error };
-  if (!data.ok) return { ok:false, msg:(data.data && data.data.error && data.data.error.message) || ('Dropp said ' + data.status) };
+  if (!data.ok) return { ok:false, status:data.status, msg:(data.data && data.data.error && data.data.error.message) || ('Dropp said ' + data.status) };
   return { ok:true, data:data.data };
 }
 const drRows = r => (r.data && (r.data.data || r.data)) || [];
+// every page of a list (Dropp gives 100 at a time), up to max rows
+async function drAll(path, query, max = 500){
+  let rows = [], cursor;
+  for (let i = 0; i < 10 && rows.length < max; i++){
+    const r = await dr('GET', path, { limit:100, ...(query || {}), cursor });
+    if (!r.ok) return rows.length ? { ok:true, rows } : r;
+    rows = rows.concat(drRows(r));
+    const p = r.data.pagination; if (!p || !p.has_more || !p.next_cursor) break; cursor = p.next_cursor;
+  }
+  return { ok:true, rows };
+}
 const drDate = d => d ? new Date(d).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
 const drMoney = (cents, cur) => { try { return new Intl.NumberFormat(undefined, { style:'currency', currency:cur || 'EUR' }).format((cents || 0) / 100); } catch(e){ return ((cents||0)/100).toFixed(2) + ' ' + (cur||''); } };
+const drSum = (rows, f) => { const by = {}; rows.forEach(x => { const [c, v] = f(x); by[c] = (by[c] || 0) + v; }); return Object.entries(by).map(([c, v]) => drMoney(v, c)).join(' · ') || drMoney(0); };
 const drCopy = t => navigator.clipboard.writeText(t).then(() => toast('Link copied'), () => prompt('Copy this link:', t));
 const drCur = (id='dCur') => `<select id="${id}"><option>EUR</option><option>USD</option><option>CAD</option><option>GBP</option></select>`;
+const drMeta = tag => ({ source:'unreal-site', by:me.full_name || me.email, tag:(tag || '').trim() || null });
+const drErr = m => `<div class="msg err">${esc(m)}</div>`;
+function drCsv(name, head, rows){
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([[head, ...rows].map(r => r.map(q).join(',')).join('\n')], { type:'text/csv' })); a.download = name + '-' + new Date().toISOString().slice(0, 10) + '.csv'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function drModal(title, html){
+  let d = $('#drDlg'); if (!d){ d = document.createElement('dialog'); d.id = 'drDlg'; d.style.cssText = 'border:0;border-radius:18px;padding:0;max-width:min(720px,94vw);width:100%;background:var(--card,#fff);color:inherit;box-shadow:0 20px 60px rgba(0,0,0,.3)'; document.body.appendChild(d); d.addEventListener('click', e => { if (e.target === d) d.close(); }); }
+  d.innerHTML = `<div style="padding:20px"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">${esc(title)}</h2><button class="btn sm ghost" id="drDlgX">Close</button></div><div id="drDlgB" style="max-height:70vh;overflow:auto">${html}</div></div>`;
+  $('#drDlgX').onclick = () => d.close(); if (!d.open) d.showModal(); return $('#drDlgB');
+}
+async function drSigned(id){
+  const c = drUrls[id]; if (c && c.exp > Date.now() + 60000) return c;
+  const r = await dr('GET', '/content/' + id + '/download-url'); if (!r.ok) return null;
+  const d = r.data.data || r.data; return drUrls[id] = { url:d.download_url, play:d.playback_url, exp:d.expires_at ? new Date(d.expires_at).getTime() : Date.now() + 600000 };
+}
+// fill the small previews, a few at a time so Dropp's rate limit is respected
+async function drThumbs(root){
+  const els = [...root.querySelectorAll('[data-thumb]')].slice(0, 40); let i = 0;
+  const run = async () => { while (i < els.length){ const el = els[i++]; if (!el.isConnected) continue; const u = await drSigned(el.dataset.thumb); if (u && u.url && el.isConnected && el.dataset.kind === 'image') el.innerHTML = `<img src="${esc(u.url)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:inherit">`; } };
+  await Promise.all([run(), run(), run()]);
+}
+const drThumb = (x, r = 10) => x.media && x.media.thumbnail_url ? `<img src="${esc(x.media.thumbnail_url)}" alt="" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:${r}px;background:var(--blush)">` : `<div data-thumb="${esc(x.id)}" data-kind="${esc(x.type)}" style="aspect-ratio:1;border-radius:${r}px;background:var(--blush);display:grid;place-items:center;font-size:26px;overflow:hidden">${x.type==='video'?'🎬':'🖼'}</div>`;
 async function droppView(){
   const v = $('#view');
   const tabs = [['links','🔗 Links','dropp.links'],['content','🖼 Content','dropp.content'],['sales','💰 Sales','dropp.sales'],['wallet','👛 Wallet','dropp.wallet'],['tips','🎁 Tips & wishlists','dropp.extras']].filter(t => can(t[2]));
+  if (me.role==='admin') tabs.push(['account','⚙️ Account']);
   if (!tabs.length) return v.innerHTML = '<div class="card empty">Nothing in Dropp is shared with you yet.</div>';
   if (!tabs.some(t => t[0] === drTab)) drTab = tabs[0][0];
   v.innerHTML = `<div class="smstop"><div class="stats"><div class="cfilt" id="drTabs" style="padding:0;border:0">${tabs.map(t => `<button data-t="${t[0]}" class="${t[0]===drTab?'on':''}">${t[1]}</button>`).join('')}</div></div>
     <div class="stats"><label for="drWho" style="margin:0;font-size:13px">Model</label><select id="drWho" style="width:auto;margin:0"><option>Loading…</option></select></div></div>
     <div id="drBody"><p class="muted">Loading…</p></div>`;
-  document.querySelectorAll('#drTabs button').forEach(b => b.onclick = () => { drTab = b.dataset.t; document.querySelectorAll('#drTabs button').forEach(x => x.classList.toggle('on', x === b)); drDraw(); });
+  document.querySelectorAll('#drTabs button').forEach(b => b.onclick = () => drGo(b.dataset.t));
   const c = await dr('GET', '/creators');
-  if (!c.ok) return $('#drBody').innerHTML = `<div class="msg err">${esc(c.msg)}</div>`;
+  if (!c.ok) return $('#drBody').innerHTML = drErr(c.msg);
   drCreators = drRows(c).filter(x => !x.is_self);
-  if (!drCreators.length) return $('#drBody').innerHTML = '<div class="card empty">No model in your Dropp agency yet. Add one in Dropp → Creators first.</div>';
-  if (!drCreators.some(x => x.id === drPid)) drPid = drCreators[0].id;
+  if (!drCreators.length && drTab !== 'account') return $('#drBody').innerHTML = `<div class="card empty">No model in your Dropp agency yet.${me.role==='admin' ? ' Add one in the ⚙️ Account tab.' : ''}</div>`;
+  if (!drCreators.some(x => x.id === drPid)) drPid = drCreators[0] ? drCreators[0].id : null;
   $('#drWho').innerHTML = drCreators.map(x => `<option value="${esc(x.id)}" ${x.id===drPid?'selected':''}>${esc(x.display_name)}</option>`).join('');
-  $('#drWho').onchange = e => { drPid = e.target.value; drCache = {}; drDraw(); };
+  $('#drWho').onchange = e => { drPid = e.target.value; drPre = []; drLinkFilter = null; drDraw(); };
   drDraw();
 }
-function drDraw(){ ({ links:drLinks, content:drContent, sales:drSales, wallet:drWallet, tips:drTips })[drTab](); }
-async function drContentList(){
-  let r = await dr('GET', '/content', { limit:100, profile_id:drPid });
-  if (!r.ok) r = await dr('GET', '/content', { limit:100 });
+function drGo(t){ drTab = t; document.querySelectorAll('#drTabs button').forEach(x => x.classList.toggle('on', x.dataset.t === t)); drDraw(); }
+function drDraw(){ ({ links:drLinks, content:drContent, sales:drSales, wallet:drWallet, tips:drTips, account:drAccount })[drTab](); }
+const drName = id => (drCreators.find(x => x.id === id) || {}).display_name || '';
+
+// ----- content -----
+async function drContentList(folder){
+  let r = await drAll('/content', { profile_id:drPid, folder_id:folder || undefined });
+  if (!r.ok) r = await drAll('/content', { folder_id:folder || undefined });
   return r;
 }
 async function drContent(){
   const box = $('#drBody');
-  box.innerHTML = `<div class="card"><h2>Upload content</h2><p class="muted" style="font-size:13px">Photos and videos go straight to Dropp for the model picked above. You can pick many files at once.</p>
-    <input type="file" id="drFiles" multiple accept="image/*,video/*" style="margin-top:8px"><div id="drUp" style="margin-top:10px;display:grid;gap:6px"></div></div>
-    <div class="card" style="margin-top:14px"><div class="row" style="justify-content:space-between;align-items:center"><h2>Library</h2><button class="btn sm ghost" id="drRef">Refresh</button></div><div id="drLib" class="bgrid" style="padding:10px 0 0;background:none;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))"><p class="muted">Loading…</p></div></div>`;
-  $('#drRef').onclick = drLib;
-  $('#drFiles').onchange = async e => {
-    const files = [...e.target.files]; e.target.value = '';
+  box.innerHTML = `<div class="card"><h2>Upload content</h2><p class="muted" style="font-size:13px">Photos and videos go straight to Dropp for the model picked above. Pick many files at once, or drop them here.</p>
+    <div id="drDrop" style="margin-top:8px;border:2px dashed var(--line,#e6d5dc);border-radius:14px;padding:18px;text-align:center"><input type="file" id="drFiles" multiple accept="image/*,video/*"></div><div id="drUp" style="margin-top:10px;display:grid;gap:6px"></div></div>
+    <div class="card" style="margin-top:14px"><div class="row" style="justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2>Library <small class="muted" id="drCount"></small></h2>
+      <div class="stats"><select id="drFold" style="width:auto;margin:0"><option value="">All folders</option></select><select id="drType" style="width:auto;margin:0"><option value="">Photos + videos</option><option value="image">Photos</option><option value="video">Videos</option></select>
+      <button class="btn sm" id="drMk" disabled>Make a link with selected</button><button class="btn sm ghost" id="drArchSel" disabled>Archive selected</button><button class="btn sm ghost" id="drSelAll">Select all</button><button class="btn sm ghost" id="drRef">Refresh</button></div></div>
+      <div id="drLib" class="bgrid" style="padding:10px 0 0;background:none;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))"><p class="muted">Loading…</p></div></div>`;
+  const send = async files => {
     for (const f of files){
       const row = document.createElement('div'); row.className = 'stat'; row.style.justifyContent = 'space-between'; row.innerHTML = `<span>${esc(f.name)}</span><b class="st">waiting…</b>`; $('#drUp').prepend(row);
       const st = row.querySelector('.st'), type = f.type.startsWith('video') ? 'video' : 'image';
@@ -828,95 +869,205 @@ async function drContent(){
     }
     drLib();
   };
+  $('#drFiles').onchange = e => { const f = [...e.target.files]; e.target.value = ''; send(f); };
+  const dz = $('#drDrop'); dz.ondragover = e => { e.preventDefault(); dz.style.background = 'var(--blush)'; }; dz.ondragleave = () => dz.style.background = ''; dz.ondrop = e => { e.preventDefault(); dz.style.background = ''; send([...e.dataTransfer.files].filter(f => /^(image|video)\//.test(f.type))); };
+  $('#drRef').onclick = drLib; $('#drFold').onchange = drLib; $('#drType').onchange = drLib;
+  const picked = () => [...document.querySelectorAll('#drLib input:checked')].map(i => i.value);
+  $('#drSelAll').onclick = () => { const all = [...document.querySelectorAll('#drLib input[type=checkbox]')], on = all.some(i => !i.checked); all.forEach(i => i.checked = on); drSel(); };
+  $('#drMk').onclick = () => { drPre = picked(); drGo('links'); };
+  $('#drArchSel').onclick = async () => { const ids = picked(); if (!ids.length || !confirm('Archive ' + ids.length + ' file(s)? They leave the library.')) return; let bad = 0; for (const id of ids){ const r = await dr('DELETE', '/content/' + id); if (!r.ok) bad++; } toast(bad ? bad + ' could not be archived' : 'Archived'); drLib(); };
+  dr('GET', '/content/folders', { limit:100 }).then(f => { if (f.ok && $('#drFold')) $('#drFold').innerHTML += drRows(f).map(x => `<option value="${esc(x.id)}">${esc(x.name || 'Folder')}</option>`).join(''); });
   drLib();
 }
+function drSel(){ const n = document.querySelectorAll('#drLib input:checked').length; if ($('#drMk')){ $('#drMk').disabled = !n; $('#drArchSel').disabled = !n; $('#drMk').textContent = n ? `Make a link with ${n} selected` : 'Make a link with selected'; } }
 async function drLib(){
   const lib = $('#drLib'); if (!lib) return;
-  const r = await drContentList();
-  if (!r.ok) return lib.innerHTML = `<div class="msg err">${esc(r.msg)}</div>`;
-  const items = drRows(r).filter(x => !x.is_archived); drCache.content = items;
-  lib.innerHTML = items.length ? items.map(x => `<article class="bcard" style="padding:8px">
-    ${x.media && x.media.thumbnail_url ? `<img src="${esc(x.media.thumbnail_url)}" alt="" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;background:var(--blush)">` : `<div style="aspect-ratio:1;border-radius:10px;background:var(--blush);display:grid;place-items:center;font-size:28px">${x.type==='video'?'🎬':'🖼'}</div>`}
-    <small>${esc(x.type)} · ${esc(x.status)} · ${drDate(x.created_at)}</small>
-    <button class="btn sm ghost" data-arch="${esc(x.id)}">Archive</button></article>`).join('') : '<p class="muted">Nothing uploaded yet.</p>';
+  const r = await drContentList($('#drFold').value);
+  if (!r.ok) return lib.innerHTML = drErr(r.msg);
+  const t = $('#drType').value, items = r.rows.filter(x => !x.is_archived && (!t || x.type === t));
+  $('#drCount').textContent = items.length ? '(' + items.length + ')' : '';
+  lib.innerHTML = items.length ? items.map(x => `<article class="bcard" style="padding:8px">${drThumb(x)}
+    <small><label style="display:inline;margin:0;font-weight:400"><input type="checkbox" value="${esc(x.id)}" style="width:auto"> ${esc(x.type)} · ${esc(x.status)}</label><br>${drDate(x.created_at)}</small>
+    <div class="row" style="gap:4px"><button class="btn sm ghost" data-view="${esc(x.id)}" data-kind="${esc(x.type)}">View</button><button class="btn sm ghost" data-dl="${esc(x.id)}">Download</button><button class="btn sm ghost" data-arch="${esc(x.id)}">Archive</button></div></article>`).join('') : '<p class="muted">Nothing here yet.</p>';
+  lib.querySelectorAll('input[type=checkbox]').forEach(i => i.onchange = drSel); drSel();
   lib.querySelectorAll('[data-arch]').forEach(b => b.onclick = async () => { if (!confirm('Archive this file? It leaves the library.')) return; const r = await dr('DELETE', '/content/' + b.dataset.arch); toast(r.ok ? 'Archived' : r.msg); drLib(); });
+  lib.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => { const u = await drSigned(b.dataset.view); if (!u || !(u.url || u.play)) return toast('Not ready yet'); drModal('Preview', b.dataset.kind === 'video' ? `<video src="${esc(u.url || u.play)}" controls autoplay style="width:100%;max-height:66vh;border-radius:12px;background:#000"></video>` : `<img src="${esc(u.url)}" alt="" style="width:100%;max-height:66vh;object-fit:contain;border-radius:12px">`); });
+  lib.querySelectorAll('[data-dl]').forEach(b => b.onclick = async () => { const u = await drSigned(b.dataset.dl); if (!u || !u.url) return toast('Not ready yet'); const a = document.createElement('a'); a.href = u.url; a.download = ''; a.target = '_blank'; a.rel = 'noopener'; a.click(); });
+  drThumbs(lib);
 }
+
+// ----- payment links -----
 async function drLinks(){
   const box = $('#drBody');
   box.innerHTML = `<div class="card"><h2>New payment link</h2><p class="muted" style="font-size:13px">Tick the files to sell, set the price, and you get a link to send.</p>
     <div id="drPick" class="bgrid" style="padding:8px 0;background:none;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));max-height:260px"><p class="muted">Loading content…</p></div>
     <div class="row" style="align-items:flex-end"><div><label for="dPrice">Price</label><input id="dPrice" type="number" min="1" step="0.01" placeholder="20"></div><div><label for="dCur">Currency</label>${drCur()}</div><div><label for="dNote">Tag (who it's for, optional)</label><input id="dNote" placeholder="e.g. Marc, Snap"></div><button class="btn" id="dMake">Create link</button></div>
     <div id="dOut" style="margin-top:10px"></div></div>
-    <div class="card tbl" style="margin-top:14px"><div class="row" style="justify-content:space-between;align-items:center"><h2>Links</h2><button class="btn sm ghost" id="drRefL">Refresh</button></div><div id="drLinkList"><p class="muted">Loading…</p></div></div>`;
-  const c = await drContentList(); const items = c.ok ? drRows(c).filter(x => !x.is_archived && x.status === 'ready') : [];
-  $('#drPick').innerHTML = items.length ? items.map(x => `<label class="bcard" style="padding:6px;cursor:pointer">${x.media && x.media.thumbnail_url ? `<img src="${esc(x.media.thumbnail_url)}" alt="" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">` : `<div style="aspect-ratio:1;border-radius:8px;background:var(--blush);display:grid;place-items:center;font-size:22px">${x.type==='video'?'🎬':'🖼'}</div>`}<span style="font-size:12px"><input type="checkbox" value="${esc(x.id)}" style="width:auto"> ${esc(x.type)}</span></label>`).join('') : `<p class="muted">${c.ok ? 'No ready content yet. Upload some in the Content tab first.' : esc(c.msg)}</p>`;
+    <div class="card tbl" style="margin-top:14px"><div class="row" style="justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2>Links <small class="muted" id="drLCount"></small></h2>
+      <div class="stats"><input id="drLQ" placeholder="Search" style="width:150px;margin:0"><select id="drLFold" style="width:auto;margin:0"><option value="">All folders</option></select><select id="drLAct" style="width:auto;margin:0"><option value="">Active + off</option><option value="true">Active only</option><option value="false">Off only</option></select><button class="btn sm ghost" id="drRefL">Refresh</button></div></div>
+      <div id="drLinkList"><p class="muted">Loading…</p></div>
+      <p class="muted" style="font-size:12px;margin-top:8px">Dropp does not let any outside site rename, re-price, switch off or delete a payment link. To change a price, create a new link.</p></div>`;
+  const c = await drContentList(); const items = c.ok ? c.rows.filter(x => !x.is_archived && x.status === 'ready') : [];
+  $('#drPick').innerHTML = items.length ? items.map(x => `<label class="bcard" style="padding:6px;cursor:pointer">${drThumb(x, 8)}<span style="font-size:12px"><input type="checkbox" value="${esc(x.id)}" ${drPre.includes(x.id)?'checked':''} style="width:auto"> ${esc(x.type)}</span></label>`).join('') : `<p class="muted">${c.ok ? 'No ready content yet. Upload some in the Content tab first.' : esc(c.msg)}</p>`;
+  drPre = []; drThumbs($('#drPick'));
   $('#dMake').onclick = async () => {
     const ids = [...document.querySelectorAll('#drPick input:checked')].map(i => i.value), price = Math.round(Number($('#dPrice').value) * 100);
     if (!ids.length) return toast('Tick at least one file'); if (!(price > 0)) return toast('Set a price');
     $('#dMake').disabled = true;
-    const r = await dr('POST', '/links', null, { content_ids:ids, price, currency_code:$('#dCur').value, metadata:{ source:'unreal-site', by:me.full_name || me.email, tag:$('#dNote').value.trim() || null } });
+    const r = await dr('POST', '/links', null, { content_ids:ids, price, currency_code:$('#dCur').value, metadata:drMeta($('#dNote').value) });
     $('#dMake').disabled = false;
-    if (!r.ok) return $('#dOut').innerHTML = `<div class="msg err">${esc(r.msg)}</div>`;
+    if (!r.ok) return $('#dOut').innerHTML = drErr(r.msg);
     const d = r.data.data || r.data, url = d.copy && d.copy.checkout_url;
     $('#dOut').innerHTML = `<div class="msg ok">Link ready: <b>${esc(url || d.id)}</b> ${url ? '<button class="btn sm" id="dCopy">Copy</button>' : ''}</div>`;
-    if (url) $('#dCopy').onclick = () => drCopy(url);
+    if (url){ $('#dCopy').onclick = () => drCopy(url); drCopy(url); }
     drLinkList();
   };
-  $('#drRefL').onclick = drLinkList; drLinkList();
+  dr('GET', '/links/folders', { limit:100 }).then(f => { if (f.ok && $('#drLFold')) $('#drLFold').innerHTML += drRows(f).map(x => `<option value="${esc(x.id)}">${esc(x.name || 'Folder')} (${x.link_count || 0})</option>`).join(''); });
+  $('#drRefL').onclick = drLinkList; $('#drLFold').onchange = drLinkList; $('#drLAct').onchange = drLinkList; $('#drLQ').oninput = () => drLinkDraw();
+  drLinkList();
 }
+let drLinkRows = [], drLinkStats = {};
 async function drLinkList(){
   const box = $('#drLinkList'); if (!box) return;
-  const r = await dr('GET', '/links', { limit:100 });
-  if (!r.ok) return box.innerHTML = `<div class="msg err">${esc(r.msg)}</div>`;
-  const rows = drRows(r).filter(x => !x.is_archived && (!x.seller || x.seller.id === drPid));
-  box.innerHTML = rows.length ? `<table><thead><tr><th>Link</th><th>Price</th><th>Files</th><th>Created</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(x => `<tr><td>${esc(x.name || x.id)}</td><td class="num">${esc(x.price ? x.price.display : '')}</td><td>${x.contents ? x.contents.count : ''}</td><td>${drDate(x.created_at)}</td><td><span class="pill ${x.is_active?'yes':'no'}">${x.is_active?'active':'off'}</span></td><td><button class="btn sm" data-cp="${esc(x.id)}">Get link to send</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No links yet for this model.</p>';
+  const [r, o] = await Promise.all([drAll('/links', { folder_id:$('#drLFold').value || undefined, is_active:$('#drLAct').value || undefined }), can('dropp.sales') ? drAll('/orders', { status:'paid' }) : { ok:false }]);
+  if (!r.ok) return box.innerHTML = drErr(r.msg);
+  drLinkRows = r.rows.filter(x => !x.is_archived && (!x.seller || x.seller.id === drPid));
+  drLinkStats = {}; if (o.ok) o.rows.forEach(x => { if (!x.link) return; const s = drLinkStats[x.link.id] = drLinkStats[x.link.id] || { n:0, c:{} }; s.n++; s.c[x.amount.currency_code] = (s.c[x.amount.currency_code] || 0) + x.amount.total_cents; });
+  drLinkDraw();
+}
+function drLinkDraw(){
+  const box = $('#drLinkList'); if (!box) return;
+  const q = $('#drLQ').value.trim().toLowerCase(), rows = drLinkRows.filter(x => !q || (x.name || '').toLowerCase().includes(q) || x.id.toLowerCase().includes(q));
+  $('#drLCount').textContent = rows.length ? '(' + rows.length + ')' : '';
+  box.innerHTML = rows.length ? `<table><thead><tr><th>Link</th><th>Price</th><th>Files</th><th>Sold</th><th>Created</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(x => { const s = drLinkStats[x.id]; return `<tr><td>${esc(x.name || x.id)}</td><td class="num">${esc(x.price ? x.price.display : '')}</td><td>${x.contents ? x.contents.count + ' ' + (x.contents.types || []).join('/').toLowerCase() : ''}</td><td class="num">${s ? s.n + ' · ' + Object.entries(s.c).map(([c, v]) => drMoney(v, c)).join(' · ') : '0'}</td><td>${drDate(x.created_at)}</td><td><span class="pill ${x.is_active?'yes':'no'}">${x.is_active?'active':'off'}</span></td><td style="white-space:nowrap"><button class="btn sm" data-cp="${esc(x.id)}">Get link to send</button> ${can('dropp.sales') ? `<button class="btn sm ghost" data-ls="${esc(x.id)}">Sales</button>` : ''}</td></tr>`; }).join('')}</tbody></table>` : '<p class="muted">No links here for this model.</p>';
   box.querySelectorAll('[data-cp]').forEach(b => b.onclick = async () => {
-    const tag = prompt('Who is this link for? (optional, shows up on the sale)') ; if (tag === null) return;
-    const r = await dr('POST', '/links/' + b.dataset.cp + '/copies', null, { metadata:{ source:'unreal-site', by:me.full_name || me.email, tag:tag.trim() || null } });
+    const tag = prompt('Who is this link for? (optional, shows up on the sale)'); if (tag === null) return;
+    const r = await dr('POST', '/links/' + b.dataset.cp + '/copies', null, { metadata:drMeta(tag) });
     if (!r.ok) return toast(r.msg);
-    const d = r.data.data || r.data; drCopy(d.copy.checkout_url);
+    drCopy((r.data.data || r.data).copy.checkout_url);
   });
+  box.querySelectorAll('[data-ls]').forEach(b => b.onclick = () => { drLinkFilter = b.dataset.ls; drGo('sales'); });
 }
+
+// ----- sales -----
+let drOrders = [];
 async function drSales(){
-  const box = $('#drBody'); box.innerHTML = '<p class="muted">Loading…</p>';
-  const r = await dr('GET', '/orders', { limit:100 });
-  if (!r.ok) return box.innerHTML = `<div class="msg err">${esc(r.msg)}</div>`;
-  const rows = drRows(r).filter(x => !x.seller || x.seller.id === drPid), paid = rows.filter(x => x.status === 'paid');
-  const by = {}; paid.forEach(x => { const c = x.amount.currency_code; by[c] = (by[c] || 0) + x.amount.total_cents; });
-  const today = new Date().toDateString(), tdy = paid.filter(x => new Date(x.paid_at || x.created_at).toDateString() === today).length;
-  box.innerHTML = `<div class="tiles"><div class="card tile"><span>Paid orders</span><b>${paid.length}</b></div><div class="card tile"><span>Today</span><b>${tdy}</b></div><div class="card tile"><span>Collected</span><b class="pink">${Object.entries(by).map(([c, v]) => drMoney(v, c)).join(' · ') || drMoney(0)}</b></div></div>
-    <div class="card tbl">${rows.length ? `<table><thead><tr><th>Date</th><th>What</th><th>Type</th><th>For</th><th>Total</th><th>Status</th></tr></thead><tbody>${rows.map(x => `<tr><td>${drDate(x.paid_at || x.created_at)}</td><td>${esc(x.link ? x.link.name || x.link.id : '—')}</td><td>${esc(x.type)}</td><td class="muted">${esc(x.metadata ? [x.metadata.tag, x.metadata.by].filter(Boolean).join(' · ') : '')}</td><td class="num">${esc(x.amount.display_total || drMoney(x.amount.total_cents, x.amount.currency_code))}</td><td><span class="pill ${x.status==='paid'?'yes':'pending'}">${esc(x.status)}</span></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No orders yet for this model.</p>'}</div>`;
+  const box = $('#drBody');
+  box.innerHTML = `<div class="card"><div class="row" style="align-items:flex-end;gap:8px;flex-wrap:wrap"><div><label for="sStat">Status</label><select id="sStat"><option value="">All</option><option value="paid" selected>Paid</option><option value="pending">Pending</option></select></div>
+    <div><label for="sType">Type</label><select id="sType"><option value="">All</option><option value="purchase">Link sale</option><option value="donation">Tip</option><option value="wishlist">Wishlist</option><option value="paid_chat">Paid chat</option></select></div>
+    <div><label for="sFrom">From</label><input type="date" id="sFrom"></div><div><label for="sTo">To</label><input type="date" id="sTo"></div><div><label for="sQ">Search</label><input id="sQ" placeholder="tag, link, who sent it"></div>
+    <label style="margin:0 0 10px"><input type="checkbox" id="sAll" style="width:auto"> All models</label><button class="btn sm ghost" id="sCsv">Export CSV</button></div>
+    ${drLinkFilter ? `<p class="muted" style="font-size:13px;margin-top:8px">Showing one link only. <button class="btn sm ghost" id="sClr">Show all links</button></p>` : ''}</div>
+    <div id="sOut" style="margin-top:14px"><p class="muted">Loading…</p></div>`;
+  const load = async () => {
+    $('#sOut').innerHTML = '<p class="muted">Loading…</p>';
+    const f = $('#sFrom').value, t = $('#sTo').value;
+    const r = await drAll('/orders', { status:$('#sStat').value || undefined, link_id:drLinkFilter || undefined, created_after:f ? new Date(f + 'T00:00:00').toISOString() : undefined, created_before:t ? new Date(t + 'T23:59:59').toISOString() : undefined }, 1000);
+    if (!r.ok) return $('#sOut').innerHTML = drErr(r.msg);
+    drOrders = r.rows; draw();
+  };
+  const rowsNow = () => { const q = $('#sQ').value.trim().toLowerCase(), ty = $('#sType').value, all = $('#sAll').checked; return drOrders.filter(x => (all || !x.seller || x.seller.id === drPid) && (!ty || x.type === ty) && (!q || JSON.stringify([x.metadata, x.link, x.id]).toLowerCase().includes(q))); };
+  const draw = () => {
+    const rows = rowsNow(), paid = rows.filter(x => x.status === 'paid'), today = new Date().toDateString(), wk = Date.now() - 7 * 864e5;
+    const when = x => new Date(x.paid_at || x.created_at), tot = x => [x.amount.currency_code, x.amount.total_cents];
+    const grp = key => { const g = {}; paid.forEach(x => { const k = key(x) || '—'; (g[k] = g[k] || []).push(x); }); return Object.entries(g).sort((a, b) => b[1].length - a[1].length).slice(0, 12); };
+    const tbl = (title, g) => `<div class="card tbl"><h2>${title}</h2>${g.length ? `<table><tbody>${g.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v.length}</td><td class="num">${drSum(v, tot)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing yet.</p>'}</div>`;
+    $('#sOut').innerHTML = `<div class="tiles"><div class="card tile"><span>Paid orders</span><b>${paid.length}</b></div><div class="card tile"><span>Today</span><b>${drSum(paid.filter(x => when(x).toDateString() === today), tot)}</b></div><div class="card tile"><span>Last 7 days</span><b>${drSum(paid.filter(x => when(x) > wk), tot)}</b></div><div class="card tile"><span>Collected</span><b class="pink">${drSum(paid, tot)}</b></div></div>
+      <div class="two" style="margin-bottom:14px">${tbl('By who sent the link', grp(x => x.metadata && x.metadata.by))}${tbl('By link', grp(x => x.link && (x.link.name || x.link.id)))}</div>
+      <div class="card tbl">${rows.length ? `<table><thead><tr><th>Date</th><th>Model</th><th>What</th><th>Type</th><th>For</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(x => `<tr><td>${drDate(x.paid_at || x.created_at)}</td><td>${esc(x.seller ? x.seller.display_name : '')}</td><td>${esc(x.link ? x.link.name || x.link.id : '—')}</td><td>${esc(x.type)}</td><td class="muted">${esc(x.metadata ? [x.metadata.tag, x.metadata.by].filter(Boolean).join(' · ') : '')}</td><td class="num">${esc(x.amount.display_total || drMoney(x.amount.total_cents, x.amount.currency_code))}</td><td><span class="pill ${x.status==='paid'?'yes':'pending'}">${esc(x.status)}</span></td><td><button class="btn sm ghost" data-ord="${esc(x.id)}">Details</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No orders match.</p>'}</div>`;
+    document.querySelectorAll('#sOut [data-ord]').forEach(b => b.onclick = async () => { const m = drModal('Order', '<p class="muted">Loading…</p>'); const r = await dr('GET', '/orders/' + b.dataset.ord); m.innerHTML = r.ok ? drKV(r.data.data || r.data) : drErr(r.msg); });
+  };
+  ['sStat','sFrom','sTo'].forEach(i => $('#' + i).onchange = load); $('#sType').onchange = draw; $('#sAll').onchange = draw; $('#sQ').oninput = draw;
+  if ($('#sClr')) $('#sClr').onclick = () => { drLinkFilter = null; drSales(); };
+  $('#sCsv').onclick = () => drCsv('dropp-sales', ['date','model','link','type','status','total','currency','tag','sent by','order id'], rowsNow().map(x => [x.paid_at || x.created_at, x.seller ? x.seller.display_name : '', x.link ? x.link.name || x.link.id : '', x.type, x.status, (x.amount.total_cents / 100).toFixed(2), x.amount.currency_code, x.metadata ? x.metadata.tag : '', x.metadata ? x.metadata.by : '', x.id]));
+  load();
 }
+// any Dropp object as a readable two-column list
+function drKV(o, pre = ''){
+  return '<table><tbody>' + (function walk(o, pre){ return Object.entries(o || {}).map(([k, v]) => v && typeof v === 'object' && !Array.isArray(v) ? walk(v, pre + k + ' › ') : `<tr><td class="muted" style="white-space:nowrap">${esc(pre + k)}</td><td style="word-break:break-word">${esc(v === null ? '—' : Array.isArray(v) ? v.map(x => typeof x === 'object' ? JSON.stringify(x) : x).join(', ') : /_at$/.test(k) ? drDate(v) : /_cents$/.test(k) ? (v / 100).toFixed(2) : v)}</td></tr>`).join(''); })(o, pre) + '</tbody></table>';
+}
+
+// ----- wallet -----
 async function drWallet(){
-  const box = $('#drBody'); box.innerHTML = '<p class="muted">Loading…</p>';
-  const r = await dr('GET', '/transactions', { limit:100 });
-  if (!r.ok) return box.innerHTML = `<div class="msg err">${esc(r.msg)}</div>`;
-  const rows = drRows(r), by = {}; rows.filter(x => !x.refunded).forEach(x => { const c = x.amount.currency_code; by[c] = (by[c] || 0) + x.amount.net_cents; });
-  box.innerHTML = `<div class="tiles"><div class="card tile"><span>Net earned (all models)</span><b class="pink">${Object.entries(by).map(([c, v]) => drMoney(v, c)).join(' · ') || drMoney(0)}</b></div><div class="card tile"><span>Records</span><b>${rows.length}</b></div></div>
-    <div class="card tbl">${rows.length ? `<table><thead><tr><th>Date</th><th>Type</th><th>Goes to</th><th>Net</th><th></th></tr></thead><tbody>${rows.map(x => `<tr><td>${drDate(x.created_at)}</td><td>${esc(x.type)}</td><td>${esc(x.recipient ? x.recipient.display_name : '')}</td><td class="num">${esc(x.amount.display || drMoney(x.amount.net_cents, x.amount.currency_code))}</td><td>${x.refunded ? '<span class="pill no">refunded</span>' : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No earnings recorded yet.</p>'}</div>
-    <p class="muted" style="font-size:13px;margin-top:10px">Payouts (moving money out) are done on Dropp itself.</p>`;
+  const box = $('#drBody');
+  box.innerHTML = `<div class="card"><div class="row" style="align-items:flex-end;gap:8px;flex-wrap:wrap"><div><label for="wType">Type</label><select id="wType"><option value="">All</option><option value="REVENUE">Sales</option><option value="AGENCY_REFERRER">Agency referral</option><option value="CREATOR_REFERRER">Creator referral</option></select></div>
+    <div><label for="wFrom">From</label><input type="date" id="wFrom"></div><div><label for="wTo">To</label><input type="date" id="wTo"></div><label style="margin:0 0 10px"><input type="checkbox" id="wOne" style="width:auto"> Only the model picked above</label><button class="btn sm ghost" id="wCsv">Export CSV</button></div></div>
+    <div id="wOut" style="margin-top:14px"><p class="muted">Loading…</p></div>
+    <p class="muted" style="font-size:13px;margin-top:10px">Withdrawing the money (payouts) and refunds can only be done on Dropp itself; Dropp does not open them to outside sites.</p>`;
+  let rows = [];
+  const load = async () => {
+    $('#wOut').innerHTML = '<p class="muted">Loading…</p>';
+    const f = $('#wFrom').value, t = $('#wTo').value;
+    const r = await drAll('/transactions', { type:$('#wType').value || undefined, profile_id:$('#wOne').checked ? drPid : undefined, created_after:f ? new Date(f + 'T00:00:00').toISOString() : undefined, created_before:t ? new Date(t + 'T23:59:59').toISOString() : undefined }, 1000);
+    if (!r.ok) return $('#wOut').innerHTML = drErr(r.msg);
+    rows = r.rows; const live = rows.filter(x => !x.refunded), net = x => [x.amount.currency_code, x.amount.net_cents], wk = Date.now() - 7 * 864e5, mo = Date.now() - 30 * 864e5;
+    $('#wOut').innerHTML = `<div class="tiles"><div class="card tile"><span>Net earned</span><b class="pink">${drSum(live, net)}</b></div><div class="card tile"><span>Last 7 days</span><b>${drSum(live.filter(x => new Date(x.created_at) > wk), net)}</b></div><div class="card tile"><span>Last 30 days</span><b>${drSum(live.filter(x => new Date(x.created_at) > mo), net)}</b></div><div class="card tile"><span>Refunded</span><b>${rows.length - live.length}</b></div></div>
+      <div class="card tbl">${rows.length ? `<table><thead><tr><th>Date</th><th>Type</th><th>Model</th><th>Goes to</th><th>Net</th><th></th><th></th></tr></thead><tbody>${rows.map(x => `<tr><td>${drDate(x.created_at)}</td><td>${esc(x.type)}</td><td>${esc(x.seller ? x.seller.display_name : '')}</td><td>${esc(x.recipient ? x.recipient.display_name : '')}</td><td class="num">${esc(x.amount.display || drMoney(x.amount.net_cents, x.amount.currency_code))}</td><td>${x.refunded ? '<span class="pill no">refunded</span>' : ''}</td><td><button class="btn sm ghost" data-trx="${esc(x.id)}">Details</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No earnings recorded yet.</p>'}</div>`;
+    document.querySelectorAll('#wOut [data-trx]').forEach(b => b.onclick = async () => { const m = drModal('Transaction', '<p class="muted">Loading…</p>'); const r = await dr('GET', '/transactions/' + b.dataset.trx); m.innerHTML = r.ok ? drKV(r.data.data || r.data) : drErr(r.msg); });
+  };
+  ['wType','wFrom','wTo','wOne'].forEach(i => $('#' + i).onchange = load);
+  $('#wCsv').onclick = () => drCsv('dropp-wallet', ['date','type','model','goes to','net','currency','refunded','order id','id'], rows.map(x => [x.created_at, x.type, x.seller ? x.seller.display_name : '', x.recipient ? x.recipient.display_name : '', (x.amount.net_cents / 100).toFixed(2), x.amount.currency_code, x.refunded ? 'yes' : '', x.order ? x.order.id : '', x.id]));
+  load();
 }
+
+// ----- tip pages + wishlists -----
 async function drTips(){
   const box = $('#drBody');
   box.innerHTML = `<div class="two"><div class="card"><h2>New tip page</h2><label for="tTitle">Title</label><input id="tTitle" placeholder="Buy me flowers"><label for="tDesc">Description (optional)</label><input id="tDesc">
-      <div class="row"><div><label for="tPre">Suggested amounts</label><input id="tPre" value="5, 10, 20, 50"></div><div><label for="tCur">Currency</label>${drCur('tCur')}</div></div><button class="btn" id="tMake">Create tip page</button><div id="tOut" style="margin-top:10px"></div></div>
-    <div class="card"><h2>New wishlist</h2><label for="wName">Name</label><input id="wName" placeholder="Birthday wishlist"><label for="wItems">Items, one per line: name, price</label><textarea id="wItems" rows="4" placeholder="Camera lens, 299&#10;Tripod, 89"></textarea>
+      <div class="row"><div><label for="tPre">Suggested amounts</label><input id="tPre" value="5, 10, 20, 50"></div><div><label for="tCur">Currency</label>${drCur('tCur')}</div></div>
+      <div class="row"><div><label for="tMin">Smallest tip</label><input id="tMin" type="number" min="1" value="1"></div><div><label for="tMax">Biggest tip (empty = no limit)</label><input id="tMax" type="number" min="1"></div></div><button class="btn" id="tMake">Create tip page</button><div id="tOut" style="margin-top:10px"></div></div>
+    <div class="card"><h2>New wishlist</h2><label for="wName">Name</label><input id="wName" placeholder="Birthday wishlist"><label for="wDesc">Description (optional)</label><input id="wDesc"><label for="wItems">Items, one per line: name, price, link (optional)</label><textarea id="wItems" rows="4" placeholder="Camera lens, 299, https://amazon.com/dp/...&#10;Tripod, 89"></textarea>
       <div class="row"><div><label for="wCur">Currency</label>${drCur('wCur')}</div></div><button class="btn" id="wMake">Create wishlist</button><div id="wOut" style="margin-top:10px"></div></div></div>
-    <div class="card tbl" style="margin-top:14px"><h2>Tip pages</h2><div id="tList"><p class="muted">Loading…</p></div></div>
-    <div class="card tbl" style="margin-top:14px"><h2>Wishlists</h2><div id="wList"><p class="muted">Loading…</p></div></div>`;
-  const meta = () => ({ source:'unreal-site', by:me.full_name || me.email });
-  const show = (el, r) => { if (!r.ok) return el.innerHTML = `<div class="msg err">${esc(r.msg)}</div>`; const d = r.data.data || r.data, url = d.copy && d.copy.checkout_url; el.innerHTML = `<div class="msg ok">Ready: <b>${esc(url || d.id)}</b></div>`; if (url) drCopy(url); drTipLists(); };
-  $('#tMake').onclick = async () => { const pre = $('#tPre').value.split(',').map(x => Math.round(Number(x.trim()) * 100)).filter(x => x > 0).slice(0, 10); show($('#tOut'), await dr('POST', '/donation-links', null, { profile_id:drPid, title:$('#tTitle').value.trim() || undefined, description:$('#tDesc').value.trim() || undefined, preset_amounts_cents:pre.length ? pre : undefined, currency_code:$('#tCur').value, metadata:meta() })); };
-  $('#wMake').onclick = async () => { const name = $('#wName').value.trim(); if (!name) return toast('Give the wishlist a name'); const items = $('#wItems').value.split('\n').map(l => l.split(',')).filter(p => p[0] && p[0].trim() && Number(p[1]) > 0).map(p => ({ name:p[0].trim(), target_price_cents:Math.round(Number(p[1]) * 100) })); show($('#wOut'), await dr('POST', '/wishlists', null, { profile_id:drPid, name, currency_code:$('#wCur').value, items, metadata:meta() })); };
+    <div class="card tbl" style="margin-top:14px"><div class="row" style="justify-content:space-between;align-items:center"><h2>Tip pages</h2><label style="margin:0"><input type="checkbox" id="tOff" style="width:auto"> Show switched off</label></div><div id="tList"><p class="muted">Loading…</p></div></div>
+    <div class="card tbl" style="margin-top:14px"><h2>Wishlists</h2><div id="wList"><p class="muted">Loading…</p></div></div>
+    <p class="muted" style="font-size:12px;margin-top:8px">Dropp does not let outside sites edit a tip page or wishlist after it is made (only switch off / archive, and add wishlist items). To change one, switch it off and create a new one.</p>`;
+  const show = (el, r) => { if (!r.ok) return el.innerHTML = drErr(r.msg); const d = r.data.data || r.data, url = d.copy && d.copy.checkout_url; el.innerHTML = `<div class="msg ok">Ready: <b>${esc(url || d.id)}</b></div>`; if (url) drCopy(url); drTipLists(); };
+  const cents = v => Math.round(Number(v) * 100);
+  $('#tMake').onclick = async () => { const pre = $('#tPre').value.split(',').map(x => cents(x.trim())).filter(x => x > 0).slice(0, 10); show($('#tOut'), await dr('POST', '/donation-links', null, { profile_id:drPid, title:$('#tTitle').value.trim() || undefined, description:$('#tDesc').value.trim() || undefined, preset_amounts_cents:pre.length ? pre : undefined, min_amount_cents:cents($('#tMin').value) > 0 ? cents($('#tMin').value) : undefined, max_amount_cents:cents($('#tMax').value) > 0 ? cents($('#tMax').value) : undefined, currency_code:$('#tCur').value, metadata:drMeta() })); };
+  $('#wMake').onclick = async () => { const name = $('#wName').value.trim(); if (!name) return toast('Give the wishlist a name'); const items = $('#wItems').value.split('\n').map(l => l.split(',').map(p => p.trim())).filter(p => p[0] && Number(p[1]) > 0).slice(0, 50).map(p => ({ name:p[0], target_price_cents:cents(p[1]), amazon_url:/^https?:\/\//.test(p[2] || '') ? p[2] : undefined })); show($('#wOut'), await dr('POST', '/wishlists', null, { profile_id:drPid, name, description:$('#wDesc').value.trim() || undefined, currency_code:$('#wCur').value, items, metadata:drMeta() })); };
+  $('#tOff').onchange = drTipLists;
   drTipLists();
 }
 async function drTipLists(){
   const mine = x => !x.seller || x.seller.id === drPid;
-  const [t, w] = await Promise.all([dr('GET', '/donation-links', { limit:100 }), dr('GET', '/wishlists', { limit:100 })]);
-  const copyBtn = (kind, id) => `<button class="btn sm" data-k="${kind}" data-id="${esc(id)}">Get link to send</button>`;
-  if ($('#tList')) $('#tList').innerHTML = !t.ok ? `<div class="msg err">${esc(t.msg)}</div>` : drRows(t).filter(mine).length ? `<table><tbody>${drRows(t).filter(mine).map(x => `<tr><td>${esc(x.title || 'Tip page')}</td><td>${drDate(x.created_at)}</td><td><span class="pill ${x.is_active?'yes':'no'}">${x.is_active?'active':'off'}</span></td><td>${copyBtn('donation-links', x.id)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None yet.</p>';
-  if ($('#wList')) $('#wList').innerHTML = !w.ok ? `<div class="msg err">${esc(w.msg)}</div>` : drRows(w).filter(x => mine(x) && !x.is_archived).length ? `<table><tbody>${drRows(w).filter(x => mine(x) && !x.is_archived).map(x => `<tr><td>${esc(x.name)}</td><td>${x.item_count} items</td><td>${drDate(x.created_at)}</td><td>${copyBtn('wishlists', x.id)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None yet.</p>';
-  document.querySelectorAll('#drBody [data-k]').forEach(b => b.onclick = async () => { const r = await dr('POST', '/' + b.dataset.k + '/' + b.dataset.id + '/copies', null, { metadata:{ source:'unreal-site', by:me.full_name || me.email } }); if (!r.ok) return toast(r.msg); drCopy((r.data.data || r.data).copy.checkout_url); });
+  const [t, w] = await Promise.all([drAll('/donation-links'), drAll('/wishlists')]);
+  if (!$('#tList')) return;
+  const tr = t.ok ? t.rows.filter(x => mine(x) && ($('#tOff').checked || x.is_active)) : [], wr = w.ok ? w.rows.filter(x => mine(x) && !x.is_archived) : [];
+  $('#tList').innerHTML = !t.ok ? drErr(t.msg) : tr.length ? `<table><thead><tr><th>Tip page</th><th>Amounts</th><th>Created</th><th>Status</th><th></th></tr></thead><tbody>${tr.map(x => `<tr><td>${esc(x.title || 'Tip page')}${x.description ? `<br><small class="muted">${esc(x.description)}</small>` : ''}</td><td class="num">${x.amounts ? (x.amounts.preset_cents || []).map(c => drMoney(c, x.amounts.currency_code)).join(', ') : ''}</td><td>${drDate(x.created_at)}</td><td><span class="pill ${x.is_active?'yes':'no'}">${x.is_active?'active':'off'}</span></td><td style="white-space:nowrap">${x.is_active ? `<button class="btn sm" data-k="donation-links" data-id="${esc(x.id)}">Get link to send</button> <button class="btn sm ghost" data-off="${esc(x.id)}">Switch off</button>` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None yet.</p>';
+  $('#wList').innerHTML = !w.ok ? drErr(w.msg) : wr.length ? `<table><thead><tr><th>Wishlist</th><th>Items</th><th>Created</th><th></th></tr></thead><tbody>${wr.map(x => `<tr><td>${esc(x.name)}${x.description ? `<br><small class="muted">${esc(x.description)}</small>` : ''}</td><td>${x.item_count}</td><td>${drDate(x.created_at)}</td><td style="white-space:nowrap"><button class="btn sm" data-k="wishlists" data-id="${esc(x.id)}">Get link to send</button> <button class="btn sm ghost" data-wl="${esc(x.id)}">Items</button> <button class="btn sm ghost" data-warch="${esc(x.id)}">Archive</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">None yet.</p>';
+  const body = $('#drBody');
+  body.querySelectorAll('[data-k]').forEach(b => b.onclick = async () => { const tag = prompt('Who is this link for? (optional)'); if (tag === null) return; const r = await dr('POST', '/' + b.dataset.k + '/' + b.dataset.id + '/copies', null, { metadata:drMeta(tag) }); if (!r.ok) return toast(r.msg); drCopy((r.data.data || r.data).copy.checkout_url); });
+  body.querySelectorAll('[data-off]').forEach(b => b.onclick = async () => { if (!confirm('Switch this tip page off? It stops taking tips and cannot be switched back on from here.')) return; const r = await dr('DELETE', '/donation-links/' + b.dataset.off); toast(r.ok ? 'Switched off' : r.msg); drTipLists(); });
+  body.querySelectorAll('[data-warch]').forEach(b => b.onclick = async () => { if (!confirm('Archive this wishlist? It stops taking gifts.')) return; const r = await dr('DELETE', '/wishlists/' + b.dataset.warch); toast(r.ok ? 'Archived' : r.msg); drTipLists(); });
+  body.querySelectorAll('[data-wl]').forEach(b => b.onclick = () => drWishItems(b.dataset.wl));
+}
+async function drWishItems(id){
+  const m = drModal('Wishlist items', '<p class="muted">Loading…</p>');
+  const r = await dr('GET', '/wishlists/' + id); if (!r.ok) return m.innerHTML = drErr(r.msg);
+  const w = r.data.data || r.data, items = w.items || [];
+  m.innerHTML = `${items.length ? `<table><thead><tr><th>Item</th><th>Price</th><th>Funded</th><th></th></tr></thead><tbody>${items.map(x => `<tr><td>${x.amazon_url ? `<a href="${esc(x.amazon_url)}" target="_blank" rel="noopener" style="color:var(--pink)">${esc(x.name)}</a>` : esc(x.name)}</td><td class="num">${drMoney(x.target_price_cents, x.currency_code)}</td><td class="num">${drMoney(x.funded_amount_cents, x.currency_code)} (${x.target_price_cents ? Math.round(x.funded_amount_cents / x.target_price_cents * 100) : 0}%)</td><td>${x.is_funded ? '<span class="pill yes">funded</span>' : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No items yet.</p>'}
+    <h2 style="margin-top:16px">Add an item</h2><div class="row" style="align-items:flex-end"><div><label for="wiN">Name</label><input id="wiN"></div><div><label for="wiP">Price</label><input id="wiP" type="number" min="1" step="0.01"></div><div><label for="wiU">Link (optional)</label><input id="wiU" placeholder="https://"></div><button class="btn" id="wiAdd">Add</button></div>`;
+  $('#wiAdd').onclick = async () => { const name = $('#wiN').value.trim(), p = Math.round(Number($('#wiP').value) * 100), u = $('#wiU').value.trim(); if (!name || !(p > 0)) return toast('Name and price needed'); const r = await dr('POST', '/wishlists/' + id + '/items', null, { name, target_price_cents:p, amazon_url:/^https?:\/\//.test(u) ? u : undefined }); if (!r.ok) return toast(r.msg); toast('Item added'); drWishItems(id); drTipLists(); };
+}
+
+// ----- account (owner only) -----
+async function drAccount(){
+  const box = $('#drBody'); box.innerHTML = '<p class="muted">Loading…</p>';
+  const [me_, cr, wh] = await Promise.all([dr('GET', '/me'), dr('GET', '/creators'), dr('GET', '/webhooks/endpoints')]);
+  const m = me_.ok ? (me_.data.data || me_.data) : null;
+  box.innerHTML = `<div class="two"><div class="card"><h2>Connection</h2>${m ? `<table><tbody><tr><td class="muted">Agency</td><td>${esc(m.agency ? m.agency.name : '—')}</td></tr><tr><td class="muted">Key</td><td>${esc(m.key ? m.key.prefix + '… (' + m.key.mode + ')' : '—')}</td></tr><tr><td class="muted">Allowed</td><td style="font-size:12px">${esc(m.key ? (m.key.scopes || []).join(', ') : '')}</td></tr></tbody></table>` : drErr(me_.msg)}</div>
+    <div class="card"><h2>Add a model</h2><p class="muted" style="font-size:13px">Creates her creator profile in your agency (100% to the agency) and emails her an invite. She must still pass Dropp's ID check before selling.</p>
+      <label for="acE">Her email</label><input id="acE" type="email"><div class="row"><div><label for="acF">First name</label><input id="acF"></div><div><label for="acL">Last name</label><input id="acL"></div></div><button class="btn" id="acAdd">Add model and send invite</button><div id="acOut" style="margin-top:10px"></div></div></div>
+    <div class="card tbl" style="margin-top:14px"><h2>Models</h2>${cr.ok ? `<table><thead><tr><th>Name</th><th>ID check</th><th>Can sell</th><th></th></tr></thead><tbody>${drRows(cr).map(x => `<tr><td>${esc(x.display_name)}</td><td>${esc(x.kyc ? x.kyc.status : '—')}</td><td><span class="pill ${x.kyc && x.kyc.can_sell ? 'yes' : 'no'}">${x.kyc && x.kyc.can_sell ? 'yes' : 'no'}</span></td><td class="muted">${x.is_self ? 'agency account (cannot own links)' : ''}</td></tr>`).join('')}</tbody></table>` : drErr(cr.msg)}</div>
+    <div class="card tbl" style="margin-top:14px"><h2>Webhooks (read only)</h2>${wh.ok ? (drRows(wh).length ? `<table><thead><tr><th>Sends to</th><th>Events</th><th>Last sent</th><th>Fails</th><th>Status</th></tr></thead><tbody>${drRows(wh).map(x => `<tr><td style="word-break:break-all">${esc(x.url)}</td><td style="font-size:12px">${esc((x.events || []).join(', '))}</td><td>${drDate(x.last_triggered_at)}</td><td>${x.failure_count || 0}</td><td><span class="pill ${x.is_active?'yes':'no'}">${x.is_active?'active':'off'}</span></td></tr>`).join('')}</tbody></table>` : '<p class="muted">None.</p>') : drErr(wh.msg)}</div>`;
+  $('#acAdd').onclick = async () => {
+    const email = $('#acE').value.trim(), first_name = $('#acF').value.trim(), last_name = $('#acL').value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(email) || !first_name) return toast('Email and first name needed');
+    if (!confirm(`Create a Dropp creator profile for ${first_name} ${last_name} and email an invite to ${email}?`)) return;
+    const r = await dr('POST', '/agency/creators', null, { email, first_name, last_name });
+    $('#acOut').innerHTML = r.ok ? `<div class="msg ok">Done. She is in the model list now.</div>` : drErr(r.msg);
+    if (r.ok) droppView();
+  };
 }
 
 // ---------- team to-do (staff) ----------

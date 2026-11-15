@@ -374,7 +374,7 @@ let me = null, settings = {}, tab = 'personas';
 const PERMS = [
   { k:'team', l:'✅ Team to-do', sub:[['team:Before posting','Before posting'],['team:Daily posting','Daily posting'],['team:Rules','Rules']] },
   { k:'sms', l:'📱 SMS phone', sub:[] },
-  { k:'dropp', l:'💸 Dropp', sub:[] },
+  { k:'dropp', l:'💸 Dropp', sub:[['dropp.links','Links'],['dropp.content','Content'],['dropp.sales','Sales'],['dropp.wallet','Wallet'],['dropp.extras','Tips & wishlists']] },
   { k:'personas', l:'🎀 Personas', sub:[] },
   { k:'docs', l:'📚 Docs', sub:[] },
   { k:'bot', l:'🤖 AI chatbot', sub:[['bot.sms','SMS'],['bot.of','OnlyFans'],['bot.telegram','Telegram'],['bot.billing','Billing']] },
@@ -411,7 +411,7 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Payment links, content, sales and wallet. The real Dropp, inside the site.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t);
@@ -771,12 +771,152 @@ async function membersView(){
   });
 }
 
-// ---------- Dropp, embedded ----------
-function droppView(){
-  const url = 'https://app.dropp.fans/en/';
-  $('#view').innerHTML = `<div class="smstop"><span class="muted" style="font-size:13px">If the page stays blank or keeps asking you to log in, open it in its own tab.</span><div class="stats"><button class="btn sm ghost" id="dReload">Reload</button><a class="btn sm" href="${url}" target="_blank" rel="noopener">Open Dropp in a new tab ↗</a></div></div>
-    <iframe id="droppFrame" src="${url}" title="Dropp" allow="clipboard-write; clipboard-read; fullscreen" style="width:100%;height:calc(100vh - 230px);min-height:560px;border:1px solid var(--line);border-radius:18px;background:#fff;display:block"></iframe>`;
-  $('#dReload').onclick = () => { const f = $('#droppFrame'); f.src = url; };
+// ---------- Dropp (through its API, key stays on the server) ----------
+let drTab = 'links', drCreators = [], drPid = null, drCache = {};
+async function dr(method, path, query, body){
+  const { data, error } = await sb.functions.invoke('dropp', { body:{ method, path, query, body, idem: method === 'POST' ? crypto.randomUUID() : undefined } });
+  if (error){ let m = error.message; try { m = (await error.context.json()).error || m; } catch(e){} return { ok:false, msg:m }; }
+  if (data.error) return { ok:false, msg:data.error };
+  if (!data.ok) return { ok:false, msg:(data.data && data.data.error && data.data.error.message) || ('Dropp said ' + data.status) };
+  return { ok:true, data:data.data };
+}
+const drRows = r => (r.data && (r.data.data || r.data)) || [];
+const drDate = d => d ? new Date(d).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '—';
+const drMoney = (cents, cur) => { try { return new Intl.NumberFormat(undefined, { style:'currency', currency:cur || 'EUR' }).format((cents || 0) / 100); } catch(e){ return ((cents||0)/100).toFixed(2) + ' ' + (cur||''); } };
+const drCopy = t => navigator.clipboard.writeText(t).then(() => toast('Link copied'), () => prompt('Copy this link:', t));
+const drCur = (id='dCur') => `<select id="${id}"><option>EUR</option><option>USD</option><option>CAD</option><option>GBP</option></select>`;
+async function droppView(){
+  const v = $('#view');
+  const tabs = [['links','🔗 Links','dropp.links'],['content','🖼 Content','dropp.content'],['sales','💰 Sales','dropp.sales'],['wallet','👛 Wallet','dropp.wallet'],['tips','🎁 Tips & wishlists','dropp.extras']].filter(t => can(t[2]));
+  if (!tabs.length) return v.innerHTML = '<div class="card empty">Nothing in Dropp is shared with you yet.</div>';
+  if (!tabs.some(t => t[0] === drTab)) drTab = tabs[0][0];
+  v.innerHTML = `<div class="smstop"><div class="stats"><div class="cfilt" id="drTabs" style="padding:0;border:0">${tabs.map(t => `<button data-t="${t[0]}" class="${t[0]===drTab?'on':''}">${t[1]}</button>`).join('')}</div></div>
+    <div class="stats"><label for="drWho" style="margin:0;font-size:13px">Model</label><select id="drWho" style="width:auto;margin:0"><option>Loading…</option></select><a class="btn sm ghost" href="https://app.dropp.fans/en/" target="_blank" rel="noopener">Open Dropp ↗</a></div></div>
+    <div id="drBody"><p class="muted">Loading…</p></div>`;
+  document.querySelectorAll('#drTabs button').forEach(b => b.onclick = () => { drTab = b.dataset.t; document.querySelectorAll('#drTabs button').forEach(x => x.classList.toggle('on', x === b)); drDraw(); });
+  const c = await dr('GET', '/creators');
+  if (!c.ok) return $('#drBody').innerHTML = `<div class="msg err">${esc(c.msg)}</div>`;
+  drCreators = drRows(c).filter(x => !x.is_self);
+  if (!drCreators.length) return $('#drBody').innerHTML = '<div class="card empty">No model in your Dropp agency yet. Add one in Dropp → Creators first.</div>';
+  if (!drCreators.some(x => x.id === drPid)) drPid = drCreators[0].id;
+  $('#drWho').innerHTML = drCreators.map(x => `<option value="${esc(x.id)}" ${x.id===drPid?'selected':''}>${esc(x.display_name)}</option>`).join('');
+  $('#drWho').onchange = e => { drPid = e.target.value; drCache = {}; drDraw(); };
+  drDraw();
+}
+function drDraw(){ ({ links:drLinks, content:drContent, sales:drSales, wallet:drWallet, tips:drTips })[drTab](); }
+async function drContentList(){
+  let r = await dr('GET', '/content', { limit:100, profile_id:drPid });
+  if (!r.ok) r = await dr('GET', '/content', { limit:100 });
+  return r;
+}
+async function drContent(){
+  const box = $('#drBody');
+  box.innerHTML = `<div class="card"><h2>Upload content</h2><p class="muted" style="font-size:13px">Photos and videos go straight to Dropp for the model picked above. You can pick many files at once.</p>
+    <input type="file" id="drFiles" multiple accept="image/*,video/*" style="margin-top:8px"><div id="drUp" style="margin-top:10px;display:grid;gap:6px"></div></div>
+    <div class="card" style="margin-top:14px"><div class="row" style="justify-content:space-between;align-items:center"><h2>Library</h2><button class="btn sm ghost" id="drRef">Refresh</button></div><div id="drLib" class="bgrid" style="padding:10px 0 0;background:none;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))"><p class="muted">Loading…</p></div></div>`;
+  $('#drRef').onclick = drLib;
+  $('#drFiles').onchange = async e => {
+    const files = [...e.target.files]; e.target.value = '';
+    for (const f of files){
+      const row = document.createElement('div'); row.className = 'stat'; row.style.justifyContent = 'space-between'; row.innerHTML = `<span>${esc(f.name)}</span><b class="st">waiting…</b>`; $('#drUp').prepend(row);
+      const st = row.querySelector('.st'), type = f.type.startsWith('video') ? 'video' : 'image';
+      const u = await dr('POST', '/content/upload-url', null, { type, profile_id:drPid });
+      if (!u.ok){ st.textContent = 'failed: ' + u.msg; row.classList.add('bad'); continue; }
+      const url = (u.data.data || u.data).upload_url;
+      const done = await new Promise(res => { const x = new XMLHttpRequest(); x.open('POST', url); x.upload.onprogress = p => { if (p.lengthComputable) st.textContent = Math.round(p.loaded / p.total * 100) + '%'; }; x.onload = () => res(x.status >= 200 && x.status < 300); x.onerror = () => res(false); const fd = new FormData(); fd.append('file', f, f.name); x.send(fd); });
+      st.textContent = done ? 'uploaded ✓' : 'upload failed'; if (!done) row.classList.add('bad');
+    }
+    drLib();
+  };
+  drLib();
+}
+async function drLib(){
+  const lib = $('#drLib'); if (!lib) return;
+  const r = await drContentList();
+  if (!r.ok) return lib.innerHTML = `<div class="msg err">${esc(r.msg)}</div>`;
+  const items = drRows(r).filter(x => !x.is_archived); drCache.content = items;
+  lib.innerHTML = items.length ? items.map(x => `<article class="bcard" style="padding:8px">
+    ${x.media && x.media.thumbnail_url ? `<img src="${esc(x.media.thumbnail_url)}" alt="" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;background:var(--blush)">` : `<div style="aspect-ratio:1;border-radius:10px;background:var(--blush);display:grid;place-items:center;font-size:28px">${x.type==='video'?'🎬':'🖼'}</div>`}
+    <small>${esc(x.type)} · ${esc(x.status)} · ${drDate(x.created_at)}</small>
+    <button class="btn sm ghost" data-arch="${esc(x.id)}">Archive</button></article>`).join('') : '<p class="muted">Nothing uploaded yet.</p>';
+  lib.querySelectorAll('[data-arch]').forEach(b => b.onclick = async () => { if (!confirm('Archive this file? It leaves the library.')) return; const r = await dr('DELETE', '/content/' + b.dataset.arch); toast(r.ok ? 'Archived' : r.msg); drLib(); });
+}
+async function drLinks(){
+  const box = $('#drBody');
+  box.innerHTML = `<div class="card"><h2>New payment link</h2><p class="muted" style="font-size:13px">Tick the files to sell, set the price, and you get a link to send.</p>
+    <div id="drPick" class="bgrid" style="padding:8px 0;background:none;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));max-height:260px"><p class="muted">Loading content…</p></div>
+    <div class="row" style="align-items:flex-end"><div><label for="dPrice">Price</label><input id="dPrice" type="number" min="1" step="0.01" placeholder="20"></div><div><label for="dCur">Currency</label>${drCur()}</div><div><label for="dNote">Tag (who it's for, optional)</label><input id="dNote" placeholder="e.g. Marc, Snap"></div><button class="btn" id="dMake">Create link</button></div>
+    <div id="dOut" style="margin-top:10px"></div></div>
+    <div class="card tbl" style="margin-top:14px"><div class="row" style="justify-content:space-between;align-items:center"><h2>Links</h2><button class="btn sm ghost" id="drRefL">Refresh</button></div><div id="drLinkList"><p class="muted">Loading…</p></div></div>`;
+  const c = await drContentList(); const items = c.ok ? drRows(c).filter(x => !x.is_archived && x.status === 'ready') : [];
+  $('#drPick').innerHTML = items.length ? items.map(x => `<label class="bcard" style="padding:6px;cursor:pointer">${x.media && x.media.thumbnail_url ? `<img src="${esc(x.media.thumbnail_url)}" alt="" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">` : `<div style="aspect-ratio:1;border-radius:8px;background:var(--blush);display:grid;place-items:center;font-size:22px">${x.type==='video'?'🎬':'🖼'}</div>`}<span style="font-size:12px"><input type="checkbox" value="${esc(x.id)}" style="width:auto"> ${esc(x.type)}</span></label>`).join('') : `<p class="muted">${c.ok ? 'No ready content yet. Upload some in the Content tab first.' : esc(c.msg)}</p>`;
+  $('#dMake').onclick = async () => {
+    const ids = [...document.querySelectorAll('#drPick input:checked')].map(i => i.value), price = Math.round(Number($('#dPrice').value) * 100);
+    if (!ids.length) return toast('Tick at least one file'); if (!(price > 0)) return toast('Set a price');
+    $('#dMake').disabled = true;
+    const r = await dr('POST', '/links', null, { content_ids:ids, price, currency_code:$('#dCur').value, metadata:{ source:'unreal-site', by:me.full_name || me.email, tag:$('#dNote').value.trim() || null } });
+    $('#dMake').disabled = false;
+    if (!r.ok) return $('#dOut').innerHTML = `<div class="msg err">${esc(r.msg)}</div>`;
+    const d = r.data.data || r.data, url = d.copy && d.copy.checkout_url;
+    $('#dOut').innerHTML = `<div class="msg ok">Link ready: <b>${esc(url || d.id)}</b> ${url ? '<button class="btn sm" id="dCopy">Copy</button>' : ''}</div>`;
+    if (url) $('#dCopy').onclick = () => drCopy(url);
+    drLinkList();
+  };
+  $('#drRefL').onclick = drLinkList; drLinkList();
+}
+async function drLinkList(){
+  const box = $('#drLinkList'); if (!box) return;
+  const r = await dr('GET', '/links', { limit:100 });
+  if (!r.ok) return box.innerHTML = `<div class="msg err">${esc(r.msg)}</div>`;
+  const rows = drRows(r).filter(x => !x.is_archived && (!x.seller || x.seller.id === drPid));
+  box.innerHTML = rows.length ? `<table><thead><tr><th>Link</th><th>Price</th><th>Files</th><th>Created</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(x => `<tr><td>${esc(x.name || x.id)}</td><td class="num">${esc(x.price ? x.price.display : '')}</td><td>${x.contents ? x.contents.count : ''}</td><td>${drDate(x.created_at)}</td><td><span class="pill ${x.is_active?'yes':'no'}">${x.is_active?'active':'off'}</span></td><td><button class="btn sm" data-cp="${esc(x.id)}">Get link to send</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No links yet for this model.</p>';
+  box.querySelectorAll('[data-cp]').forEach(b => b.onclick = async () => {
+    const tag = prompt('Who is this link for? (optional, shows up on the sale)') ; if (tag === null) return;
+    const r = await dr('POST', '/links/' + b.dataset.cp + '/copies', null, { metadata:{ source:'unreal-site', by:me.full_name || me.email, tag:tag.trim() || null } });
+    if (!r.ok) return toast(r.msg);
+    const d = r.data.data || r.data; drCopy(d.copy.checkout_url);
+  });
+}
+async function drSales(){
+  const box = $('#drBody'); box.innerHTML = '<p class="muted">Loading…</p>';
+  const r = await dr('GET', '/orders', { limit:100 });
+  if (!r.ok) return box.innerHTML = `<div class="msg err">${esc(r.msg)}</div>`;
+  const rows = drRows(r).filter(x => !x.seller || x.seller.id === drPid), paid = rows.filter(x => x.status === 'paid');
+  const by = {}; paid.forEach(x => { const c = x.amount.currency_code; by[c] = (by[c] || 0) + x.amount.total_cents; });
+  const today = new Date().toDateString(), tdy = paid.filter(x => new Date(x.paid_at || x.created_at).toDateString() === today).length;
+  box.innerHTML = `<div class="tiles"><div class="card tile"><span>Paid orders</span><b>${paid.length}</b></div><div class="card tile"><span>Today</span><b>${tdy}</b></div><div class="card tile"><span>Collected</span><b class="pink">${Object.entries(by).map(([c, v]) => drMoney(v, c)).join(' · ') || drMoney(0)}</b></div></div>
+    <div class="card tbl">${rows.length ? `<table><thead><tr><th>Date</th><th>What</th><th>Type</th><th>For</th><th>Total</th><th>Status</th></tr></thead><tbody>${rows.map(x => `<tr><td>${drDate(x.paid_at || x.created_at)}</td><td>${esc(x.link ? x.link.name || x.link.id : '—')}</td><td>${esc(x.type)}</td><td class="muted">${esc(x.metadata ? [x.metadata.tag, x.metadata.by].filter(Boolean).join(' · ') : '')}</td><td class="num">${esc(x.amount.display_total || drMoney(x.amount.total_cents, x.amount.currency_code))}</td><td><span class="pill ${x.status==='paid'?'yes':'pending'}">${esc(x.status)}</span></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No orders yet for this model.</p>'}</div>`;
+}
+async function drWallet(){
+  const box = $('#drBody'); box.innerHTML = '<p class="muted">Loading…</p>';
+  const r = await dr('GET', '/transactions', { limit:100 });
+  if (!r.ok) return box.innerHTML = `<div class="msg err">${esc(r.msg)}</div>`;
+  const rows = drRows(r), by = {}; rows.filter(x => !x.refunded).forEach(x => { const c = x.amount.currency_code; by[c] = (by[c] || 0) + x.amount.net_cents; });
+  box.innerHTML = `<div class="tiles"><div class="card tile"><span>Net earned (all models)</span><b class="pink">${Object.entries(by).map(([c, v]) => drMoney(v, c)).join(' · ') || drMoney(0)}</b></div><div class="card tile"><span>Records</span><b>${rows.length}</b></div></div>
+    <div class="card tbl">${rows.length ? `<table><thead><tr><th>Date</th><th>Type</th><th>Goes to</th><th>Net</th><th></th></tr></thead><tbody>${rows.map(x => `<tr><td>${drDate(x.created_at)}</td><td>${esc(x.type)}</td><td>${esc(x.recipient ? x.recipient.display_name : '')}</td><td class="num">${esc(x.amount.display || drMoney(x.amount.net_cents, x.amount.currency_code))}</td><td>${x.refunded ? '<span class="pill no">refunded</span>' : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No earnings recorded yet.</p>'}</div>
+    <p class="muted" style="font-size:13px;margin-top:10px">Payouts (moving money out) are done on Dropp itself: <a href="https://app.dropp.fans/en/" target="_blank" rel="noopener" style="color:var(--pink)">open the Dropp wallet ↗</a></p>`;
+}
+async function drTips(){
+  const box = $('#drBody');
+  box.innerHTML = `<div class="two"><div class="card"><h2>New tip page</h2><label for="tTitle">Title</label><input id="tTitle" placeholder="Buy me flowers"><label for="tDesc">Description (optional)</label><input id="tDesc">
+      <div class="row"><div><label for="tPre">Suggested amounts</label><input id="tPre" value="5, 10, 20, 50"></div><div><label for="tCur">Currency</label>${drCur('tCur')}</div></div><button class="btn" id="tMake">Create tip page</button><div id="tOut" style="margin-top:10px"></div></div>
+    <div class="card"><h2>New wishlist</h2><label for="wName">Name</label><input id="wName" placeholder="Birthday wishlist"><label for="wItems">Items, one per line: name, price</label><textarea id="wItems" rows="4" placeholder="Camera lens, 299&#10;Tripod, 89"></textarea>
+      <div class="row"><div><label for="wCur">Currency</label>${drCur('wCur')}</div></div><button class="btn" id="wMake">Create wishlist</button><div id="wOut" style="margin-top:10px"></div></div></div>
+    <div class="card tbl" style="margin-top:14px"><h2>Tip pages</h2><div id="tList"><p class="muted">Loading…</p></div></div>
+    <div class="card tbl" style="margin-top:14px"><h2>Wishlists</h2><div id="wList"><p class="muted">Loading…</p></div></div>`;
+  const meta = () => ({ source:'unreal-site', by:me.full_name || me.email });
+  const show = (el, r) => { if (!r.ok) return el.innerHTML = `<div class="msg err">${esc(r.msg)}</div>`; const d = r.data.data || r.data, url = d.copy && d.copy.checkout_url; el.innerHTML = `<div class="msg ok">Ready: <b>${esc(url || d.id)}</b></div>`; if (url) drCopy(url); drTipLists(); };
+  $('#tMake').onclick = async () => { const pre = $('#tPre').value.split(',').map(x => Math.round(Number(x.trim()) * 100)).filter(x => x > 0).slice(0, 10); show($('#tOut'), await dr('POST', '/donation-links', null, { profile_id:drPid, title:$('#tTitle').value.trim() || undefined, description:$('#tDesc').value.trim() || undefined, preset_amounts_cents:pre.length ? pre : undefined, currency_code:$('#tCur').value, metadata:meta() })); };
+  $('#wMake').onclick = async () => { const name = $('#wName').value.trim(); if (!name) return toast('Give the wishlist a name'); const items = $('#wItems').value.split('\n').map(l => l.split(',')).filter(p => p[0] && p[0].trim() && Number(p[1]) > 0).map(p => ({ name:p[0].trim(), target_price_cents:Math.round(Number(p[1]) * 100) })); show($('#wOut'), await dr('POST', '/wishlists', null, { profile_id:drPid, name, currency_code:$('#wCur').value, items, metadata:meta() })); };
+  drTipLists();
+}
+async function drTipLists(){
+  const mine = x => !x.seller || x.seller.id === drPid;
+  const [t, w] = await Promise.all([dr('GET', '/donation-links', { limit:100 }), dr('GET', '/wishlists', { limit:100 })]);
+  const copyBtn = (kind, id) => `<button class="btn sm" data-k="${kind}" data-id="${esc(id)}">Get link to send</button>`;
+  if ($('#tList')) $('#tList').innerHTML = !t.ok ? `<div class="msg err">${esc(t.msg)}</div>` : drRows(t).filter(mine).length ? `<table><tbody>${drRows(t).filter(mine).map(x => `<tr><td>${esc(x.title || 'Tip page')}</td><td>${drDate(x.created_at)}</td><td><span class="pill ${x.is_active?'yes':'no'}">${x.is_active?'active':'off'}</span></td><td>${copyBtn('donation-links', x.id)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None yet.</p>';
+  if ($('#wList')) $('#wList').innerHTML = !w.ok ? `<div class="msg err">${esc(w.msg)}</div>` : drRows(w).filter(x => mine(x) && !x.is_archived).length ? `<table><tbody>${drRows(w).filter(x => mine(x) && !x.is_archived).map(x => `<tr><td>${esc(x.name)}</td><td>${x.item_count} items</td><td>${drDate(x.created_at)}</td><td>${copyBtn('wishlists', x.id)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">None yet.</p>';
+  document.querySelectorAll('#drBody [data-k]').forEach(b => b.onclick = async () => { const r = await dr('POST', '/' + b.dataset.k + '/' + b.dataset.id + '/copies', null, { metadata:{ source:'unreal-site', by:me.full_name || me.email } }); if (!r.ok) return toast(r.msg); drCopy((r.data.data || r.data).copy.checkout_url); });
 }
 
 // ---------- team to-do (staff) ----------

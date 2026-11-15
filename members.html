@@ -134,7 +134,7 @@
   .stat b{margin-right:5px}
   .stat.hot{border-color:var(--pink);color:var(--pink-deep)} .stat.bad{border-color:#d23b3b;color:#d23b3b}
   .chat{display:grid;grid-template-columns:300px minmax(0,1fr) 270px;height:calc(100vh - 275px);min-height:480px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--card)}
-  @media(max-width:1100px){.chat{grid-template-columns:240px minmax(0,1fr)}.cinfo{display:none}}
+  @media(max-width:1100px){.chat{grid-template-columns:240px minmax(0,1fr);height:auto}.clist,.cmain,.cboard{height:62vh}.cinfo{grid-column:1/-1;border-left:0;border-top:1px solid var(--line);flex-direction:row}.cinfo #cinfo,.cpad{flex:1;border-top:0}}
   @media(max-width:700px){.chat{grid-template-columns:1fr;height:auto}.clist{max-height:260px}.cmain{height:70vh}}
   .clist{display:flex;flex-direction:column;border-right:1px solid var(--line);min-height:0}
   .chead{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line)}
@@ -154,7 +154,16 @@
   .csend{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
   .csend textarea{flex:1;resize:none;margin:0;min-height:44px;max-height:140px;border-radius:14px}
   .cblank{flex:1;display:grid;place-content:center;text-align:center;color:var(--muted);gap:4px}
-  .cinfo{border-left:1px solid var(--line);padding:14px;overflow:auto;min-height:0}
+  .cinfo{border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .cinfo #cinfo{padding:14px;overflow:auto;flex:1;min-height:0}
+  .cpad{border-top:1px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;flex:0 0 38%;min-height:150px;background:var(--blush)}
+  .cpad h3 small{font-weight:400;color:var(--muted);font-size:11.5px}
+  .cpad textarea{flex:1;margin:6px 0 0;resize:none;font-size:13.5px}
+  .chat [hidden]{display:none!important}
+  .cboard{grid-column:1/3;display:flex;flex-direction:column;min-height:0;min-width:0}
+  .bgrid{flex:1;overflow:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;align-content:start;background:var(--surface)}
+  .bcard{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--card);display:flex;flex-direction:column;gap:6px}
+  .bcard .bname{font-weight:700;margin:0} .bcard small{color:var(--muted);font-size:12px} .bcard textarea{margin:0;resize:vertical;font-size:13.5px}
   .cinfo h3{font-size:15px;margin-bottom:6px} .cinfo label{font-size:12px;margin-top:10px}
   .ifacts{list-style:none;padding:0;margin:16px 0 0;font-size:13px} .ifacts li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line)} .ifacts span{color:var(--muted)}
   .tt-sec{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--pink);margin:18px 0 2px;font-weight:700}
@@ -588,7 +597,7 @@ async function smsGatePanel(){
 }
 async function smsView(){
   const v = $('#view');
-  v.innerHTML = `<div class="smstop"><div id="smsStats" class="stats"></div><div id="gateChips" class="stats"></div></div>
+  v.innerHTML = `<div class="smstop"><div class="stats"><div class="cfilt" id="smsMode" style="padding:0;border:0"><button data-m="chat" class="on">💬 Chat</button><button data-m="board">📋 Client notes</button></div><div id="smsStats" class="stats"></div></div><div id="gateChips" class="stats"></div></div>
   <div class="chat">
     <aside class="clist">
       <div class="chead"><input id="csearch" type="search" placeholder="Search" aria-label="Search conversations"><button class="btn sm" id="pnew">＋ New</button></div>
@@ -596,11 +605,16 @@ async function smsView(){
       <div class="crows" id="crows"><p class="pempty">Loading…</p></div>
     </aside>
     <section class="cmain" id="cmain"></section>
-    <aside class="cinfo" id="cinfo"></aside>
+    <section class="cboard" id="cboard" hidden></section>
+    <aside class="cinfo"><div id="cinfo"></div>
+      <div class="cpad"><h3>📝 Notes <small id="padState"></small></h3><textarea id="padText" placeholder="Team notes. Always here, saved by itself." aria-label="Team notes"></textarea></div>
+    </aside>
   </div>
   <details class="card" id="gateWrap" style="margin-top:14px" hidden><summary style="cursor:pointer;font-weight:700">⚙️ Phone link settings</summary><div id="gateBox" style="margin-top:12px"></div></details>`;
   smsGatePanel();
   $('#csearch').oninput = e => { smsQ = e.target.value.toLowerCase(); smsRows(); };
+  document.querySelectorAll('#smsMode button').forEach(b => b.onclick = () => smsSetMode(b.dataset.m));
+  smsPad();
   document.querySelectorAll('.cfilt button').forEach(b => b.onclick = () => { smsFilter = b.dataset.f; document.querySelectorAll('.cfilt button').forEach(x => x.classList.toggle('on', x === b)); smsRows(); });
   $('#pnew').onclick = () => { let n = prompt('Phone number to text (with country code, e.g. +15145550000):'); if (!n) return; n = n.replace(/[^\d+]/g, ''); if (n.replace(/\D/g,'').length < 10) return toast('That number looks too short'); if (!n.startsWith('+')) n = '+' + (n.length === 10 ? '1' : '') + n; smsOpen = n; smsDraw(true); };
   const [m, c] = await Promise.all([ sb.from('sms_messages').select('*').order('created_at').limit(5000), sb.from('sms_contacts').select('*') ]);
@@ -614,7 +628,52 @@ async function smsView(){
   }).subscribe();
   smsOpen = null; smsDraw(true);
 }
-function smsDraw(first){ smsStats(); smsRows(); smsThread(first); smsInfo(); }
+function smsDraw(first){ smsStats(); smsRows(); smsThread(first); smsInfo(); smsBoard(); }
+let smsMode = 'chat', smsBQ = '';
+function smsSetMode(m){
+  smsMode = m;
+  document.querySelectorAll('#smsMode button').forEach(x => x.classList.toggle('on', x.dataset.m === m));
+  document.querySelector('.clist').hidden = $('#cmain').hidden = m !== 'chat'; $('#cboard').hidden = m !== 'board';
+  smsBoard(true);
+}
+async function smsSaveContact(p, name, note){
+  const row = { phone:p, name:(name||'').trim() || null, note:(note||'').trim() || null, updated_at:new Date().toISOString() };
+  const { error } = await sb.from('sms_contacts').upsert(row); if (error){ toast(error.message); return false; }
+  smsNames[p] = row; return true;
+}
+function smsBoard(force){
+  const box = $('#cboard'); if (!box || box.hidden) return;
+  if (!force && box.contains(document.activeElement)) return;
+  const phones = [...new Set([...smsMsgs.map(x => x.phone), ...Object.keys(smsNames)])];
+  let rows = phones.map(p => { const a = smsMsgs.filter(x => x.phone === p); return { p, c:smsNames[p] || {}, last:a[a.length-1], n:a.length }; })
+    .sort((a,b) => (b.last ? new Date(b.last.created_at) : 0) - (a.last ? new Date(a.last.created_at) : 0));
+  if (smsBQ) rows = rows.filter(r => ((r.c.name||'') + ' ' + r.p + ' ' + (r.c.note||'')).toLowerCase().includes(smsBQ));
+  box.innerHTML = `<div class="chead"><input id="bsearch" type="search" placeholder="Search a client or a note" value="${esc(smsBQ)}" aria-label="Search client notes"><span class="stat"><b>${rows.length}</b> clients</span></div>
+    <div class="bgrid">${rows.map(r => `<article class="bcard" data-p="${esc(r.p)}">
+      <input class="bname" value="${esc(r.c.name || '')}" placeholder="Add a name" aria-label="Client name">
+      <small>${esc(r.p)} · ${r.n} message${r.n===1?'':'s'}${r.last ? ' · last ' + smsDay(r.last.created_at) : ''}</small>
+      <textarea class="bnote" rows="5" placeholder="Job, interests, what he likes, key points…" aria-label="Client note">${esc(r.c.note || '')}</textarea>
+      <div class="row" style="justify-content:space-between;align-items:center"><span class="bstate muted" style="font-size:12px"></span><button class="btn sm ghost bopen">Open chat</button></div>
+    </article>`).join('') || '<p class="pempty">No clients yet. They appear here as soon as someone texts.</p>'}</div>`;
+  $('#bsearch').oninput = e => { smsBQ = e.target.value.toLowerCase(); smsBoard(true); const i = $('#bsearch'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); };
+  box.querySelectorAll('.bcard').forEach(card => {
+    const p = card.dataset.p, st = card.querySelector('.bstate');
+    const save = async () => { st.textContent = 'Saving…'; st.textContent = (await smsSaveContact(p, card.querySelector('.bname').value, card.querySelector('.bnote').value)) ? 'Saved' : 'Not saved'; smsRows(); };
+    card.querySelector('.bname').onchange = save; card.querySelector('.bnote').onchange = save;
+    card.querySelector('.bopen').onclick = () => { smsOpen = p; smsSetMode('chat'); smsDraw(true); };
+  });
+}
+let padTimer = null;
+async function smsPad(){
+  const t = $('#padText'), st = $('#padState'); if (!t) return;
+  const { data, error } = await sb.from('sms_pad').select('*').eq('id','main').maybeSingle();
+  if (error){ st.textContent = '· ' + error.message; return; }
+  t.value = data?.body || ''; if (data?.updated_at && data.body) st.textContent = '· saved ' + smsTime(data.updated_at);
+  t.oninput = () => { st.textContent = '· typing…'; clearTimeout(padTimer); padTimer = setTimeout(async () => {
+    const { error } = await sb.from('sms_pad').upsert({ id:'main', body:t.value, updated_at:new Date().toISOString(), updated_by:me.id });
+    st.textContent = error ? '· not saved: ' + error.message : '· saved ' + smsTime(new Date());
+  }, 700); };
+}
 function smsRows(){
   const box = $('#crows'); if (!box) return;
   const by = {}; smsMsgs.forEach(x => (by[x.phone] ||= []).push(x));
@@ -653,20 +712,16 @@ function smsThread(first){
 }
 function smsInfo(){
   const box = $('#cinfo'); if (!box) return;
-  if (!smsOpen){ box.innerHTML = ''; return; }
+  if (!smsOpen){ box.dataset.p = ''; box.innerHTML = '<h3>👤 Client note</h3><p class="muted" style="font-size:13px">Open a conversation to see and edit this client\'s note.</p>'; return; }
   if (box.dataset.p === smsOpen && box.contains(document.activeElement)) return;
   const p = smsOpen, a = smsMsgs.filter(x => x.phone === p), c = smsNames[p] || {};
   box.dataset.p = p;
-  box.innerHTML = `<h3>Contact</h3>
+  box.innerHTML = `<h3>👤 Client note</h3>
     <label for="iName">Name</label><input id="iName" value="${esc(c.name || '')}" placeholder="Add a name">
-    <label for="iNote">Notes (job, interests, key points)</label><textarea id="iNote" rows="6" placeholder="Anything worth remembering">${esc(c.note || '')}</textarea>
+    <label for="iNote">Note (job, interests, key points)</label><textarea id="iNote" rows="5" placeholder="Anything worth remembering about him">${esc(c.note || '')}</textarea>
     <button class="btn sm" id="iSave">Save</button>
     <ul class="ifacts"><li><span>Number</span><b>${esc(p)}</b></li><li><span>Messages from them</span><b>${a.filter(x=>x.direction==='in').length}</b></li><li><span>Messages from us</span><b>${a.filter(x=>x.direction==='out').length}</b></li><li><span>First message</span><b>${a[0] ? smsDay(a[0].created_at) : 'none yet'}</b></li></ul>`;
-  $('#iSave').onclick = async () => {
-    const row = { phone:p, name:$('#iName').value.trim() || null, note:$('#iNote').value.trim() || null, updated_at:new Date().toISOString() };
-    const { error } = await sb.from('sms_contacts').upsert(row); if (error) return toast(error.message);
-    smsNames[p] = row; toast('Saved'); document.activeElement.blur(); smsDraw();
-  };
+  $('#iSave').onclick = async () => { if (await smsSaveContact(p, $('#iName').value, $('#iNote').value)){ toast('Saved'); document.activeElement.blur(); smsDraw(); } };
 }
 
 // ---------- admin ----------

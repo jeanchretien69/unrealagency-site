@@ -160,8 +160,8 @@
   .bub video.mm,.bub audio.mm{cursor:auto}
   .cblank{flex:1;display:grid;place-content:center;text-align:center;color:var(--muted);gap:4px}
   .cinfo{border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-  .cinfo #cinfo{padding:14px;overflow:auto;flex:1;min-height:0}
-  .cpad{border-top:1px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;flex:0 0 38%;min-height:150px;background:var(--blush)}
+  .cinfo #cinfo{padding:10px 14px;flex:0 0 auto} .cinfo #cinfo textarea{margin:4px 0 0;resize:none;font-size:13px;height:66px} .cinfo #cinfo h3 small{font-weight:400;color:var(--muted);font-size:11.5px}
+  .cpad{border-top:1px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;flex:1;min-height:150px;background:var(--blush)}
   .cpad h3 small{font-weight:400;color:var(--muted);font-size:11.5px}
   .cpad textarea{flex:1;margin:6px 0 0;resize:none;font-size:13.5px}
   .chat [hidden]{display:none!important}
@@ -789,16 +789,16 @@ function smsThread(first){
 }
 function smsInfo(){
   const box = $('#cinfo'); if (!box) return;
-  if (!smsOpen){ box.dataset.p = ''; box.innerHTML = '<h3>👤 Client note</h3><p class="muted" style="font-size:13px">Open a conversation to see and edit this client\'s note.</p>'; return; }
+  if (!smsOpen){ box.dataset.p = ''; box.innerHTML = '<h3>👤 Client note</h3><p class="muted" style="font-size:12px;margin:0">Open a conversation to write a note.</p>'; return; }
   if (box.dataset.p === smsOpen && box.contains(document.activeElement)) return;
   const p = smsOpen, a = smsMsgs.filter(x => x.phone === p), c = smsNames[p] || {};
   box.dataset.p = p;
-  box.innerHTML = `<h3>👤 Client note</h3>
-    <label for="iName">Name</label><input id="iName" value="${esc(c.name || '')}" placeholder="Add a name">
-    <label for="iNote">Note (job, interests, key points)</label><textarea id="iNote" rows="5" placeholder="Anything worth remembering about him">${esc(c.note || '')}</textarea>
-    <button class="btn sm" id="iSave">Save</button>
-    <ul class="ifacts"><li><span>Number</span><b>${esc(p)}</b></li><li><span>Messages from them</span><b>${a.filter(x=>x.direction==='in').length}</b></li><li><span>Messages from us</span><b>${a.filter(x=>x.direction==='out').length}</b></li><li><span>First message</span><b>${a[0] ? smsDay(a[0].created_at) : 'none yet'}</b></li></ul>`;
-  $('#iSave').onclick = async () => { if (await smsSaveContact(p, $('#iName').value, $('#iNote').value)){ toast('Saved'); document.activeElement.blur(); smsDraw(); } };
+  box.innerHTML = `<h3>👤 Client note <small id="iState"></small></h3>
+    <textarea id="iNote" rows="3" placeholder="Note about this client. Saves by itself." aria-label="Client note">${esc(c.note || '')}</textarea>`;
+  const note = $('#iNote'), state = $('#iState'); let timer;
+  const save = async () => { clearTimeout(timer); if ((smsNames[p]?.note || '') === note.value.trim()) return; state.textContent = 'saving…'; state.textContent = await smsSaveContact(p, smsNames[p]?.name, note.value) ? 'saved' : 'not saved'; if (smsMode === 'board') smsBoard(true); };
+  note.oninput = () => { state.textContent = '…'; clearTimeout(timer); timer = setTimeout(save, 700); };
+  note.onblur = save;
 }
 
 // ---------- admin ----------

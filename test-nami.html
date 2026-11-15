@@ -534,7 +534,7 @@
   function startLive(){
     canvas.style.display = 'none'; face.hidden = false;
     var v = document.createElement('video'); v.className = 'nv'; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true;
-    v.setAttribute('playsinline',''); v.setAttribute('muted',''); v.preload = 'auto'; v.poster = 'live/nami_idle.jpg'; v.src = 'live/nami_idle.mp4';
+    v.setAttribute('playsinline',''); v.setAttribute('muted',''); v.preload = 'auto'; v.poster = 'live/nami_idle.jpg'; v.src = 'live/nami_idle.mp4?v=2';
     head.appendChild(v);
     v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ face.hidden = true; }, 400); }, { once:true });
     var p = v.play(); if (p && p.catch) p.catch(function(){});

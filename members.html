@@ -119,6 +119,14 @@
   .tt-row input{width:18px;height:18px;margin-top:2px;accent-color:var(--pink);flex:none}
   .tt-row.done .tt-t{text-decoration:line-through;color:var(--muted)}
   .tt-h{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .smsgrid{display:grid;grid-template-columns:minmax(300px,390px) minmax(240px,1fr);gap:22px;align-items:start}
+  @media(max-width:900px){.smsgrid{grid-template-columns:1fr}}
+  .smsgrid .phone{margin:0}
+  .dash{display:grid;gap:12px}
+  .dash .tiles{grid-template-columns:1fr 1fr;margin:0}
+  .led{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:#bbb}
+  .led.ok{background:#1f8a4c}.led.warn{background:#d99a00}.led.bad{background:#d23b3b}
+  .dash li{margin:6px 0;list-style:none;font-size:14px}
   .tt-sec{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--pink);margin:18px 0 2px;font-weight:700}
   .pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
   .pill.pending{background:var(--warnbg);color:var(--warn)}
@@ -230,12 +238,13 @@
       <aside class="side" id="side">
         <button data-tab="plan" class="adm" hidden>📋 My plan</button>
         <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
+        <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone</button>
         <button data-tab="personas" data-perm="personas" hidden>🎀 Personas</button>
         <button data-tab="docs" data-perm="docs" hidden>📚 Docs & scripts</button>
         <button data-tab="bot" data-perm="bot" hidden>🤖 AI chatbot</button>
         <button data-tab="wallet" data-perm="wallet" hidden>💳 Wallet</button>
         <div class="sep adm" hidden>Admin</div>
-        <button data-tab="sms" class="adm" hidden>📱 SMS phone</button>
+        
         <button data-tab="train" class="adm" hidden>🧠 Train AI</button>
         <button data-tab="members" class="adm" hidden>👥 Access board</button>
         <button data-tab="topups" class="adm" hidden>🪙 Top-ups</button>
@@ -324,6 +333,7 @@ document.querySelectorAll('[data-signout]').forEach(b => b.onclick = () => sb.au
 let me = null, settings = {}, tab = 'personas';
 const PERMS = [
   { k:'team', l:'✅ Team to-do', sub:[['team:Before posting','Before posting'],['team:Daily posting','Daily posting'],['team:Rules','Rules']] },
+  { k:'sms', l:'📱 SMS phone', sub:[] },
   { k:'personas', l:'🎀 Personas', sub:[] },
   { k:'docs', l:'📚 Docs', sub:[] },
   { k:'bot', l:'🤖 AI chatbot', sub:[['bot.sms','SMS'],['bot.of','OnlyFans'],['bot.telegram','Telegram'],['bot.billing','Billing']] },
@@ -360,7 +370,7 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Admin only.'] };
+const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t);
@@ -514,22 +524,45 @@ async function smsGate(body){
   if (error){ let m = error.message; try { m = (await error.context.json()).error || m; } catch(e){} return { error:m }; }
   return data || {};
 }
+function smsStats(){
+  const box = $('#smsStats'); if (!box) return;
+  const real = smsMsgs.filter(x => !x.is_test), today = new Date().toDateString(), isToday = x => new Date(x.created_at).toDateString() === today;
+  const convos = new Set(real.map(x => x.phone)).size, unread = real.filter(x => x.direction==='in' && !x.is_read).length;
+  const inT = real.filter(x => x.direction==='in' && isToday(x)).length, outT = real.filter(x => x.direction==='out' && isToday(x) && x.status!=='failed').length;
+  const failed = real.filter(x => x.direction==='out' && x.status==='failed').length;
+  box.innerHTML = `<div class="tiles">
+    <div class="card tile"><span>Conversations</span><b>${convos}</b></div>
+    <div class="card tile"><span>Unread</span><b class="${unread?'pink':''}">${unread}</b></div>
+    <div class="card tile"><span>Received today</span><b>${inT}</b></div>
+    <div class="card tile"><span>Sent today</span><b>${outT}</b></div>
+  </div>${failed ? `<div class="msg err" style="margin-top:12px">${failed} message${failed===1?'':'s'} not sent. Open the conversation to see which.</div>` : ''}`;
+}
 async function smsGatePanel(){
   const box = $('#gateBox'); if (!box) return;
   const st = await smsGate({ action:'status' });
-  if (st.error) return box.innerHTML = `<div class="msg err">${esc(st.error)}</div>`;
-  const mode = st.allow === '*' ? 'Live: every text is saved' : st.allow ? 'Test: only the numbers below' : 'Off: nothing is saved';
-  box.innerHTML = `<h2>Phone link (SMSGate)</h2>
-    <p class="muted" style="font-size:13px">Login saved in Supabase: <b>${st.creds ? 'yes' : 'not yet'}</b> · Mode: <b>${mode}</b></p>
+  if (st.error) return box.innerHTML = `<h2>Phone link</h2><div class="msg err">${esc(st.error)}</div>`;
+  const seen = st.device?.lastSeen ? new Date(st.device.lastSeen) : null, mins = seen ? Math.round((Date.now() - seen) / 60000) : null;
+  const led = (ok, warn) => `<i class="led ${ok ? 'ok' : warn ? 'warn' : 'bad'}"></i>`;
+  const mode = st.allow === '*' ? 'Live: every text is saved here' : st.allow ? 'Test: only the allowed numbers' : 'Off: no text is saved yet';
+  box.innerHTML = `<h2>Phone link</h2><ul style="padding:0;margin:8px 0 0">
+    <li>${led(st.creds && st.gate === 200)}SMSGate login: <b>${!st.creds ? 'missing' : st.gate === 200 ? 'accepted' : 'refused (' + esc(String(st.gate)) + ')'}</b></li>
+    <li>${led(st.hook)}Site ↔ phone link: <b>${st.hook ? 'connected' : 'not connected'}</b></li>
+    <li>${led(mins !== null && mins < 20, mins !== null)}Phone last seen: <b>${mins === null ? 'unknown' : mins < 2 ? 'just now' : mins < 120 ? mins + ' min ago' : seen.toLocaleString()}</b></li>
+    <li>${led(st.allow === '*', !!st.allow)}Mode: <b>${mode}</b></li></ul>
+    <button class="btn sm ghost" id="gRefresh" style="margin-top:10px">Check again</button>
+    ${st.admin ? `<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
     <label for="gAllow">Numbers allowed (comma separated). Empty = off, * = everyone</label>
     <input id="gAllow" value="${esc(st.allow || '')}" placeholder="+15145550000">
-    <div class="row" style="margin-top:10px"><button class="btn sm" id="gSave">Save numbers</button><button class="btn sm ghost" id="gSetup" ${st.creds ? '' : 'disabled'}>Connect the phone</button></div>`;
-  $('#gSave').onclick = async () => { const r = await smsGate({ action:'allow', value:$('#gAllow').value.trim() }); toast(r.error || 'Saved'); smsGatePanel(); };
-  $('#gSetup').onclick = async () => { const r = await smsGate({ action:'setup' }); toast(r.error || (r.already ? 'Already connected' : 'Phone connected')); };
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="gSave">Save numbers</button><button class="btn sm ghost" id="gSetup" ${st.creds ? '' : 'disabled'}>Connect the phone</button></div>` : ''}`;
+  $('#gRefresh').onclick = () => { box.innerHTML = '<p class="muted">Checking the phone link…</p>'; smsGatePanel(); };
+  if (st.admin){
+    $('#gSave').onclick = async () => { const r = await smsGate({ action:'allow', value:$('#gAllow').value.trim() }); toast(r.error || 'Saved'); smsGatePanel(); };
+    $('#gSetup').onclick = async () => { const r = await smsGate({ action:'setup' }); toast(r.error || (r.already ? 'Already connected' : 'Phone connected')); smsGatePanel(); };
+  }
 }
 async function smsView(){
   const v = $('#view');
-  v.innerHTML = '<div class="phone"><div class="pscreen" id="pscreen"><p class="pempty">Loading…</p></div></div><div class="card" id="gateBox" style="max-width:520px;margin:80px auto 0;clear:both"><p class="muted">Checking the phone link…</p></div>';
+  v.innerHTML = '<div class="smsgrid"><div class="phone"><div class="pscreen" id="pscreen"><p class="pempty">Loading…</p></div></div><div class="dash"><div id="smsStats"></div><div class="card" id="gateBox"><p class="muted">Checking the phone link…</p></div></div></div>';
   smsGatePanel();
   const [m, c] = await Promise.all([ sb.from('sms_messages').select('*').order('created_at').limit(2000), sb.from('sms_contacts').select('*') ]);
   if (m.error){ $('#pscreen').innerHTML = `<p class="pempty">${esc(m.error.message)}</p>`; return; }
@@ -542,13 +575,14 @@ async function smsView(){
   }).subscribe();
   smsOpen = null; smsDraw();
 }
-function smsDraw(){ smsOpen ? smsThread() : smsList(); }
+function smsDraw(){ smsStats(); smsOpen ? smsThread() : smsList(); }
 function smsList(){
   const by = {}; smsMsgs.forEach(x => (by[x.phone] ||= []).push(x));
   const rows = Object.entries(by).map(([p, a]) => ({ p, last:a[a.length-1], unread:a.filter(x => x.direction==='in' && !x.is_read).length })).sort((a,b) => new Date(b.last.created_at) - new Date(a.last.created_at));
-  $('#pscreen').innerHTML = `<div class="pbar"><h3>Messages<small>${rows.length} conversation${rows.length===1?'':'s'}</small></h3></div>
+  $('#pscreen').innerHTML = `<div class="pbar"><h3>Messages<small>${rows.length} conversation${rows.length===1?'':'s'}</small></h3><button class="pback" id="pnew">＋ New</button></div>
     <div class="plist">${rows.length ? rows.map(r => `<button class="prow" data-p="${esc(r.p)}"><span class="pav">${esc(smsName(r.p).replace(/^Test · /,'').slice(0,1).toUpperCase())}</span><span class="pmeta"><b>${esc(smsName(r.p))}<span>${smsTime(r.last.created_at)}</span></b><p>${r.last.direction==='out'?'You: ':''}${esc(r.last.body)}</p></span>${r.unread?'<i class="pdot" title="Unread"></i>':''}</button>`).join('') : '<p class="pempty">No messages yet.</p>'}</div>`;
   document.querySelectorAll('.prow').forEach(b => b.onclick = () => { smsOpen = b.dataset.p; smsThread(true); });
+  $('#pnew').onclick = () => { let n = prompt('Phone number to text (with country code, e.g. +15145550000):'); if (!n) return; n = n.replace(/[^\d+]/g, ''); if (n.replace(/\D/g,'').length < 10) return toast('That number looks too short'); if (!n.startsWith('+')) n = '+' + (n.length === 10 ? '1' : '') + n; smsOpen = n; smsThread(true); };
 }
 async function smsThread(first){
   const p = smsOpen, a = smsMsgs.filter(x => x.phone === p), box = $('#pthread'), keep = $('#ptext')?.value || '';

@@ -221,6 +221,19 @@
   .aiset{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px 20px}
   .aiset small{display:block;color:var(--muted);font-size:12.5px;margin-top:5px}
   .aiset .row{flex-wrap:nowrap;align-items:center} .aiset .btn,#aSave{white-space:nowrap;flex:0 0 auto}
+  .brains{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(440px,100%),1fr));gap:14px;align-items:start}
+  .brain .bhead{display:flex;justify-content:space-between;align-items:center;gap:10px} .brain .bhead h2{margin:0}
+  .brain>p.muted{margin:6px 0 12px;font-size:13.5px}
+  .bflow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;margin-bottom:16px;border-radius:14px;background:var(--surface);border:1px solid var(--line);font-size:13px}
+  .bflow i{font-style:normal;color:var(--muted)}
+  .bstep{padding:6px 10px;border-radius:10px;background:var(--card);border:1px solid var(--line)}
+  .bstep small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+  .bstep.main{border-color:var(--pink);font-weight:700} .bstep.bak{border-style:dashed;font-weight:700}
+  .brain .aiset{grid-template-columns:1fr} .brain .aiset select{min-width:0}
+  .bstat{font-size:13px;margin:12px 0 0}
+  .btest{margin-top:14px;border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;height:340px}
+  .btest .ph{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .bby{align-self:flex-start;font-size:11.5px;color:var(--muted);margin-top:-4px;padding:0 4px} .bby.bak{color:var(--warn);font-weight:700}
   .compose{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
   .compose input{border-radius:999px}
   /* ---- SMS mini phone ---- */
@@ -313,6 +326,7 @@
         <button data-tab="wallet" data-perm="wallet" hidden>💳 Wallet</button>
         <div class="sep adm" hidden>Admin</div>
         
+        <button data-tab="brains" class="adm" hidden>⚡ AI brains</button>
         <button data-tab="train" class="adm" hidden>🧠 Train AI</button>
         <button data-tab="members" class="adm" hidden>👥 Access board<span class="nb" id="nbAcc" hidden></span></button>
         <button data-tab="topups" class="adm" hidden>🪙 Top-ups</button>
@@ -470,15 +484,15 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t); badges();
-  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'dropp');
+  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'dropp' || t === 'brains');
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, sms:smsView, team:teamView, dropp:droppView })[t]();
+  ({ plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, dropp:droppView })[t]();
 }
 
 
@@ -672,7 +686,7 @@ const AI_HINT = {
   suggest:'The AI writes a reply in each chat. Nothing is sent until a person presses Send.',
   auto:'The AI answers clients by itself. Use the 🤖 button inside a chat to switch it off for one client.' };
 async function smsAiLoad(){
-  const [st, s] = await Promise.all([ smsAi({ action:'status' }), sb.from('settings').select('*').like('key', 'sms_ai_%') ]);
+  const [st, s] = await Promise.all([ smsAi({ action:'status' }), sb.from('settings').select('*').or('key.like.sms_ai_%,key.like.of_ai_%') ]);
   smsAiState = st.error ? { hasKey:false } : st;
   (s.data || []).forEach(r => settings[r.key] = r.value);
 }
@@ -1355,6 +1369,122 @@ function settingsView(){
   };
 }
 
+
+// ---------- AI brains ----------
+// One brain per channel. Main brain answers; if it refuses or breaks and a backup brain is set, the backup answers.
+const DOLPHIN = 'cognitivecomputations/dolphin-mistral-24b-venice-edition', CLAUDE = '~anthropic/claude-sonnet-latest';
+const BRAINS = [
+  [DOLPHIN, '🐬', 'Dolphin Venice (Mistral 24B)', 'Uncensored: it never refuses, so it handles explicit talk. Cheap.'],
+  [DOLPHIN + ':free', '🐬', 'Dolphin Venice, free version', 'Same brain for $0, but often busy or slow.'],
+  [CLAUDE, '🟠', 'Claude Sonnet', 'The smartest and most human writer. It refuses very explicit messages. Costs more.'],
+  ['~anthropic/claude-haiku-latest', '🟠', 'Claude Haiku', 'A faster, cheaper Claude. It also refuses very explicit messages.'],
+  ['nvidia/nemotron-3.5-lightning:free', '🟢', 'Nemotron (free test engine)', 'Free. Fine for a quick test, not for real clients.'],
+];
+const brainInfo = id => { const b = BRAINS.find(x => x[0] === id); return b ? { ico:b[1], name:b[2], d:b[3] } : { ico:'⚙️', name:id, d:'An engine you picked from the full list.' }; };
+const CHAN = {
+  sms: { ico:'📱', t:'SMS phone', pre:'sms_ai_', eng:DOLPHIN, bak:'', prof:'kaya-fans-sms', who:'client',
+    d:'Texts on the model phone. Her job here: chat, build the connection, and move him to OnlyFans.',
+    send:'The site sends the texts through the phone. The Off / Suggest / Auto switch is on the 📱 SMS phone page.' },
+  of: { ico:'💗', t:'OnlyFans', pre:'of_ai_', eng:CLAUDE, bak:DOLPHIN, prof:'kaya', who:'fan',
+    d:'Messages with fans on OnlyFans. Her job here: a sexual, girlfriend-style chat that sells PPV.',
+    send:'Messages inside OnlyFans are sent by your n8n workflow. This page decides which brain writes them.' },
+};
+let brainEngines = null, brainHist = { sms:[], of:[] };
+const brainCfg = c => { const k = CHAN[c]; return { engine: settings[k.pre + 'engine'] || k.eng, backup: settings[k.pre + 'backup'] ?? k.bak, profile: settings[k.pre + 'profile'] || k.prof }; };
+
+async function brainsView(){
+  const v = $('#view');
+  const [{ data: profs, error }] = await Promise.all([ sb.from('bot_config').select('model,display_name').order('model'), smsAiLoad() ]);
+  if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
+  const hasKey = smsAiState.hasKey, today = smsAiState.today || {};
+  const opts = (sel, none) => {
+    const ids = BRAINS.map(b => b[0]).filter(id => !brainEngines || brainEngines.find(e => e.id === id) || id === sel);
+    const extra = (brainEngines || []).filter(e => !ids.includes(e.id));
+    if (sel && !ids.includes(sel) && !extra.find(e => e.id === sel)) ids.push(sel);
+    return (none ? `<option value="" ${sel ? '' : 'selected'}>No backup</option>` : '') +
+      ids.map(id => { const i = brainInfo(id), e = (brainEngines || []).find(x => x.id === id); return `<option value="${esc(id)}" ${id === sel ? 'selected' : ''}>${i.ico} ${esc(i.name)}${e ? ' · ' + esc(e.price) : ''}</option>`; }).join('') +
+      (extra.length ? `<optgroup label="All other engines">${extra.map(e => `<option value="${esc(e.id)}" ${e.id === sel ? 'selected' : ''}>${esc(e.name)} · ${esc(e.price)}</option>`).join('')}</optgroup>` : '');
+  };
+  const flow = (c, eng, bak) => { const k = CHAN[c], a = brainInfo(eng), b = bak ? brainInfo(bak) : null;
+    return `<span class="bstep">${k.who === 'fan' ? 'Fan message' : 'Client text'}</span><i>→</i><span class="bstep main">${a.ico} ${esc(a.name)}<small>answers first</small></span>${b ? `<i>→</i><span class="bstep bak">${b.ico} ${esc(b.name)}<small>only if the first one refuses or is down</small></span>` : ''}<i>→</i><span class="bstep">Her reply</span>`; };
+  const card = c => { const k = CHAN[c], cfg = brainCfg(c), t = today[c] || {}, n = Object.values(t).reduce((a, b) => a + b, 0);
+    const err = (settings[k.pre + 'last_error'] || '').split('|');
+    const mode = c === 'sms' ? { off:['no','Off'], suggest:['pending','Suggest'], auto:['yes','Auto'] }[aiMode()] : (smsAiState.ofLinked ? ['pending','Ready for n8n'] : ['no','Not connected']);
+    return `<section class="card brain" data-c="${c}">
+      <div class="bhead"><h2>${k.ico} ${k.t}</h2><span class="pill ${mode[0]}">${mode[1]}</span></div>
+      <p class="muted">${k.d}</p>
+      <div class="bflow" data-flow>${flow(c, cfg.engine, cfg.backup)}</div>
+      <div class="aiset">
+        <div><label for="bEng-${c}">1 · Main brain</label><select id="bEng-${c}" data-f="engine">${opts(cfg.engine)}</select><small data-d="engine">${esc(brainInfo(cfg.engine).d)}</small></div>
+        <div><label for="bBak-${c}">2 · Backup brain</label><select id="bBak-${c}" data-f="backup">${opts(cfg.backup, true)}</select><small data-d="backup">${cfg.backup ? esc(brainInfo(cfg.backup).d) : 'Nobody takes over. If the main brain fails, you get an error and a person answers.'}</small></div>
+        <div><label for="bProf-${c}">3 · Script she follows</label><div class="row"><select id="bProf-${c}" data-f="profile">${profs.map(p => `<option value="${esc(p.model)}" ${p.model === cfg.profile ? 'selected' : ''}>${esc(p.display_name || p.model)}</option>`).join('')}</select><button type="button" class="btn sm ghost" data-open>Open her boxes</button></div><small>Who she is, how she texts, her rules. You edit it in 🧠 Train AI.</small></div>
+      </div>
+      <div class="row" style="margin-top:14px;align-items:center"><div style="flex:0"><button type="button" class="btn" data-save>Save ${k.t} brain</button></div><div><p class="muted" style="font-size:13px" data-dirty>${k.send}</p></div></div>
+      <p class="muted bstat">Last 24 h: ${n ? Object.entries(t).map(([id, x]) => `${x} by ${esc(brainInfo(id).name)}`).join(', ') : 'no real replies yet'}.</p>
+      ${err[1] ? `<p class="msg err">Last problem (${esc(new Date(err[0]).toLocaleString())}): ${esc(err.slice(1).join('|'))}</p>` : ''}
+      <div class="btest">
+        <div class="ph"><b>Test it here</b><button type="button" class="btn ghost sm" data-reset>New convo</button></div>
+        <div class="msgs" data-msgs><p class="muted" style="font-size:13px;text-align:center;margin:auto">${hasKey ? `Write like a ${k.who} would. Under each answer you see which brain wrote it. It uses the brains picked above, even before you save.` : 'Add the AI key first (button at the top of this page).'}</p></div>
+        <form class="compose" data-chat><input placeholder="Write as a ${k.who}…" autocomplete="off" ${hasKey ? '' : 'disabled'}><button class="btn sm" ${hasKey ? '' : 'disabled'}>Send</button></form>
+      </div>
+    </section>`; };
+  v.innerHTML = `
+  <div class="card tguide" style="margin-bottom:14px"><b>How it works</b>
+    <ol>
+      <li><b>A brain</b> is the AI engine that writes the messages. Each channel has its own.</li>
+      <li><b>The main brain</b> answers first. <b>The backup brain</b> answers only when the main one refuses the message or is down.</li>
+      <li><b>The script</b> is what she knows and how she talks. Same Kaya, one script per channel.</li>
+      <li>Change a brain in the list, try it in <b>Test it here</b>, then press <b>Save</b>.</li>
+    </ol>
+    <p style="margin:12px 0 0;font-size:13.5px">AI key (OpenRouter): <span class="pill ${hasKey ? 'yes' : 'no'}">${hasKey ? 'Saved' : 'Missing'}</span> ${hasKey ? '<span class="muted">One key pays for every brain.</span>' : '<button type="button" class="btn sm" id="bKey">Add the key</button> <span class="muted">Nothing can answer without it.</span>'}</p>
+  </div>
+  <div class="brains">${card('sms')}${card('of')}</div>`;
+  const bk = $('#bKey'); if (bk) bk.onclick = () => show('train');
+
+  v.querySelectorAll('.brain').forEach(el => {
+    const c = el.dataset.c, k = CHAN[c], f = n => el.querySelector(`[data-f="${n}"]`), msgs = el.querySelector('[data-msgs]');
+    const refresh = () => {
+      el.querySelector('[data-flow]').innerHTML = flow(c, f('engine').value, f('backup').value);
+      el.querySelector('[data-d="engine"]').textContent = brainInfo(f('engine').value).d;
+      el.querySelector('[data-d="backup"]').textContent = f('backup').value ? brainInfo(f('backup').value).d : 'Nobody takes over. If the main brain fails, you get an error and a person answers.';
+      const cfg = brainCfg(c), dirty = ['engine','backup','profile'].some(n => f(n).value !== cfg[n]);
+      el.querySelector('[data-dirty]').innerHTML = dirty ? '<b style="color:var(--pink)">Not saved yet.</b> Test it below, then press Save.' : k.send;
+    };
+    ['engine','backup','profile'].forEach(n => f(n).onchange = () => {
+      if (n !== 'profile' && f('backup').value === f('engine').value) f('backup').value = '';
+      refresh();
+    });
+    el.querySelector('[data-open]').onclick = () => { trainModel = f('profile').value; show('train'); };
+    el.querySelector('[data-save]').onclick = async () => {
+      const rows = ['engine','backup','profile'].map(n => ({ key:k.pre + n, value:f(n).value }));
+      const { error } = await sb.from('settings').upsert(rows); if (error) return toast(error.message);
+      rows.forEach(r => settings[r.key] = r.value); toast(`${k.t} brain saved`); refresh();
+    };
+    el.querySelector('[data-reset]').onclick = () => { brainHist[c] = []; msgs.innerHTML = ''; };
+    const add = (cls, text) => { if (msgs.querySelector('p.muted')) msgs.innerHTML = ''; const b = document.createElement('div'); b.className = cls; b.textContent = text; msgs.appendChild(b); msgs.scrollTop = msgs.scrollHeight; return b; };
+    el.querySelector('[data-chat]').onsubmit = async e => {
+      e.preventDefault();
+      const inp = e.target.querySelector('input'), text = inp.value.trim(); if (!text) return;
+      inp.value = ''; add('bub fan', text); const wait = add('bub bot', '…');
+      brainHist[c].push({ role:'user', content:text });
+      const r = await smsAi({ action:'chat', channel:c, profile:f('profile').value, engine:f('engine').value, backup:f('backup').value, history:brainHist[c] });
+      if (r.error){ brainHist[c].pop(); wait.textContent = 'Error: ' + r.error; wait.classList.add('handoff'); return; }
+      brainHist[c].push({ role:'assistant', content:r.output });
+      wait.textContent = r.output;
+      const i = brainInfo(r.by);
+      add('bby' + (r.backup ? ' bak' : ''), `${i.ico} ${i.name}` + (r.backup ? (r.why === 'refused' ? ' · backup, the main brain refused' : ' · backup, the main brain was down') : ''));
+    };
+  });
+  // full engine list with prices, loaded once in the background
+  if (!brainEngines && hasKey !== undefined) smsAi({ action:'engines' }).then(r => {
+    if (r.error || !r.engines || tab !== 'brains') return;
+    brainEngines = r.engines;
+    v.querySelectorAll('.brain').forEach(el => { const c = el.dataset.c;
+      const e = el.querySelector('[data-f="engine"]'), b = el.querySelector('[data-f="backup"]'), ev = e.value, bv = b.value;
+      e.innerHTML = opts(ev); b.innerHTML = opts(bv, true); e.value = ev; b.value = bv; });
+  });
+}
+
 // ---------- train AI ----------
 // Each profile's instructions are one text in the database. Here it is shown as separate boxes (one per
 // CAPITAL LETTER heading) so each part is easy to find and edit. Saving puts the boxes back into one text.
@@ -1410,7 +1540,7 @@ async function trainView(){
     ? `<label for="tPrompt">Everything she knows, as one text</label><textarea id="tPrompt">${esc(trainJoin(trainSecs))}</textarea><p class="muted" style="font-size:12.5px;margin-top:6px">A line in CAPITAL LETTERS starts a new box.</p>`
     : trainSecs.map((x, i) => { const inf = tsecInfo(x.key); return `<details class="tsec" ${i < 2 ? 'open' : ''}><summary>${esc(inf.t)}<small>${esc(inf.d)}</small></summary><textarea data-i="${i}" rows="${rows(x.content)}" aria-label="${esc(inf.t)}">${esc(x.content)}</textarea>${inf.ex ? `<p class="tex">${esc(inf.ex)}</p>` : ''}</details>`; }).join('') + `<button type="button" class="btn sm ghost" id="tAdd">+ Add a box</button>`;
   const lastErr = (settings.sms_ai_last_error || '').split('|');
-  const delays = [5, 10, 20, 30, 45, 60, 90], delay = Number(settings.sms_ai_delay || 20), engine = settings.sms_ai_engine || 'nvidia/nemotron-3.5-lightning:free';
+  const delays = [5, 10, 20, 30, 45, 60, 90], delay = Number(settings.sms_ai_delay || 20);
   v.innerHTML = `
   <details class="card tguide" id="tGuide" ${guideOpen ? 'open' : ''} style="margin-bottom:14px"><summary style="cursor:pointer;font-weight:700">📖 How to train her (read once)</summary>
     <ol>
@@ -1422,7 +1552,7 @@ async function trainView(){
     <p class="muted" style="font-size:13px;margin:10px 0 0">Real examples teach her more than rules. Everything you save is live on the next message. To turn the AI on or off, use the switch on the 📱 SMS phone page.</p>
   </details>
   <div class="row" style="margin-bottom:14px">
-    <div><label for="tPick">Profile</label><select id="tPick">${data.map(x=>`<option value="${esc(x.model)}" ${x.model===trainModel?'selected':''}>${esc(x.display_name||x.model)}${x.model === smsProf ? ' · answers the SMS phone' : ''}</option>`).join('')}</select></div>
+    <div><label for="tPick">Profile</label><select id="tPick">${data.map(x=>`<option value="${esc(x.model)}" ${x.model===trainModel?'selected':''}>${esc(x.display_name||x.model)}${x.model === smsProf ? ' · answers the SMS phone' : x.model === brainCfg('of').profile ? ' · answers OnlyFans' : ''}</option>`).join('')}</select></div>
     <div style="flex:0"><button class="btn ghost" id="tNew">+ New profile</button></div>
   </div>
   <div class="train">
@@ -1450,8 +1580,8 @@ async function trainView(){
         <small>A real girl does not answer in one second. If he sends several texts in a row, she waits for the last one.</small></div>
       <div><label for="aCap">Safety limit</label><input id="aCap" type="number" min="5" max="200" value="${esc(settings.sms_ai_cap || 40)}">
         <small>The most AI texts one client can get in 24 hours. After that she only suggests.</small></div>
-      <div><label for="aEng">AI engine</label><select id="aEng"><option value="${esc(engine)}">${esc(engine)}</option></select>
-        <small>The AI model that writes her texts. Free engines can be slow or busy. <a href="#" id="aEngMore">Show other engines</a></small></div>
+      <div><label>AI brain</label><p style="margin:0;font-size:14px">${esc(brainInfo(brainCfg('sms').engine).ico)} ${esc(brainInfo(brainCfg('sms').engine).name)}</p>
+        <small>The AI engine that writes her texts. <a href="#brains" id="aBrains">Change it in ⚡ AI brains</a></small></div>
     </div>
     <div class="row" style="margin-top:16px"><div style="flex:0"><button type="button" class="btn" id="aSave">Save AI settings</button></div><div><p class="muted" style="font-size:13px">The Off / Suggest / Auto switch is on the 📱 SMS phone page.</p></div></div>
     ${lastErr[1] ? `<p class="msg err" style="margin-top:12px">Last AI problem (${esc(new Date(lastErr[0]).toLocaleString())}): ${esc(lastErr.slice(1).join('|'))}</p>` : ''}
@@ -1494,11 +1624,11 @@ async function trainView(){
     const wait = add('bot', '…');
     trainHist.push({ role:'user', content:text });
     try {
-      let out = '';
+      let out = '', by = '';
       if (hasKey){
-        const r = await smsAi({ action:'chat', profile:trainModel, history:trainHist });
+        const r = await smsAi({ action:'chat', channel: trainModel === brainCfg('of').profile && trainModel !== brainCfg('sms').profile ? 'of' : 'sms', profile:trainModel, history:trainHist });
         if (r.error) throw new Error(r.error);
-        out = (r.output || '').trim();
+        out = (r.output || '').trim(); by = r.by ? `${brainInfo(r.by).ico} ${brainInfo(r.by).name}${r.backup ? ' · backup' : ''}` : '';
       } else {
         const r = await fetch(BOT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'sendMessage', sessionId:trainSession, chatInput:text, model:trainModel }) });
         const d = await r.json();
@@ -1515,7 +1645,7 @@ async function trainView(){
         const { error } = await sb.from('bot_config').update({ examples: ex.value, updated_at:new Date().toISOString() }).eq('model', trainModel);
         toast(error ? error.message : 'Added to her examples'); fix.textContent = '✓ Learned';
       };
-      wait.after(fix); $('#tMsgs').scrollTop = 1e9;
+      wait.after(fix); if (by){ const t = document.createElement('div'); t.className = 'bby'; t.textContent = by; wait.after(t); } $('#tMsgs').scrollTop = 1e9;
     } catch(err){ trainHist.pop(); wait.textContent = 'Error: ' + err.message; }
   };
   if (!owner) return;
@@ -1525,16 +1655,10 @@ async function trainView(){
     if (r.error){ $('#aKeySave').disabled = false; return toast(r.error); }
     toast('Key saved'); trainView();
   };
-  $('#aEngMore').onclick = async e => {
-    e.preventDefault(); e.target.textContent = 'Loading…';
-    const r = await smsAi({ action:'engines' }); if (r.error){ e.target.textContent = 'Show other engines'; return toast(r.error); }
-    const list = r.engines || []; if (!list.find(x => x.id === engine)) list.unshift({ id:engine, name:engine, price:'' });
-    $('#aEng').innerHTML = list.map(x => `<option value="${esc(x.id)}" ${x.id === engine ? 'selected' : ''}>${esc(x.name)}${x.price ? ' · ' + esc(x.price) : ''}</option>`).join('');
-    e.target.remove();
-  };
+  $('#aBrains').onclick = e => { e.preventDefault(); show('brains'); };
   $('#aSave').onclick = async () => {
     const cap = Math.max(5, Math.min(200, Number($('#aCap').value) || 40));
-    const rows2 = [{ key:'sms_ai_profile', value:$('#aProf').value }, { key:'sms_ai_delay', value:$('#aDelay').value }, { key:'sms_ai_cap', value:String(cap) }, { key:'sms_ai_engine', value:$('#aEng').value }];
+    const rows2 = [{ key:'sms_ai_profile', value:$('#aProf').value }, { key:'sms_ai_delay', value:$('#aDelay').value }, { key:'sms_ai_cap', value:String(cap) }];
     const { error } = await sb.from('settings').upsert(rows2); if (error) return toast(error.message);
     rows2.forEach(r => settings[r.key] = r.value); toast('AI settings saved'); trainView();
   };

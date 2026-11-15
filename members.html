@@ -129,12 +129,13 @@
   .led.ok{background:#1f8a4c}.led.warn{background:#d99a00}.led.bad{background:#d23b3b}
   .dash li{margin:6px 0;list-style:none;font-size:14px}
   .wrap.wide{max-width:1700px}
-  .smstop{display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:space-between;margin-bottom:12px}
+  .smstop{display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:space-between;margin-bottom:10px}
+  .smsmore{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:space-between;margin-bottom:10px}
   .stats{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   .stat{display:inline-flex;align-items:center;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);white-space:nowrap}
   .stat b{margin-right:5px}
   .stat.hot{border-color:var(--pink);color:var(--pink-deep)} .stat.bad{border-color:#d23b3b;color:#d23b3b}
-  .chat{display:grid;grid-template-columns:300px minmax(0,1fr) 270px;height:calc(100vh - 275px);min-height:480px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--card)}
+  .chat{display:grid;grid-template-columns:270px minmax(0,1fr) 350px;height:calc(100vh - 215px);min-height:480px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--card)}
   @media(max-width:1100px){.chat{grid-template-columns:240px minmax(0,1fr);height:auto}.clist,.cmain,.cboard{height:62vh}.cinfo{grid-column:1/-1;border-left:0;border-top:1px solid var(--line);flex-direction:row}.cinfo #cinfo,.cpad{flex:1;border-top:0}}
   @media(max-width:700px){.chat{grid-template-columns:1fr;height:auto}.clist{max-height:260px}.cmain{height:70vh}}
   .clist{display:flex;flex-direction:column;border-right:1px solid var(--line);min-height:0}
@@ -163,7 +164,7 @@
   .cinfo #cinfo{padding:10px 14px;flex:0 0 auto} .cinfo #cinfo textarea{margin:4px 0 0;resize:none;font-size:13px;height:62px;min-height:62px;padding:7px 10px;font-family:inherit} .cinfo #cinfo h3 small{font-weight:400;color:var(--muted);font-size:11.5px}
   .cpad{border-top:1px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;flex:1;min-height:150px;background:var(--blush)}
   .cpad h3 small{font-weight:400;color:var(--muted);font-size:11.5px}
-  .cpad textarea{flex:1;margin:6px 0 0;resize:none;font-size:13.5px}
+  .cpad textarea{flex:1;margin:6px 0 0;resize:none;font-size:13px;line-height:1.45;padding:9px 11px;min-height:0}
   .chat [hidden]{display:none!important}
   .cboard{grid-column:1/3;display:flex;flex-direction:column;min-height:0;min-width:0}
   .bgrid{flex:1;overflow:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;align-content:start;background:var(--surface)}
@@ -615,10 +616,11 @@ async function smsGatePanel(){
   const chips = $('#gateChips'), box = $('#gateBox'); if (!chips) return;
   chips.innerHTML = '<span class="stat">Checking the phone link…</span>';
   const st = await smsGate({ action:'status' });
-  if (st.error){ chips.innerHTML = `<span class="stat bad">${esc(st.error)}</span>`; return; }
+  if (st.error){ chips.innerHTML = `<span class="stat bad">${esc(st.error)}</span>`; if ($('#smsDot')) $('#smsDot').className = 'led bad'; return; }
   const seen = st.device?.lastSeen ? new Date(st.device.lastSeen) : null, mins = seen ? Math.round((Date.now() - seen) / 60000) : null;
   const led = (ok, warn) => `<i class="led ${ok ? 'ok' : warn ? 'warn' : 'bad'}"></i>`;
   const mode = st.allow === '*' ? 'Live' : st.allow ? 'Test numbers only' : 'Off';
+  const dot = $('#smsDot'); if (dot){ const good = st.creds && st.gate === 200 && st.hook && mins !== null && mins < 20, warn = st.creds && st.gate === 200 && st.hook; dot.className = 'led ' + (good ? 'ok' : warn ? 'warn' : 'bad'); dot.title = good ? 'Phone link OK' : 'Check the phone link'; }
   chips.innerHTML = `<span class="stat">${led(st.creds && st.gate === 200)}Login ${!st.creds ? 'missing' : st.gate === 200 ? 'OK' : 'refused'}</span>
     <span class="stat">${led(st.hook)}${st.hook ? 'Phone connected' : 'Phone not connected'}</span>
     <span class="stat">${led(st.pics, st.hook)}${st.pics ? 'Pictures on' : 'Pictures: receiving not on yet'}</span>
@@ -636,7 +638,8 @@ async function smsGatePanel(){
 }
 async function smsView(){
   const v = $('#view');
-  v.innerHTML = `<div class="smstop"><div class="stats"><div class="cfilt" id="smsMode" style="padding:0;border:0"><button data-m="chat" class="on">💬 Chat</button><button data-m="board">📋 Client notes</button></div><div id="smsStats" class="stats"></div><button class="btn sm ghost" id="smsBell" title="Sound when a new text arrives"></button></div><div id="gateChips" class="stats"></div></div>
+  v.innerHTML = `<div class="smstop"><div class="stats"><div class="cfilt" id="smsMode" style="padding:0;border:0"><button data-m="chat" class="on">💬 Chat</button><button data-m="board">📋 Client notes</button></div><button class="btn sm ghost" id="smsBell" title="Sound when a new text arrives"></button><button class="btn sm ghost" id="smsMoreBtn" aria-expanded="false"><i class="led" id="smsDot"></i>Status ▾</button></div></div>
+  <div id="smsMore" class="smsmore" hidden><div id="smsStats" class="stats"></div><div id="gateChips" class="stats"></div></div>
   <div class="chat">
     <aside class="clist">
       <div class="chead"><input id="csearch" type="search" placeholder="Search" aria-label="Search conversations"><button class="btn sm" id="pnew">＋ New</button></div>
@@ -653,6 +656,9 @@ async function smsView(){
   smsGatePanel();
   $('#csearch').oninput = e => { smsQ = e.target.value.toLowerCase(); smsRows(); };
   document.querySelectorAll('#smsMode button').forEach(b => b.onclick = () => smsSetMode(b.dataset.m));
+  const more = $('#smsMore'), moreBtn = $('#smsMoreBtn'), moreSet = on => { more.hidden = !on; moreBtn.setAttribute('aria-expanded', on); moreBtn.lastChild.textContent = on ? 'Status ▴' : 'Status ▾'; try { localStorage.setItem('unreal-sms-status', on ? 'open' : 'closed'); } catch(e){} };
+  let moreOpen = false; try { moreOpen = localStorage.getItem('unreal-sms-status') === 'open'; } catch(e){}
+  moreSet(moreOpen); moreBtn.onclick = () => moreSet(more.hidden);
   const bell = $('#smsBell'), bellDraw = () => { bell.textContent = dingOn() ? '🔔 Sound on' : '🔕 Sound off'; };
   bellDraw(); bell.onclick = () => { try { localStorage.setItem('unreal-sms-sound', dingOn() ? 'off' : 'on'); } catch(e){} bellDraw(); if (dingOn()) setTimeout(() => ding(true), 50); };
   smsPad();

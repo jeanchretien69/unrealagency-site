@@ -199,6 +199,27 @@
   .bub.bot.handoff{background:var(--warnbg);color:var(--warn)}
   .fix{align-self:flex-start;border:0;background:none;color:var(--muted);font-size:12px;padding:0 4px;margin-top:-4px}
   .fix:hover{color:var(--pink)}
+  /* AI replies: switch on the SMS phone, suggestions, Train AI boxes */
+  .aibar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 14px;margin-bottom:10px;border:1px solid var(--line);border-radius:14px;background:var(--card);font-size:13.5px}
+  .aibar.suggest{border-color:#d99a00} .aibar.auto{border-color:#1f8a4c}
+  .aibar .cfilt{padding:0;border:0}
+  .aibar .cfilt button{padding:6px 14px;font-size:13px;font-weight:700}
+  .aibar .cfilt button:disabled{opacity:.45;cursor:not-allowed}
+  .aibar .cfilt button.on.off{background:var(--muted);border-color:var(--muted)}
+  .aibar .cfilt button.on.suggest{background:#d99a00;border-color:#d99a00}
+  .aibar .cfilt button.on.auto{background:#1f8a4c;border-color:#1f8a4c}
+  .aihint{color:var(--muted);flex:1;min-width:220px}
+  .csugg{flex-basis:100%;display:flex;align-items:center;gap:10px;font-size:13.5px;padding:9px 12px;border-radius:12px;background:var(--warnbg)}
+  .csugg span{flex:1;white-space:pre-wrap} .csugg b{color:var(--warn);margin-right:8px}
+  .csugg.error{background:var(--badbg)} .csugg.error b{color:var(--bad)}
+  .tguide ol{margin:10px 0 0;padding-left:20px;line-height:1.7}
+  .tsec{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+  .tsec summary{cursor:pointer;font-weight:700}
+  .tsec summary small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:2px}
+  .train .tsec textarea{min-height:0;margin-top:10px;font-family:inherit;font-size:13.5px;resize:vertical}
+  .tsec .tex{font-size:12px;color:var(--muted);margin:6px 0 0}
+  .aiset{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px 20px}
+  .aiset small{display:block;color:var(--muted);font-size:12.5px;margin-top:5px}
   .compose{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
   .compose input{border-radius:999px}
   /* ---- SMS mini phone ---- */
@@ -544,7 +565,7 @@ function botView(){
     <div class="card tile"><span>Unreal fee</span><b>${esc(settings.fee_percent || 10)}%</b></div>
   </div>
   <div class="card tbl"><table><thead><tr><th>Channel</th><th>Mode</th><th>Status</th></tr></thead><tbody>
-    ${can('bot.sms') ? '<tr><td>SMS (textbee)</td><td>Auto reply, human-like delay</td><td><span class="pill pending">Setting up</span></td></tr>' : ''}
+    ${can('bot.sms') ? `<tr><td>SMS phone</td><td>${{ off:'Off: the team answers every text', suggest:'Suggest: the AI writes, a person sends', auto:'Auto: the AI answers by itself' }[aiMode()]}</td><td><span class="pill ${aiMode() === 'off' ? 'no' : 'yes'}">${aiMode() === 'off' ? 'Off' : 'On'}</span></td></tr>` : ''}
     ${can('bot.of') ? '<tr><td>OnlyFans</td><td>AI drafts → human approves</td><td><span class="pill pending">Setting up</span></td></tr>' : ''}
     ${can('bot.telegram') ? '<tr><td>Telegram</td><td>Funnel</td><td><span class="pill no">Planned</span></td></tr>' : ''}
   </tbody></table></div>
@@ -636,9 +657,67 @@ async function smsGatePanel(){
   $('#gSave').onclick = async () => { const r = await smsGate({ action:'allow', value:$('#gAllow').value.trim() }); toast(r.error || 'Saved'); smsGatePanel(); };
   $('#gSetup').onclick = async () => { const r = await smsGate({ action:'setup' }); toast(r.error || (r.already ? 'Already connected' : 'Phone connected (texts + pictures)')); smsGatePanel(); };
 }
+// ---------- AI replies on the SMS phone ----------
+// Off = the team answers. Suggest = the AI writes a reply, a person sends it. Auto = the AI answers by itself.
+let smsSugg = {}, smsAiState = { hasKey:false }, smsSuggChan = null;
+const aiMode = () => ['suggest','auto'].includes(settings.sms_ai_mode) ? settings.sms_ai_mode : 'off';
+async function smsAi(body){
+  const { data, error } = await sb.functions.invoke('sms-ai', { body });
+  if (error){ let m = error.message; try { m = (await error.context.json()).error || m; } catch(e){} return { error:m }; }
+  return data || {};
+}
+const AI_HINT = {
+  off:'The AI is off. Your team answers every text.',
+  suggest:'The AI writes a reply in each chat. Nothing is sent until a person presses Send.',
+  auto:'The AI answers clients by itself. Use the 🤖 button inside a chat to switch it off for one client.' };
+async function smsAiLoad(){
+  const [st, s] = await Promise.all([ smsAi({ action:'status' }), sb.from('settings').select('*').like('key', 'sms_ai_%') ]);
+  smsAiState = st.error ? { hasKey:false } : st;
+  (s.data || []).forEach(r => settings[r.key] = r.value);
+}
+function smsAiBar(){
+  const box = $('#aiBar'); if (!box) return;
+  const m = aiMode(), owner = me.role === 'admin', ok = smsAiState.hasKey;
+  box.className = 'aibar ' + m;
+  box.innerHTML = `<b>🤖 AI replies</b><div class="cfilt" role="group" aria-label="AI mode">${[['off','Off'],['suggest','Suggest'],['auto','Auto']].map(([k, l]) => `<button data-a="${k}" class="${k} ${m === k ? 'on' : ''}" ${owner && (ok || k === 'off') ? '' : 'disabled'}>${l}</button>`).join('')}</div>
+    <span class="aihint">${ok ? AI_HINT[m] : (owner ? 'The AI key is missing. Add it in <a href="#train" id="aiGo">Train AI → AI settings</a> to turn the AI on.' : 'The AI is not set up yet.')}${ok && !owner ? ' Only the owner can change this.' : ''}</span>`;
+  box.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => {
+    const k = b.dataset.a; if (k === aiMode()) return;
+    if (k === 'auto' && !confirm('Turn on Auto?\n\nThe AI will answer clients by itself, without a person checking first.')) return;
+    const { error } = await sb.from('settings').upsert({ key:'sms_ai_mode', value:k }); if (error) return toast(error.message);
+    settings.sms_ai_mode = k; toast(k === 'off' ? 'AI is off' : k === 'suggest' ? 'AI now suggests replies' : 'AI now answers by itself'); smsAiBar(); smsThread();
+  });
+  const go = $('#aiGo'); if (go) go.onclick = e => { e.preventDefault(); show('train'); };
+}
+function smsSuggHtml(p, a){
+  const g = smsSugg[p]; if (!g) return '';
+  const last = a[a.length - 1]; if (g.kind !== 'stop' && (!last || last.direction !== 'in')) return '';
+  const x = '<button type="button" class="btn sm ghost" id="sgNo" aria-label="Hide this">✕</button>';
+  if (g.kind === 'reply') return `<div class="csugg"><span><b>💡 Kaya suggests</b>${esc(g.body)}</span><button type="button" class="btn sm" id="sgUse">Use it</button>${x}</div>`;
+  if (g.kind === 'handoff') return `<div class="csugg"><span><b>🙋 Kaya asks for a human</b>She does not know what to answer here. Write this one yourself.</span>${x}</div>`;
+  if (g.kind === 'stop') return `<div class="csugg error"><span><b>⛔ Kaya stopped</b>He was rude, seems under 18, or asked to stop. The AI is now off for this client.</span>${x}</div>`;
+  return `<div class="csugg error"><span><b>⚠️ AI problem</b>${esc(g.body)}</span>${x}</div>`;
+}
+function smsSuggWire(p){
+  const use = $('#sgUse'), no = $('#sgNo'), ask = $('#psugg'), tog = $('#paiTog');
+  if (use) use.onclick = () => { const t = $('#ptext'); t.value = smsSugg[p]?.body || ''; t.focus(); };
+  if (no) no.onclick = () => { delete smsSugg[p]; sb.from('sms_suggestions').delete().eq('phone', p).then(() => {}); smsThread(); };
+  if (ask) ask.onclick = async () => {
+    ask.disabled = true; toast('Kaya is writing…');
+    const r = await smsAi({ action:'suggest', phone:p });
+    if (r.error) toast(r.error); else smsSugg[p] = { phone:p, kind:r.kind, body:r.body };
+    smsThread();
+  };
+  if (tog) tog.onclick = async () => {
+    const off = !smsNames[p]?.ai_off;
+    const { error } = await sb.from('sms_contacts').upsert({ phone:p, ai_off:off, updated_at:new Date().toISOString() }); if (error) return toast(error.message);
+    smsNames[p] = { ...smsNames[p], phone:p, ai_off:off }; toast(off ? 'AI is off for this client' : 'AI is back on for this client'); smsThread();
+  };
+}
 async function smsView(){
   const v = $('#view');
   v.innerHTML = `<div class="smstop"><div class="stats"><div class="cfilt" id="smsMode" style="padding:0;border:0"><button data-m="chat" class="on">💬 Chat</button><button data-m="board">📋 Client notes</button></div><button class="btn sm ghost" id="smsBell" title="Sound when a new text arrives"></button><button class="btn sm ghost" id="smsMoreBtn" aria-expanded="false"><i class="led" id="smsDot"></i>Status ▾</button></div></div>
+  <div class="aibar" id="aiBar"><b>🤖 AI replies</b><span class="aihint">Checking…</span></div>
   <div id="smsMore" class="smsmore" hidden><div id="smsStats" class="stats"></div><div id="gateChips" class="stats"></div></div>
   <div class="chat">
     <aside class="clist">
@@ -654,6 +733,7 @@ async function smsView(){
   </div>
   <details class="card" id="gateWrap" style="margin-top:14px" hidden><summary style="cursor:pointer;font-weight:700">⚙️ Phone link settings</summary><div id="gateBox" style="margin-top:12px"></div></details>`;
   smsGatePanel();
+  smsAiLoad().then(() => { smsAiBar(); if (tab === 'sms') smsThread(); });
   $('#csearch').oninput = e => { smsQ = e.target.value.toLowerCase(); smsRows(); };
   document.querySelectorAll('#smsMode button').forEach(b => b.onclick = () => smsSetMode(b.dataset.m));
   const more = $('#smsMore'), moreBtn = $('#smsMoreBtn'), moreSet = on => { more.hidden = !on; moreBtn.setAttribute('aria-expanded', on); moreBtn.lastChild.textContent = on ? 'Status ▴' : 'Status ▾'; try { localStorage.setItem('unreal-sms-status', on ? 'open' : 'closed'); } catch(e){} };
@@ -664,9 +744,15 @@ async function smsView(){
   smsPad();
   document.querySelectorAll('.clist .cfilt button').forEach(b => b.onclick = () => { smsFilter = b.dataset.f; document.querySelectorAll('.clist .cfilt button').forEach(x => x.classList.toggle('on', x === b)); smsRows(); });
   $('#pnew').onclick = () => { let n = prompt('Phone number to text (with country code, e.g. +15145550000):'); if (!n) return; n = n.replace(/[^\d+]/g, ''); if (n.replace(/\D/g,'').length < 10) return toast('That number looks too short'); if (!n.startsWith('+')) n = '+' + (n.length === 10 ? '1' : '') + n; smsOpen = n; smsDraw(true); };
-  const [m, c] = await Promise.all([ sb.from('sms_messages').select('*').order('created_at').limit(5000), sb.from('sms_contacts').select('*') ]);
+  const [m, c, g] = await Promise.all([ sb.from('sms_messages').select('*').order('created_at').limit(5000), sb.from('sms_contacts').select('*'), sb.from('sms_suggestions').select('*') ]);
   if (m.error){ $('#crows').innerHTML = `<p class="pempty">${esc(m.error.message)}</p>`; return; }
   smsMsgs = m.data || []; smsNames = Object.fromEntries((c.data||[]).map(x => [x.phone, x]));
+  smsSugg = Object.fromEntries((g.data||[]).map(x => [x.phone, x]));
+  if (smsSuggChan) sb.removeChannel(smsSuggChan);
+  smsSuggChan = sb.channel('sms-sugg').on('postgres_changes', { event:'*', schema:'public', table:'sms_suggestions' }, q => {
+    if (q.eventType === 'DELETE') delete smsSugg[q.old.phone]; else smsSugg[q.new.phone] = q.new;
+    if (tab === 'sms') smsThread();
+  }).subscribe();
   if (smsChan) sb.removeChannel(smsChan);
   smsChan = sb.channel('sms-live').on('postgres_changes', { event:'*', schema:'public', table:'sms_messages' }, p => {
     if (p.eventType === 'DELETE') smsMsgs = smsMsgs.filter(x => x.id !== p.old.id);
@@ -686,7 +772,7 @@ function smsSetMode(m){
 async function smsSaveContact(p, name, note){
   const row = { phone:p, name:(name||'').trim() || null, note:(note||'').trim() || null, updated_at:new Date().toISOString() };
   const { error } = await sb.from('sms_contacts').upsert(row); if (error){ toast(error.message); return false; }
-  smsNames[p] = row; return true;
+  smsNames[p] = { ...smsNames[p], ...row }; return true;
 }
 function smsBoard(force){
   const box = $('#cboard'); if (!box || box.hidden) return;
@@ -759,12 +845,12 @@ function smsThread(first){
   let day = '', html = '';
   a.forEach((x, i) => {
     const d = smsDay(x.created_at); if (d !== day){ day = d; html += `<div class="pday">${d}</div>`; }
-    html += `<div class="bub ${x.direction} ${x.status==='failed'?'fail':''}">${smsMediaHtml(x)}${esc(x.body)}<small>${smsTime(x.created_at)}${x.direction==='out' && (x.status==='failed' || i===a.length-1) ? ' · ' + (label[x.status]||'') : ''}</small></div>`;
+    html += `<div class="bub ${x.direction} ${x.status==='failed'?'fail':''}">${smsMediaHtml(x)}${esc(x.body)}<small>${x.ai ? '🤖 ' : ''}${smsTime(x.created_at)}${x.direction==='out' && (x.status==='failed' || i===a.length-1) ? ' · ' + (label[x.status]||'') : ''}</small></div>`;
   });
-  main.innerHTML = `<header class="cbar"><div><b>${esc(smsName(p))}</b><small>${esc(p)}${a.some(x=>x.is_test)?' · test conversation':''}</small></div><button class="btn sm ghost" id="prename">✏️ ${smsNames[p]?.name ? 'Rename' : 'Add a name'}</button></header>
+  main.innerHTML = `<header class="cbar"><div><b>${esc(smsName(p))}</b><small>${esc(p)}${a.some(x=>x.is_test)?' · test conversation':''}</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${aiMode() !== 'off' ? `<button class="btn sm ghost" id="paiTog" title="Turn the AI on or off for this client only">🤖 AI ${smsNames[p]?.ai_off ? 'OFF' : 'ON'} for this client</button>` : ''}<button class="btn sm ghost" id="prename">✏️ ${smsNames[p]?.name ? 'Rename' : 'Add a name'}</button></div></header>
     <div class="cthread" id="cthread">${html || '<p class="pempty">No messages yet. Write the first one below.</p>'}</div>
-    <form class="csend" id="psend">${smsPend && smsPend.p === p ? `<div class="cattach"><img src="${esc(smsPend.url)}" alt=""><span>Photo ready to send (${Math.round(smsPend.blob.size / 1024)} KB)</span><button type="button" class="btn sm ghost" id="pdrop">Remove</button></div>` : ''}
-      <input type="file" id="pfile" accept="image/*" hidden><button type="button" class="btn ghost" id="pclip" title="Send a photo" aria-label="Attach a photo">📎</button>
+    <form class="csend" id="psend">${smsSuggHtml(p, a)}${smsPend && smsPend.p === p ? `<div class="cattach"><img src="${esc(smsPend.url)}" alt=""><span>Photo ready to send (${Math.round(smsPend.blob.size / 1024)} KB)</span><button type="button" class="btn sm ghost" id="pdrop">Remove</button></div>` : ''}
+      <input type="file" id="pfile" accept="image/*" hidden><button type="button" class="btn ghost" id="pclip" title="Send a photo" aria-label="Attach a photo">📎</button>${smsAiState.hasKey ? '<button type="button" class="btn ghost" id="psugg" title="Ask the AI to write a reply for this chat" aria-label="Ask the AI to write a reply">✨</button>' : ''}
       <textarea id="ptext" rows="2" placeholder="Write a message. Enter sends, Shift+Enter makes a new line." aria-label="Message"></textarea><button class="btn" aria-label="Send">Send</button></form>`;
   $('#prename').onclick = async () => {
     const name = prompt('Name for this client (leave empty to show the phone number again):', smsNames[p]?.name || ''); if (name === null) return;
@@ -773,6 +859,7 @@ function smsThread(first){
   smsMediaFill(main);
   main.querySelectorAll('img.mm').forEach(i => i.onclick = () => { if (i.src) window.open(i.src, '_blank', 'noopener'); });
   $('#pclip').onclick = () => $('#pfile').click();
+  smsSuggWire(p);
   $('#pfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; toast('Preparing the photo…'); const b = await smsShrink(f); if (!b) return toast('This file cannot be sent as a picture message'); if (smsPend) URL.revokeObjectURL(smsPend.url); smsPend = { p, blob:b, url:URL.createObjectURL(b) }; smsThread(); };
   if ($('#pdrop')) $('#pdrop').onclick = () => { URL.revokeObjectURL(smsPend.url); smsPend = null; smsThread(); };
   const t = $('#ptext'); t.value = keep; if (first || hadFocus){ t.focus(); try { if (sel) t.setSelectionRange(sel[0], sel[1]); else t.setSelectionRange(keep.length, keep.length); } catch(e){} }
@@ -789,6 +876,7 @@ function smsThread(first){
     }
     t.value = ''; const { data: row, error } = await sb.from('sms_messages').insert({ phone:p, direction:'out', body, media, status:'queued', is_read:true, is_test:a.some(x => x.is_test) }).select().single();
     if (error){ t.value = body; return toast(error.message); }
+    if (smsSugg[p]){ delete smsSugg[p]; sb.from('sms_suggestions').delete().eq('phone', p).then(() => {}); }
     $('#ptext')?.focus();
     if (row && !row.is_test){ const r = await smsGate({ action:'send', id:row.id }); if (r.error) toast(r.error); }
     $('#ptext')?.focus();
@@ -1267,60 +1355,156 @@ function settingsView(){
 }
 
 // ---------- train AI ----------
+// Each profile's instructions are one text in the database. Here it is shown as separate boxes (one per
+// CAPITAL LETTER heading) so each part is easy to find and edit. Saving puts the boxes back into one text.
 const BOT_URL = 'https://jeanchretien.app.n8n.cloud/webhook/eed38aa6-9d3a-4273-96cf-79bc653af7a3/chat';
-let trainModel = null, trainSession = null, lastFan = '';
+let trainModel = null, trainSession = null, lastFan = '', trainSecs = [], trainHist = [], trainRaw = false;
+const TSEC = [
+  [/^(PERSONA & STYLE|TEXTING STYLE)/, 'How she texts', 'Length of her texts, slang, emojis, tone. This is what makes her sound like a real girl and not a robot.', 'Example:  - 1–2 lines, lowercase, max one emoji'],
+  [/^(WHO YOU ARE|PERSONA)/, 'Who she is', 'Her age, look, city, passions, likes and dislikes. She uses this when he asks about her.', 'Example:  - Lives in Milan, loves photography and matcha'],
+  [/^LANGUAGE/, 'Language', 'Which language she answers in.', ''],
+  [/^(CONVERSATION STAGES|FAN JOURNEY)/, 'How a conversation moves', 'The steps from the first hi to a real connection. She follows them in order.', 'Example:  - 1 · Open: warm and curious, get his name'],
+  [/^SCRIPT LIBRARY/, 'What she says in common situations', 'One line per situation: "- Situation: her reply". Put · between two possible replies. She writes her own version, she never copies word for word.', 'Example:  - Asks to call: i\'m shy on calls lol, i\'m way better at texting'],
+  [/^PPV RULES/, 'Selling rules', 'How she offers paid content and which words she uses.', 'Example:  - Never say buy or sell. Say unlock'],
+  [/^PRICE LADDER/, 'Prices', 'What each step costs, from the first offer to a loyal client.', 'Example:  - 1st PPV: soft tease, short · $15–25'],
+  [/^OBJECTIONS/, 'When he says no', 'What she answers when he hesitates or pushes back.', 'Example:  - "too expensive": ok what feels right for u?'],
+  [/^HARD RULES/, 'Things she must never do', 'The red lines. She follows these before anything else.', 'Example:  - Never meet. Never give an address'],
+  [/^FORBIDDEN WORDS/, 'Words she must never write', 'If he brings one up, she changes the subject.', ''],
+];
+function tsecInfo(key){
+  if (!key) return { t:'The situation', d:'One or two sentences that set the scene: who she is, where she is texting, and with whom.', ex:'Example:  You are Kaya, texting 1-on-1 by SMS with a guy who got your number from your socials.' };
+  const f = TSEC.find(x => x[0].test(key));
+  return f ? { t:f[1], d:f[2], ex:f[3] } : { t:key.charAt(0) + key.slice(1).toLowerCase(), d:'Your own box.', ex:'' };
+}
+function trainSplit(text){
+  const out = [];
+  String(text || '').replace(/\r/g, '').split(/\n{2,}/).forEach(b => {
+    if (!b.trim()) return;
+    const nl = b.indexOf('\n'), first = nl < 0 ? b : b.slice(0, nl), body = nl < 0 ? '' : b.slice(nl + 1);
+    const m = /^([A-Z][A-Z &'-]{3,})(?=$|[\s:(])(.*)$/.exec(first);
+    if (m){
+      const key = m[1].trimEnd(), rest = m[1].slice(key.length) + m[2];
+      if (!body && rest.startsWith(':')) out.push({ key, suffix:'', inline:true, content:rest.slice(1).trim() });
+      else out.push({ key, suffix:rest, inline:false, content:body });
+    } else if (!out.length) out.push({ key:'', suffix:'', inline:false, content:b });
+    else out[out.length - 1].content += (out[out.length - 1].content ? '\n\n' : '') + b;
+  });
+  return out;
+}
+const trainJoin = secs => secs.filter(x => x.content.trim()).map(x => !x.key ? x.content.trim() : x.inline ? `${x.key}: ${x.content.trim()}` : `${x.key}${x.suffix}\n${x.content.trim()}`).join('\n\n');
+
 async function trainView(){
-  const { data, error } = await sb.from('bot_config').select('*').order('model');
+  const [{ data, error }] = await Promise.all([ sb.from('bot_config').select('*').order('model'), smsAiLoad() ]);
   const v = $('#view');
   if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
   if (!trainModel || !data.find(x=>x.model===trainModel)) trainModel = data[0]?.model || null;
   const c = data.find(x=>x.model===trainModel) || { model:'', display_name:'', system_prompt:'', examples:'' };
-  const name = c.display_name || c.model;
-  trainSession = 'train-' + Math.random().toString(36).slice(2);
+  const name = c.display_name || c.model, owner = me.role === 'admin', hasKey = smsAiState.hasKey;
+  const smsProf = settings.sms_ai_profile || 'kaya-fans-sms';
+  trainSession = 'train-' + Math.random().toString(36).slice(2); trainHist = [];
+  trainSecs = trainSplit(c.system_prompt);
+  const rows = t => Math.min(18, Math.max(2, String(t).split('\n').length + 1));
+  let guideOpen = true; try { guideOpen = localStorage.getItem('unreal-train-guide') !== 'closed'; } catch(e){}
+  const boxes = () => trainRaw
+    ? `<label for="tPrompt">Everything she knows, as one text</label><textarea id="tPrompt">${esc(trainJoin(trainSecs))}</textarea><p class="muted" style="font-size:12.5px;margin-top:6px">A line in CAPITAL LETTERS starts a new box.</p>`
+    : trainSecs.map((x, i) => { const inf = tsecInfo(x.key); return `<details class="tsec" ${i < 2 ? 'open' : ''}><summary>${esc(inf.t)}<small>${esc(inf.d)}</small></summary><textarea data-i="${i}" rows="${rows(x.content)}" aria-label="${esc(inf.t)}">${esc(x.content)}</textarea>${inf.ex ? `<p class="tex">${esc(inf.ex)}</p>` : ''}</details>`; }).join('') + `<button type="button" class="btn sm ghost" id="tAdd">+ Add a box</button>`;
+  const lastErr = (settings.sms_ai_last_error || '').split('|');
+  const delays = [5, 10, 20, 30, 45, 60, 90], delay = Number(settings.sms_ai_delay || 20), engine = settings.sms_ai_engine || 'nvidia/nemotron-3.5-lightning:free';
   v.innerHTML = `
+  <details class="card tguide" id="tGuide" ${guideOpen ? 'open' : ''} style="margin-bottom:14px"><summary style="cursor:pointer;font-weight:700">📖 How to train her (read once)</summary>
+    <ol>
+      <li><b>Pick a profile.</b> A profile is one way of talking. There is one for SMS and one for OnlyFans.</li>
+      <li><b>Fill the boxes.</b> Each box is one part of her brain. Write short lines that start with a dash, like the example under each box. Then press <b>Save</b>.</li>
+      <li><b>Test her</b> on the phone on the right. Text her like a client would.</li>
+      <li><b>Fix what you don't like.</b> Under a bad answer, press <b>✏️ Fix this reply</b> and write what she should have said. It is added to her good examples.</li>
+    </ol>
+    <p class="muted" style="font-size:13px;margin:10px 0 0">Real examples teach her more than rules. Everything you save is live on the next message. To turn the AI on or off, use the switch on the 📱 SMS phone page.</p>
+  </details>
   <div class="row" style="margin-bottom:14px">
-    <div><label for="tPick">Model</label><select id="tPick">${data.map(x=>`<option value="${esc(x.model)}" ${x.model===trainModel?'selected':''}>${esc(x.display_name||x.model)}</option>`).join('')}</select></div>
-    <div style="flex:0"><button class="btn ghost" id="tNew">+ New model</button></div>
+    <div><label for="tPick">Profile</label><select id="tPick">${data.map(x=>`<option value="${esc(x.model)}" ${x.model===trainModel?'selected':''}>${esc(x.display_name||x.model)}${x.model === smsProf ? ' · answers the SMS phone' : ''}</option>`).join('')}</select></div>
+    <div style="flex:0"><button class="btn ghost" id="tNew">+ New profile</button></div>
   </div>
   <div class="train">
     <form id="tForm" class="card">
-      <label for="tPrompt">How ${esc(name)} talks <span class="muted" style="font-weight:400">— personality, texting style, rules</span></label>
-      <textarea id="tPrompt">${esc(c.system_prompt)}</textarea>
-      <label for="tExamples">Good examples <span class="muted" style="font-weight:400">— real chats that worked. Format: Fan: … / ${esc(name)}: …</span></label>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px"><b style="font-size:17px">${esc(name)}'s brain</b><button type="button" class="btn sm ghost" id="tRaw">${trainRaw ? 'Show as boxes' : 'Show as one text'}</button></div>
+      <div id="tBoxes">${boxes()}</div>
+      <label for="tExamples" style="margin-top:14px">Good examples <span class="muted" style="font-weight:400">— real chats that worked. She copies the style, not the words. Format: Fan: … / ${esc(name)}: …</span></label>
       <textarea id="tExamples" placeholder="Fan: hey what are you doing&#10;${esc(name)}: just woke up lol still in bed 🙈 u?">${esc(c.examples)}</textarea>
-      <div class="row" style="margin-top:14px"><div style="flex:0"><button class="btn">Save</button></div><div><p class="muted" style="font-size:13px">Saved = live everywhere (site, SMS, OnlyFans) on the next message.</p></div></div>
+      <div class="row" style="margin-top:14px"><div style="flex:0"><button class="btn">Save</button></div><div><p class="muted" style="font-size:13px">Saved = live on the next message.</p></div></div>
     </form>
     <div class="card phone">
       <div class="ph"><b>Test ${esc(name)}</b><button class="btn ghost sm" id="tReset">New convo</button></div>
-      <div class="msgs" id="tMsgs"><p class="muted" style="font-size:13px;text-align:center;margin:auto">Text her like a fan would. Save first if you changed something.</p></div>
+      <div class="msgs" id="tMsgs"><p class="muted" style="font-size:13px;text-align:center;margin:auto">Text her like a client would. Save first if you changed something.${hasKey ? '' : '<br><br>This test uses a free test engine. Add the AI key below to test with the real one.'}</p></div>
       <form class="compose" id="tChat"><input id="tIn" placeholder="Message ${esc(name)}…" autocomplete="off"><button class="btn sm">Send</button></form>
     </div>
-  </div>`;
+  </div>
+  ${owner ? `<div class="card" style="margin-top:14px"><h2>⚙️ AI settings</h2>
+    <div class="aiset">
+      <div><label for="aKeyIn">AI key (OpenRouter) <span class="pill ${hasKey ? 'yes' : 'no'}">${hasKey ? 'Saved' : 'Missing'}</span></label>
+        <div class="row"><input id="aKeyIn" type="password" autocomplete="off" placeholder="${hasKey ? 'Paste a new key to replace it' : 'Paste your key here (starts with sk-or-)'}"><button type="button" class="btn sm" id="aKeySave" style="flex:0">Save key</button></div>
+        <small>This is what lets the AI write. Create one at <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener">openrouter.ai → Keys</a>. It is kept on the server and never shown again.</small></div>
+      <div><label for="aProf">Who answers the SMS phone</label><select id="aProf">${data.map(x => `<option value="${esc(x.model)}" ${x.model === smsProf ? 'selected' : ''}>${esc(x.display_name || x.model)}</option>`).join('')}</select>
+        <small>The profile used for real texts. Train it in the boxes above.</small></div>
+      <div><label for="aDelay">Wait before she answers (Auto)</label><select id="aDelay">${delays.map(d => `<option value="${d}" ${d === delay ? 'selected' : ''}>${d} seconds</option>`).join('')}</select>
+        <small>A real girl does not answer in one second. If he sends several texts in a row, she waits for the last one.</small></div>
+      <div><label for="aCap">Safety limit</label><input id="aCap" type="number" min="5" max="200" value="${esc(settings.sms_ai_cap || 40)}">
+        <small>The most AI texts one client can get in 24 hours. After that she only suggests.</small></div>
+      <div><label for="aEng">AI engine</label><select id="aEng"><option value="${esc(engine)}">${esc(engine)}</option></select>
+        <small>The AI model that writes her texts. Free engines can be slow or busy. <a href="#" id="aEngMore">Show other engines</a></small></div>
+    </div>
+    <div class="row" style="margin-top:16px"><div style="flex:0"><button type="button" class="btn" id="aSave">Save AI settings</button></div><div><p class="muted" style="font-size:13px">The Off / Suggest / Auto switch is on the 📱 SMS phone page.</p></div></div>
+    ${lastErr[1] ? `<p class="msg err" style="margin-top:12px">Last AI problem (${esc(new Date(lastErr[0]).toLocaleString())}): ${esc(lastErr.slice(1).join('|'))}</p>` : ''}
+  </div>` : ''}`;
+
+  const readBoxes = () => { if (trainRaw) trainSecs = trainSplit($('#tPrompt').value); else document.querySelectorAll('#tBoxes textarea[data-i]').forEach(t => { trainSecs[+t.dataset.i].content = t.value; }); };
+  const wireBoxes = () => {
+    const add = $('#tAdd'); if (!add) return;
+    add.onclick = () => {
+      const n = prompt('Name of the new box (for example: NIGHT ROUTINE):'); if (!n) return;
+      const key = n.trim().toUpperCase().replace(/[^A-Z &'-]/g, '').trim(); if (key.length < 4) return toast('Use a longer name, letters only');
+      readBoxes(); trainSecs.push({ key, suffix:'', inline:false, content:'' }); $('#tBoxes').innerHTML = boxes(); wireBoxes();
+      const last = [...document.querySelectorAll('#tBoxes .tsec')].pop(); last.open = true; last.querySelector('textarea').focus();
+    };
+  };
+  wireBoxes();
+  $('#tGuide').ontoggle = e => { try { localStorage.setItem('unreal-train-guide', e.target.open ? 'open' : 'closed'); } catch(err){} };
+  $('#tRaw').onclick = () => { readBoxes(); trainRaw = !trainRaw; $('#tBoxes').innerHTML = boxes(); $('#tRaw').textContent = trainRaw ? 'Show as boxes' : 'Show as one text'; wireBoxes(); };
   $('#tPick').onchange = e => { trainModel = e.target.value; trainView(); };
   $('#tNew').onclick = async () => {
-    const n = prompt('New model name (e.g. Coco):'); if (!n) return;
+    const n = prompt('New profile name (e.g. Coco):'); if (!n) return;
     const slug = n.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-');
     const base = c.system_prompt.replaceAll(name, n.trim());
     const { error } = await sb.from('bot_config').insert({ model:slug, display_name:n.trim(), system_prompt:base });
     if (error) return toast(error.message);
-    trainModel = slug; toast('Created — edit her personality'); trainView();
+    trainModel = slug; toast('Created. Now edit her boxes'); trainView();
   };
   $('#tForm').onsubmit = async e => {
-    e.preventDefault();
-    const { error } = await sb.from('bot_config').update({ system_prompt:$('#tPrompt').value, examples:$('#tExamples').value, updated_at:new Date().toISOString() }).eq('model', trainModel);
+    e.preventDefault(); readBoxes();
+    const text = trainJoin(trainSecs); if (!text.trim()) return toast('Her brain is empty. Fill at least one box.');
+    const { error } = await sb.from('bot_config').update({ system_prompt:text, examples:$('#tExamples').value, updated_at:new Date().toISOString() }).eq('model', trainModel);
     toast(error ? error.message : 'Saved');
   };
-  $('#tReset').onclick = () => { trainSession = 'train-' + Math.random().toString(36).slice(2); $('#tMsgs').innerHTML = ''; };
+  $('#tReset').onclick = () => { trainSession = 'train-' + Math.random().toString(36).slice(2); trainHist = []; $('#tMsgs').innerHTML = ''; };
   const add = (cls, text) => { const m = $('#tMsgs'); if (m.querySelector('p.muted')) m.innerHTML=''; const b = document.createElement('div'); b.className = 'bub ' + cls; b.textContent = text; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; };
   $('#tChat').onsubmit = async e => {
     e.preventDefault();
     const text = $('#tIn').value.trim(); if (!text) return;
     $('#tIn').value = ''; add('fan', text); lastFan = text;
     const wait = add('bot', '…');
+    trainHist.push({ role:'user', content:text });
     try {
-      const r = await fetch(BOT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'sendMessage', sessionId:trainSession, chatInput:text, model:trainModel }) });
-      const d = await r.json();
-      const out = (d.output || d.text || '').trim() || '(no reply — the free AI model may be busy, try again)';
+      let out = '';
+      if (hasKey){
+        const r = await smsAi({ action:'chat', profile:trainModel, history:trainHist });
+        if (r.error) throw new Error(r.error);
+        out = (r.output || '').trim();
+      } else {
+        const r = await fetch(BOT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'sendMessage', sessionId:trainSession, chatInput:text, model:trainModel }) });
+        const d = await r.json();
+        out = (d.output || d.text || '').trim();
+      }
+      out = out || '(no reply — the free AI engine may be busy, try again)';
+      trainHist.push({ role:'assistant', content:out });
       wait.textContent = out; if (out.includes('[HANDOFF]')) wait.classList.add('handoff');
       const fan = text, fix = document.createElement('button');
       fix.className = 'fix'; fix.type = 'button'; fix.textContent = '✏️ Fix this reply';
@@ -1331,7 +1515,27 @@ async function trainView(){
         toast(error ? error.message : 'Added to her examples'); fix.textContent = '✓ Learned';
       };
       wait.after(fix); $('#tMsgs').scrollTop = 1e9;
-    } catch(err){ wait.textContent = 'Error: ' + err.message; }
+    } catch(err){ trainHist.pop(); wait.textContent = 'Error: ' + err.message; }
+  };
+  if (!owner) return;
+  $('#aKeySave').onclick = async () => {
+    const key = $('#aKeyIn').value.trim(); if (!key) return toast('Paste the key first');
+    $('#aKeySave').disabled = true; const r = await smsAi({ action:'set_key', key });
+    if (r.error){ $('#aKeySave').disabled = false; return toast(r.error); }
+    toast('Key saved'); trainView();
+  };
+  $('#aEngMore').onclick = async e => {
+    e.preventDefault(); e.target.textContent = 'Loading…';
+    const r = await smsAi({ action:'engines' }); if (r.error){ e.target.textContent = 'Show other engines'; return toast(r.error); }
+    const list = r.engines || []; if (!list.find(x => x.id === engine)) list.unshift({ id:engine, name:engine, price:'' });
+    $('#aEng').innerHTML = list.map(x => `<option value="${esc(x.id)}" ${x.id === engine ? 'selected' : ''}>${esc(x.name)}${x.price ? ' · ' + esc(x.price) : ''}</option>`).join('');
+    e.target.remove();
+  };
+  $('#aSave').onclick = async () => {
+    const cap = Math.max(5, Math.min(200, Number($('#aCap').value) || 40));
+    const rows2 = [{ key:'sms_ai_profile', value:$('#aProf').value }, { key:'sms_ai_delay', value:$('#aDelay').value }, { key:'sms_ai_cap', value:String(cap) }, { key:'sms_ai_engine', value:$('#aEng').value }];
+    const { error } = await sb.from('settings').upsert(rows2); if (error) return toast(error.message);
+    rows2.forEach(r => settings[r.key] = r.value); toast('AI settings saved'); trainView();
   };
 }
 </script>

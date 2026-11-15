@@ -108,6 +108,18 @@
   td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
   td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
   .tbl{overflow-x:auto}
+  .acc table{border-collapse:collapse;width:100%;font-size:13px}
+  .acc th,.acc td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:center;white-space:nowrap}
+  .acc th.g{border-left:2px solid var(--line);color:var(--pink);font-size:12px}
+  .acc td.g,.acc th.gs{border-left:2px solid var(--line)}
+  .acc th.sub{font-weight:500;color:var(--muted);font-size:11px}
+  .acc td.u{text-align:left;white-space:normal;min-width:170px}
+  .acc input{width:16px;height:16px;cursor:pointer;accent-color:var(--pink)}
+  .tt-row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+  .tt-row input{width:18px;height:18px;margin-top:2px;accent-color:var(--pink);flex:none}
+  .tt-row.done .tt-t{text-decoration:line-through;color:var(--muted)}
+  .tt-h{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .tt-sec{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--pink);margin:18px 0 2px;font-weight:700}
   .pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
   .pill.pending{background:var(--warnbg);color:var(--warn)}
   .pill.confirmed,.pill.yes{background:var(--okbg);color:var(--ok)}
@@ -217,14 +229,15 @@
     <div class="app">
       <aside class="side" id="side">
         <button data-tab="plan" class="adm" hidden>📋 My plan</button>
-        <button data-tab="personas">🎀 Personas</button>
-        <button data-tab="docs">📚 Docs & scripts</button>
-        <button data-tab="bot">🤖 AI chatbot</button>
-        <button data-tab="wallet">💳 Wallet</button>
+        <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
+        <button data-tab="personas" data-perm="personas" hidden>🎀 Personas</button>
+        <button data-tab="docs" data-perm="docs" hidden>📚 Docs & scripts</button>
+        <button data-tab="bot" data-perm="bot" hidden>🤖 AI chatbot</button>
+        <button data-tab="wallet" data-perm="wallet" hidden>💳 Wallet</button>
         <div class="sep adm" hidden>Admin</div>
         <button data-tab="sms" class="adm" hidden>📱 SMS phone</button>
         <button data-tab="train" class="adm" hidden>🧠 Train AI</button>
-        <button data-tab="members" class="adm" hidden>👥 Members</button>
+        <button data-tab="members" class="adm" hidden>👥 Access board</button>
         <button data-tab="topups" class="adm" hidden>🪙 Top-ups</button>
         <button data-tab="sales" class="adm" hidden>💰 Sales & fees</button>
         <button data-tab="edit" class="adm" hidden>✏️ Edit docs</button>
@@ -309,6 +322,14 @@ document.querySelectorAll('[data-signout]').forEach(b => b.onclick = () => sb.au
 
 // ---------- state ----------
 let me = null, settings = {}, tab = 'personas';
+const PERMS = [
+  { k:'team', l:'✅ Team to-do', sub:[['team:Before posting','Before posting'],['team:Daily posting','Daily posting'],['team:Rules','Rules']] },
+  { k:'personas', l:'🎀 Personas', sub:[] },
+  { k:'docs', l:'📚 Docs', sub:[] },
+  { k:'bot', l:'🤖 AI chatbot', sub:[['bot.sms','SMS'],['bot.of','OnlyFans'],['bot.telegram','Telegram'],['bot.billing','Billing']] },
+  { k:'wallet', l:'💳 Wallet', sub:[['wallet.topup','Top up'],['wallet.history','History']] },
+];
+const can = p => me && (me.role === 'admin' || (me.perms || []).includes(p));
 
 async function boot(session){
   $('#boot').hidden = true;
@@ -323,8 +344,11 @@ async function boot(session){
   $('#whoName').textContent = me.full_name || me.email;
   $('#whoRole').textContent = me.role; $('#whoRole').classList.toggle('admin', me.role==='admin');
   document.querySelectorAll('.adm').forEach(el => el.hidden = me.role !== 'admin');
+  document.querySelectorAll('[data-perm]').forEach(el => el.hidden = !can(el.dataset.perm));
+  const first = document.querySelector('#side button:not([hidden])');
+  if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }
   const h = location.hash.slice(1);
-  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'plan' : 'personas'));
+  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'plan' : first.dataset.tab));
 }
 
 let lastSession;
@@ -336,14 +360,14 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Members','Approve people and choose what they can see.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Admin only.'] };
+const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Admin only.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, sms:smsView })[t]();
+  ({ plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, sms:smsView, team:teamView })[t]();
 }
 
 
@@ -431,11 +455,11 @@ function botView(){
     <div class="card tile"><span>Unreal fee</span><b>${esc(settings.fee_percent || 10)}%</b></div>
   </div>
   <div class="card tbl"><table><thead><tr><th>Channel</th><th>Mode</th><th>Status</th></tr></thead><tbody>
-    <tr><td>SMS (textbee)</td><td>Auto reply, human-like delay</td><td><span class="pill pending">Setting up</span></td></tr>
-    <tr><td>OnlyFans</td><td>AI drafts → human approves</td><td><span class="pill pending">Setting up</span></td></tr>
-    <tr><td>Telegram</td><td>Funnel</td><td><span class="pill no">Planned</span></td></tr>
+    ${can('bot.sms') ? '<tr><td>SMS (textbee)</td><td>Auto reply, human-like delay</td><td><span class="pill pending">Setting up</span></td></tr>' : ''}
+    ${can('bot.of') ? '<tr><td>OnlyFans</td><td>AI drafts → human approves</td><td><span class="pill pending">Setting up</span></td></tr>' : ''}
+    ${can('bot.telegram') ? '<tr><td>Telegram</td><td>Funnel</td><td><span class="pill no">Planned</span></td></tr>' : ''}
   </tbody></table></div>
-  <div class="card" style="margin-top:14px"><h2>How billing works</h2><p class="muted">Top up your wallet in USDC on Solana. When the AI closes a sale for you, Unreal takes ${esc(settings.fee_percent || 10)}% of that sale from your wallet. Keep a positive balance so the AI keeps chatting.</p></div>`;
+  ${can('bot.billing') ? `<div class="card" style="margin-top:14px"><h2>How billing works</h2><p class="muted">Top up your wallet in USDC on Solana. When the AI closes a sale for you, Unreal takes ${esc(settings.fee_percent || 10)}% of that sale from your wallet. Keep a positive balance so the AI keeps chatting.</p></div>` : ''}`;
 }
 
 // ---------- wallet ----------
@@ -455,7 +479,7 @@ async function walletView(){
     <div class="card tile"><span>Sales by the AI</span><b>${money(salesTot)}</b></div>
     <div class="card tile"><span>Fees paid (${esc(settings.fee_percent||10)}%)</span><b>${money(feeTot)}</b></div>
   </div>
-  <div class="two">
+  ${can('wallet.topup') ? `<div class="two">
     <div class="card"><h2>1 · Send USDC</h2>
       <p class="muted">Send <b>USDC on the Solana network only</b> to this address. Other tokens or networks will be lost.</p>
       ${addr ? `<div class="addr"><code id="addr">${esc(addr)}</code><button class="btn sm" id="copy">Copy</button></div>` : `<div class="msg err">The wallet address isn't set yet. Contact us on WhatsApp.</div>`}
@@ -468,16 +492,16 @@ async function walletView(){
       </form>
       <p class="muted" style="font-size:13px;margin-top:10px">We check the transaction and credit your wallet, usually within a few hours.</p>
     </div>
-  </div>
-  <div class="card tbl" style="margin-top:14px"><h2>Top-ups</h2>${(t.data||[]).length ? `<table><thead><tr><th>Date</th><th>Amount</th><th>Transaction</th><th>Status</th></tr></thead><tbody>${t.data.map(x=>`<tr><td>${date(x.created_at)}</td><td class="num">${money(x.amount)}</td><td style="font-size:12px;word-break:break-all">${esc(x.tx_hash)}</td><td><span class="pill ${x.status}">${x.status}</span></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No top-ups yet.</p>'}</div>
-  <div class="card tbl" style="margin-top:14px"><h2>Wallet history</h2>${(w.data||[]).length ? `<table><thead><tr><th>Date</th><th>Type</th><th>Detail</th><th>Amount</th></tr></thead><tbody>${w.data.map(x=>`<tr><td>${date(x.created_at)}</td><td>${esc(x.kind)}</td><td class="muted">${esc(x.note)}</td><td class="num ${x.amount<0?'neg':'pos'}">${x.amount<0?'−':'+'}${money(Math.abs(x.amount))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing yet.</p>'}</div>`;
+  </div>` : ''}
+  ${can('wallet.history') ? `<div class="card tbl" style="margin-top:14px"><h2>Top-ups</h2>${(t.data||[]).length ? `<table><thead><tr><th>Date</th><th>Amount</th><th>Transaction</th><th>Status</th></tr></thead><tbody>${t.data.map(x=>`<tr><td>${date(x.created_at)}</td><td class="num">${money(x.amount)}</td><td style="font-size:12px;word-break:break-all">${esc(x.tx_hash)}</td><td><span class="pill ${x.status}">${x.status}</span></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No top-ups yet.</p>'}</div>
+  <div class="card tbl" style="margin-top:14px"><h2>Wallet history</h2>${(w.data||[]).length ? `<table><thead><tr><th>Date</th><th>Type</th><th>Detail</th><th>Amount</th></tr></thead><tbody>${w.data.map(x=>`<tr><td>${date(x.created_at)}</td><td>${esc(x.kind)}</td><td class="muted">${esc(x.note)}</td><td class="num ${x.amount<0?'neg':'pos'}">${x.amount<0?'−':'+'}${money(Math.abs(x.amount))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing yet.</p>'}</div>` : ''}`;
   $('#copy') && ($('#copy').onclick = () => navigator.clipboard.writeText(addr).then(()=>toast('Address copied')));
-  $('#topForm').onsubmit = async e => {
+  $('#topForm') && ($('#topForm').onsubmit = async e => {
     e.preventDefault();
     const { error } = await sb.from('topups').insert({ user_id: uid, amount: Number($('#tAmt').value), tx_hash: $('#tHash').value.trim() });
     if (error) return toast(error.message);
     toast('Top-up submitted'); walletView();
-  };
+  });
 }
 
 // ---------- SMS mini phone (admin only) ----------
@@ -538,40 +562,80 @@ async function smsThread(first){
 
 // ---------- admin ----------
 async function membersView(){
-  const [p, d, g, b] = await Promise.all([
+  const [p, d, g] = await Promise.all([
     sb.from('profiles').select('*').order('created_at', {ascending:false}),
     sb.from('docs').select('id,title,category').order('sort'),
     sb.from('doc_grants').select('*'),
-    sb.from('wallet_balances').select('*'),
   ]);
-  const bal = Object.fromEntries((b.data||[]).map(x=>[x.user_id, x.balance]));
+  const users = (p.data||[]).filter(u => u.role !== 'admin');
   const grants = new Set((g.data||[]).map(x => x.user_id + '|' + x.doc_id));
   const v = $('#view');
-  v.innerHTML = (p.data||[]).map(u => `
-    <div class="card" style="margin-bottom:12px" data-u="${u.id}">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <div><b>${esc(u.full_name || '—')}</b> <span class="muted">${esc(u.email)}</span><br><span class="muted" style="font-size:13px">Joined ${date(u.created_at)} · Wallet ${money(bal[u.id])}</span></div>
-        <div style="flex:0;display:flex;gap:8px;align-items:center;white-space:nowrap">
-          ${u.role==='admin' ? '<span class="badge admin">admin</span>' : `
-          <span class="pill ${u.approved?'yes':'pending'}">${u.approved?'approved':'pending'}</span>
-          <button class="btn sm ${u.approved?'bad':''}" data-act="approve">${u.approved?'Remove access':'Approve'}</button>`}
-        </div>
-      </div>
-      ${u.role==='admin' ? '' : `
-      <label class="check"><input type="checkbox" data-act="all" ${u.all_access?'checked':''}> Access to everything</label>
-      <div class="gl" ${u.all_access?'hidden':''}>${(d.data||[]).map(x=>`<label><input type="checkbox" data-doc="${x.id}" ${grants.has(u.id+'|'+x.id)?'checked':''}>${esc(x.title)}</label>`).join('')}</div>`}
-    </div>`).join('') || '<div class="card empty">No members yet.</div>';
-  v.querySelectorAll('[data-u]').forEach(card => {
-    const id = card.dataset.u, u = p.data.find(x=>x.id===id);
-    const ap = card.querySelector('[data-act="approve"]');
-    ap && (ap.onclick = async () => { const { error } = await sb.from('profiles').update({ approved: !u.approved }).eq('id', id); toast(error ? error.message : (u.approved ? 'Access removed' : 'Approved')); membersView(); });
-    const all = card.querySelector('[data-act="all"]');
-    all && (all.onchange = async () => { const { error } = await sb.from('profiles').update({ all_access: all.checked }).eq('id', id); if (error) return toast(error.message); card.querySelector('.gl').hidden = all.checked; toast('Saved'); });
-    card.querySelectorAll('[data-doc]').forEach(cb => cb.onchange = async () => {
-      const row = { user_id: id, doc_id: cb.dataset.doc };
-      const { error } = cb.checked ? await sb.from('doc_grants').insert(row) : await sb.from('doc_grants').delete().match(row);
-      toast(error ? error.message : 'Saved');
-    });
+  if (!users.length) return v.innerHTML = '<div class="card empty">No one has signed up yet. Send people to unrealagency.ai/members to create an account.</div>';
+  const head1 = '<th rowspan="2" style="text-align:left">Person</th><th rowspan="2">Approved</th>' + PERMS.map(g => `<th class="g" colspan="${1+g.sub.length}">${g.l}</th>`).join('');
+  const head2 = PERMS.map(g => `<th class="sub gs">Access</th>` + g.sub.map(s => `<th class="sub">${esc(s[1])}</th>`).join('')).join('');
+  const cb = (u, k, cls='') => `<td class="${cls}"><input type="checkbox" data-u="${u.id}" data-k="${esc(k)}" ${(u.perms||[]).includes(k)?'checked':''}></td>`;
+  v.innerHTML = `<div class="card tbl acc"><table><thead><tr>${head1}</tr><tr>${head2}</tr></thead><tbody>${users.map(u => `
+    <tr><td class="u"><b>${esc(u.full_name || '—')}</b><br><span class="muted">${esc(u.email)}</span><br><button class="btn ghost sm" data-docs="${u.id}" style="margin-top:4px">Docs one by one ▾</button></td>
+    <td><input type="checkbox" data-appr="${u.id}" ${u.approved?'checked':''}></td>
+    ${PERMS.map(g => cb(u, g.k, 'g') + g.sub.map(s => cb(u, s[0])).join('')).join('')}</tr>
+    <tr data-docrow="${u.id}" hidden><td colspan="99" style="text-align:left;white-space:normal">
+      <label class="check"><input type="checkbox" data-allu="${u.id}" ${u.all_access?'checked':''}> All docs & personas</label>
+      <div class="gl">${(d.data||[]).map(x=>`<label><input type="checkbox" data-doc="${x.id}" data-du="${u.id}" ${grants.has(u.id+'|'+x.id)?'checked':''}>${esc(x.title)}</label>`).join('')}</div>
+    </td></tr>`).join('')}</tbody></table></div>
+    <p class="muted" style="font-size:13px;margin-top:10px">New accounts start with nothing. Tick "Approved", then tick what they can see. Ticking a section opens all its points; untick single points to customise.</p>`;
+  const save = async (u, perms) => { u.perms = perms; const { error } = await sb.from('profiles').update({ perms }).eq('id', u.id); toast(error ? error.message : 'Saved'); };
+  v.querySelectorAll('[data-k]').forEach(box => box.onchange = async () => {
+    const u = users.find(x => x.id === box.dataset.u), k = box.dataset.k;
+    let set = new Set(u.perms || []);
+    const grp = PERMS.find(g => g.k === k), parent = PERMS.find(g => g.sub.some(s => s[0] === k));
+    if (box.checked){ set.add(k); if (grp) grp.sub.forEach(s => set.add(s[0])); if (parent) set.add(parent.k); }
+    else { set.delete(k); if (grp) grp.sub.forEach(s => set.delete(s[0])); }
+    await save(u, [...set]);
+    v.querySelectorAll(`[data-u="${u.id}"][data-k]`).forEach(c => c.checked = set.has(c.dataset.k));
+  });
+  v.querySelectorAll('[data-appr]').forEach(box => box.onchange = async () => {
+    const { error } = await sb.from('profiles').update({ approved: box.checked }).eq('id', box.dataset.appr); toast(error ? error.message : (box.checked ? 'Approved' : 'Access removed'));
+  });
+  v.querySelectorAll('[data-docs]').forEach(b => b.onclick = () => { const r = v.querySelector(`[data-docrow="${b.dataset.docs}"]`); r.hidden = !r.hidden; });
+  v.querySelectorAll('[data-allu]').forEach(box => box.onchange = async () => { const { error } = await sb.from('profiles').update({ all_access: box.checked }).eq('id', box.dataset.allu); toast(error ? error.message : 'Saved'); });
+  v.querySelectorAll('[data-doc]').forEach(box => box.onchange = async () => {
+    const row = { user_id: box.dataset.du, doc_id: box.dataset.doc };
+    const { error } = box.checked ? await sb.from('doc_grants').insert(row) : await sb.from('doc_grants').delete().match(row);
+    toast(error ? error.message : 'Saved');
+  });
+}
+
+// ---------- team to-do (staff) ----------
+async function teamView(){
+  const v = $('#view');
+  const [t, p] = await Promise.all([ sb.from('team_tasks').select('*').order('sort'), me.role==='admin' ? sb.from('profiles').select('id,full_name,email') : Promise.resolve({data:[]}) ]);
+  if (t.error) return v.innerHTML = `<div class="msg err">${esc(t.error.message)}</div>`;
+  const names = Object.fromEntries((p.data||[]).map(x => [x.id, x.full_name || x.email]));
+  const today = new Date().toDateString();
+  const isDone = x => x.done && (!x.daily || (x.done_at && new Date(x.done_at).toDateString() === today));
+  const secs = [...new Set(t.data.map(x => x.section))];
+  v.innerHTML = `<div class="card">${secs.map(sec => `<div class="tt-sec">${esc(sec)}</div>` + t.data.filter(x => x.section === sec).map(x => `
+    <div class="tt-row ${isDone(x)?'done':''}"><input type="checkbox" data-t="${x.id}" ${isDone(x)?'checked':''}>
+      <div style="flex:1"><span class="tt-t">${esc(x.text)}</span>${x.daily?' <span class="badge">daily</span>':''}
+      ${x.hint?`<span class="tt-h">${esc(x.hint)}</span>`:''}
+      ${isDone(x) && me.role==='admin' && x.done_by ? `<span class="tt-h">✓ ${esc(names[x.done_by]||'someone')} · ${new Date(x.done_at).toLocaleString([], {weekday:'short', hour:'numeric', minute:'2-digit'})}</span>`:''}</div>
+      ${me.role==='admin'?`<button class="btn ghost sm" data-del="${x.id}">✕</button>`:''}
+    </div>`).join('')).join('') || '<p class="muted">No tasks shared with you yet.</p>'}</div>
+    ${me.role==='admin' ? `<form class="card" id="ttAdd" style="margin-top:14px"><h2>Add a task</h2>
+      <div class="row"><div><label for="ttS">Section</label><select id="ttS">${['Before posting','Daily posting','Rules'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+      <div><label for="ttD">Repeat</label><select id="ttD"><option value="0">Once</option><option value="1">Every day</option></select></div></div>
+      <label for="ttT">Task</label><input id="ttT" required><label for="ttH">Note (optional)</label><input id="ttH">
+      <button class="btn">Add</button></form>` : ''}`;
+  v.querySelectorAll('[data-t]').forEach(box => box.onchange = async () => {
+    const { error } = await sb.rpc('tick_task', { t: box.dataset.t, d: box.checked });
+    if (error) { toast(error.message); box.checked = !box.checked; return; }
+    teamView();
+  });
+  v.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { if (!confirm('Delete this task?')) return; const { error } = await sb.from('team_tasks').delete().eq('id', b.dataset.del); toast(error ? error.message : 'Deleted'); teamView(); });
+  const f = $('#ttAdd'); f && (f.onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.from('team_tasks').insert({ section: $('#ttS').value, daily: $('#ttD').value === '1', text: $('#ttT').value.trim(), hint: $('#ttH').value.trim() || null, sort: Date.now() % 100000 });
+    toast(error ? error.message : 'Added'); teamView();
   });
 }
 

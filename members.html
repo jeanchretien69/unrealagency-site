@@ -791,7 +791,7 @@ async function droppView(){
   if (!tabs.length) return v.innerHTML = '<div class="card empty">Nothing in Dropp is shared with you yet.</div>';
   if (!tabs.some(t => t[0] === drTab)) drTab = tabs[0][0];
   v.innerHTML = `<div class="smstop"><div class="stats"><div class="cfilt" id="drTabs" style="padding:0;border:0">${tabs.map(t => `<button data-t="${t[0]}" class="${t[0]===drTab?'on':''}">${t[1]}</button>`).join('')}</div></div>
-    <div class="stats"><label for="drWho" style="margin:0;font-size:13px">Model</label><select id="drWho" style="width:auto;margin:0"><option>Loading…</option></select><a class="btn sm ghost" href="https://app.dropp.fans/en/" target="_blank" rel="noopener">Open Dropp ↗</a></div></div>
+    <div class="stats"><label for="drWho" style="margin:0;font-size:13px">Model</label><select id="drWho" style="width:auto;margin:0"><option>Loading…</option></select></div></div>
     <div id="drBody"><p class="muted">Loading…</p></div>`;
   document.querySelectorAll('#drTabs button').forEach(b => b.onclick = () => { drTab = b.dataset.t; document.querySelectorAll('#drTabs button').forEach(x => x.classList.toggle('on', x === b)); drDraw(); });
   const c = await dr('GET', '/creators');
@@ -894,7 +894,7 @@ async function drWallet(){
   const rows = drRows(r), by = {}; rows.filter(x => !x.refunded).forEach(x => { const c = x.amount.currency_code; by[c] = (by[c] || 0) + x.amount.net_cents; });
   box.innerHTML = `<div class="tiles"><div class="card tile"><span>Net earned (all models)</span><b class="pink">${Object.entries(by).map(([c, v]) => drMoney(v, c)).join(' · ') || drMoney(0)}</b></div><div class="card tile"><span>Records</span><b>${rows.length}</b></div></div>
     <div class="card tbl">${rows.length ? `<table><thead><tr><th>Date</th><th>Type</th><th>Goes to</th><th>Net</th><th></th></tr></thead><tbody>${rows.map(x => `<tr><td>${drDate(x.created_at)}</td><td>${esc(x.type)}</td><td>${esc(x.recipient ? x.recipient.display_name : '')}</td><td class="num">${esc(x.amount.display || drMoney(x.amount.net_cents, x.amount.currency_code))}</td><td>${x.refunded ? '<span class="pill no">refunded</span>' : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No earnings recorded yet.</p>'}</div>
-    <p class="muted" style="font-size:13px;margin-top:10px">Payouts (moving money out) are done on Dropp itself: <a href="https://app.dropp.fans/en/" target="_blank" rel="noopener" style="color:var(--pink)">open the Dropp wallet ↗</a></p>`;
+    <p class="muted" style="font-size:13px;margin-top:10px">Payouts (moving money out) are done on Dropp itself.</p>`;
 }
 async function drTips(){
   const box = $('#drBody');

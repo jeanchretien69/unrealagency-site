@@ -211,6 +211,26 @@
   @media (prefers-reduced-motion:reduce){
     .head,.head img{transition:none!important}
   }
+
+  /* Nami hero: plain video on the page colour, edges melted into the page */
+  .head img,.head .nv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:none;
+    -webkit-mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 9%,#000 86%,transparent 100%);
+    mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 9%,#000 86%,transparent 100%);
+    -webkit-mask-composite:source-in;mask-composite:intersect}
+  .head .nv{opacity:0;transition:opacity .4s ease;pointer-events:none}
+  .head .nv.on{opacity:1}
+  .head img[hidden]{display:none}
+  :root[data-mode="dark"] .head img,:root[data-mode="dark"] .head .nv{-webkit-mask-image:none;mask-image:none;border-radius:32px;box-shadow:0 0 0 1px rgba(255,199,221,.35),0 30px 90px -20px rgba(255,95,162,.55)}
+  :root[data-mode="dark"] .stage::before,:root[data-mode="dark"] .ring,:root[data-mode="dark"] .floor{display:none}
+  .head .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+  :root[data-mode="dark"] .head .fx{border-radius:32px}
+  .stage .kiss{bottom:-6px}
+  .kiss button{color:var(--ink);background:var(--surface);border:1px solid var(--pink);box-shadow:0 8px 22px -10px rgba(226,54,127,.6)}
+  .kiss button:hover{background:var(--pink);color:#fff}
+  .kiss button:disabled{opacity:.45;cursor:default}
+  .say{position:absolute;left:62%;top:9%;z-index:5;max-width:230px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px 18px 18px 4px;padding:10px 14px;font-size:14px;font-weight:600;line-height:1.35;box-shadow:0 14px 34px -14px rgba(42,20,32,.45)}
+  .say[hidden]{display:none}
+  .chip.off .dot{background:#9a9a9a}
 </style>
 </head>
 <body>
@@ -236,14 +256,13 @@
       <div class="ring" id="ring" aria-hidden="true"></div>
       <div class="floor"></div>
       <div class="head" id="head">
-        <canvas id="gl" aria-label="Kaya, an Unreal Agency AI model, in 3D following your cursor"></canvas>
-        <img id="face" src="live/idle4_first.webp" alt="Kaya, an Unreal Agency AI model" hidden>
+        <canvas id="gl" aria-hidden="true"></canvas>
+        <img id="face" src="live/nami_idle.jpg" alt="Nami, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
-      <div class="moves" id="moves" hidden>
-        <button data-m="kiss">😘 Blow a kiss</button>
+      
       </div>
-      </div>
-      <div class="chip a"><span class="dot"></span>Kaya · online now</div>
+      <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button></div>
+      <div class="chip a" id="status"><span class="dot"></span><span id="statusText">Nami · online now</span></div>
       <div class="chip b"><b>+$412</b> PPV today</div>
       <div class="chip c">AI chatter replied in <b>8s</b></div>
     </div>
@@ -522,30 +541,27 @@
 
   /* Living Kaya: real AI video clips (idle loop, head turn toward the cursor, button moves) */
   function startLive(){
-    var ua = navigator.userAgent, safari = /Safari/.test(ua) && !/Chrome|Chromium|Edg|Firefox/.test(ua);
     canvas.style.display = 'none'; face.hidden = false;
-    if (safari) return; /* Safari can't show see-through WebM yet: keep the photo for now */
-    var wrap = document.createElement('div'); wrap.className = 'live'; head.appendChild(wrap);
-    function mk(n, loop){ var v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.loop = !!loop; v.preload = 'auto'; v.className = 'lv'; v.src = 'live/' + n + '.webm'; wrap.appendChild(v); return v; }
-    var idle = mk('idle4', true), acts = { kiss: mk('kiss4') };
-    var look = document.createElement('img'); look.className = 'lv'; look.alt = ''; wrap.appendChild(look);
-    var all = [idle, look, acts.kiss], cur = null, busy = false, lookIdx = -1;
-    function show(el){ if (cur === el) return; all.forEach(function(e){ e.classList.toggle('on', e === el || e === idle); }); cur = el; }
-    idle.play().then(function(){ show(idle); setTimeout(function(){ face.hidden = true; }, 200); document.getElementById('moves').hidden = false; setTimeout(function(){ if (!busy){ var k = document.querySelector('#moves button[data-m="kiss"]'); if (k) k.click(); } }, 2000); }).catch(function(){});
-    var btns = document.querySelectorAll('#moves button');
-    btns.forEach(function(b){ b.addEventListener('click', function(){
-      if (busy) return; var v = acts[b.dataset.m]; busy = true; btns.forEach(function(x){ x.disabled = true; });
-      v.currentTime = 0; v.play().then(function(){ show(v); setTimeout(function(){ if (busy){ idle.pause(); idle.currentTime = 0; } }, 450); }).catch(function(){ busy = false; });
-      v.onended = function(){ idle.currentTime = 0; idle.play(); setTimeout(function(){ show(idle); }, 60); busy = false; btns.forEach(function(x){ x.disabled = false; }); };
-    }); });
+    var v = document.createElement('video'); v.className = 'nv'; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true;
+    v.setAttribute('playsinline',''); v.setAttribute('muted',''); v.preload = 'auto'; v.poster = 'live/nami_idle.jpg'; v.src = 'live/nami_idle.mp4?v=3';
+    head.appendChild(v);
+    v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ face.hidden = true; }, 400); }, { once:true });
+    var p = v.play(); if (p && p.catch) p.catch(function(){});
+    /* Blow a kiss: action clip starts and ends on the idle frame, blended in and out */
+    (function(){
+      var btn = document.querySelector('#moves button[data-m="kiss"]'); if (!btn) return; var act = null, busy = false;
+      function mk(){ act = document.createElement('video'); act.className = 'nv'; act.muted = true; act.playsInline = true; act.setAttribute('playsinline',''); act.setAttribute('muted',''); act.preload = 'auto'; act.src = 'live/nami_kiss.mp4?v=2'; head.insertBefore(act, v.nextSibling); }
+      v.addEventListener('playing', function(){ if (!act) mk(); setTimeout(function(){ if (!busy && !document.hidden) btn.click(); }, 3000); }, { once:true });
+      function done(){ v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function(){}); setTimeout(function(){ act.classList.remove('on'); }, 80); busy = false; btn.disabled = false; }
+      btn.addEventListener('click', function(){
+        if (busy) return; if (!act) mk(); busy = true; btn.disabled = true;
+        act.currentTime = 0; act.onended = done; var p = act.play(); if (p && p.catch) p.catch(function(){ done(); });
+        act.classList.add('on'); setTimeout(function(){ if (busy) v.pause(); }, 450);
+      });
+    })();
     var ring = document.getElementById('ring');
-    function tick(t){
-      if (!busy) show(idle);
-      if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; }
-      requestAnimationFrame(tick);
-    }
+    function tick(t){ if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; } requestAnimationFrame(tick); }
     requestAnimationFrame(tick);
-    window.__live = { cur: function(){ return cur && (cur.src || '').split('/').pop(); }, play: function(m){ document.querySelector('#moves button[data-m="' + m + '"]').click(); } };
   }
   startLive();
 })();

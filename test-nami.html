@@ -551,8 +551,8 @@
     /* Blow a kiss: action clip starts and ends on the idle frame, blended in and out */
     (function(){
       var btn = document.querySelector('#moves button[data-m="kiss"]'); if (!btn) return; var act = null, busy = false;
-      function mk(){ act = document.createElement('video'); act.className = 'nv'; act.muted = true; act.playsInline = true; act.setAttribute('playsinline',''); act.setAttribute('muted',''); act.preload = 'auto'; act.src = 'live/nami_kiss.mp4?v=1'; head.insertBefore(act, v.nextSibling); }
-      v.addEventListener('playing', function(){ if (!act) mk(); }, { once:true });
+      function mk(){ act = document.createElement('video'); act.className = 'nv'; act.muted = true; act.playsInline = true; act.setAttribute('playsinline',''); act.setAttribute('muted',''); act.preload = 'auto'; act.src = 'live/nami_kiss.mp4?v=2'; head.insertBefore(act, v.nextSibling); }
+      v.addEventListener('playing', function(){ if (!act) mk(); setTimeout(function(){ if (!busy && !document.hidden) btn.click(); }, 3000); }, { once:true });
       function done(){ v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function(){}); setTimeout(function(){ act.classList.remove('on'); }, 80); busy = false; btn.disabled = false; }
       btn.addEventListener('click', function(){
         if (busy) return; if (!act) mk(); busy = true; btn.disabled = true;

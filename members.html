@@ -529,7 +529,7 @@ async function smsGatePanel(){
 }
 async function smsView(){
   const v = $('#view');
-  v.innerHTML = '<div class="phone"><div class="pscreen" id="pscreen"><p class="pempty">Loading…</p></div></div><div class="card" id="gateBox" style="max-width:520px;margin:18px auto 0"><p class="muted">Checking the phone link…</p></div>';
+  v.innerHTML = '<div class="phone"><div class="pscreen" id="pscreen"><p class="pempty">Loading…</p></div></div><div class="card" id="gateBox" style="max-width:520px;margin:80px auto 0;clear:both"><p class="muted">Checking the phone link…</p></div>';
   smsGatePanel();
   const [m, c] = await Promise.all([ sb.from('sms_messages').select('*').order('created_at').limit(2000), sb.from('sms_contacts').select('*') ]);
   if (m.error){ $('#pscreen').innerHTML = `<p class="pempty">${esc(m.error.message)}</p>`; return; }

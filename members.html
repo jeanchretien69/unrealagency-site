@@ -855,7 +855,7 @@ async function drContent(){
     <div id="drDrop" style="margin-top:8px;border:2px dashed var(--line,#e6d5dc);border-radius:14px;padding:18px;text-align:center"><input type="file" id="drFiles" multiple accept="image/*,video/*"></div><div id="drUp" style="margin-top:10px;display:grid;gap:6px"></div></div>
     <div class="card" style="margin-top:14px"><div class="row" style="justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><h2>Library <small class="muted" id="drCount"></small></h2>
       <div class="stats"><select id="drFold" style="width:auto;margin:0"><option value="">All folders</option></select><select id="drType" style="width:auto;margin:0"><option value="">Photos + videos</option><option value="image">Photos</option><option value="video">Videos</option></select>
-      <button class="btn sm" id="drMk" disabled>Make a link with selected</button><button class="btn sm ghost" id="drArchSel" disabled>Archive selected</button><button class="btn sm ghost" id="drSelAll">Select all</button><button class="btn sm ghost" id="drRef">Refresh</button></div></div>
+      <button class="btn sm" id="drMk" disabled>Make a link with selected</button><button class="btn sm ghost" id="drArchSel" disabled>🗑 Delete selected</button><button class="btn sm ghost" id="drSelAll">Select all</button><button class="btn sm ghost" id="drRef">Refresh</button></div></div>
       <div id="drLib" class="bgrid" style="padding:10px 0 0;background:none;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))"><p class="muted">Loading…</p></div></div>`;
   const send = async files => {
     for (const f of files){
@@ -875,7 +875,7 @@ async function drContent(){
   const picked = () => [...document.querySelectorAll('#drLib input:checked')].map(i => i.value);
   $('#drSelAll').onclick = () => { const all = [...document.querySelectorAll('#drLib input[type=checkbox]')], on = all.some(i => !i.checked); all.forEach(i => i.checked = on); drSel(); };
   $('#drMk').onclick = () => { drPre = picked(); drGo('links'); };
-  $('#drArchSel').onclick = async () => { const ids = picked(); if (!ids.length || !confirm('Archive ' + ids.length + ' file(s)? They leave the library.')) return; let bad = 0; for (const id of ids){ const r = await dr('DELETE', '/content/' + id); if (!r.ok) bad++; } toast(bad ? bad + ' could not be archived' : 'Archived'); drLib(); };
+  $('#drArchSel').onclick = async () => { const ids = picked(); if (!ids.length || !confirm('Delete ' + ids.length + ' file(s) from the library?')) return; let bad = 0; for (const id of ids){ const r = await dr('DELETE', '/content/' + id); if (!r.ok) bad++; } toast(bad ? bad + ' could not be deleted' : 'Deleted'); drLib(); };
   dr('GET', '/content/folders', { limit:100 }).then(f => { if (f.ok && $('#drFold')) $('#drFold').innerHTML += drRows(f).map(x => `<option value="${esc(x.id)}">${esc(x.name || 'Folder')}</option>`).join(''); });
   drLib();
 }
@@ -888,9 +888,9 @@ async function drLib(){
   $('#drCount').textContent = items.length ? '(' + items.length + ')' : '';
   lib.innerHTML = items.length ? items.map(x => `<article class="bcard" style="padding:8px">${drThumb(x)}
     <small><label style="display:inline;margin:0;font-weight:400"><input type="checkbox" value="${esc(x.id)}" style="width:auto"> ${esc(x.type)} · ${esc(x.status)}</label><br>${drDate(x.created_at)}</small>
-    <div class="row" style="gap:4px"><button class="btn sm ghost" data-view="${esc(x.id)}" data-kind="${esc(x.type)}">View</button><button class="btn sm ghost" data-dl="${esc(x.id)}">Download</button><button class="btn sm ghost" data-arch="${esc(x.id)}">Archive</button></div></article>`).join('') : '<p class="muted">Nothing here yet.</p>';
+    <div class="row" style="gap:4px"><button class="btn sm ghost" data-view="${esc(x.id)}" data-kind="${esc(x.type)}">View</button><button class="btn sm ghost" data-dl="${esc(x.id)}">Download</button><button class="btn sm" data-arch="${esc(x.id)}" style="background:var(--bad);border-color:var(--bad);color:#fff">🗑 Delete</button></div></article>`).join('') : '<p class="muted">Nothing here yet.</p>';
   lib.querySelectorAll('input[type=checkbox]').forEach(i => i.onchange = drSel); drSel();
-  lib.querySelectorAll('[data-arch]').forEach(b => b.onclick = async () => { if (!confirm('Archive this file? It leaves the library.')) return; const r = await dr('DELETE', '/content/' + b.dataset.arch); toast(r.ok ? 'Archived' : r.msg); drLib(); });
+  lib.querySelectorAll('[data-arch]').forEach(b => b.onclick = async () => { if (!confirm('Delete this file from the library?')) return; const r = await dr('DELETE', '/content/' + b.dataset.arch); toast(r.ok ? 'Deleted' : r.msg); drLib(); });
   lib.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => { const u = await drSigned(b.dataset.view); if (!u || !(u.url || u.play)) return toast('Not ready yet'); drModal('Preview', b.dataset.kind === 'video' ? `<video src="${esc(u.url || u.play)}" controls autoplay style="width:100%;max-height:66vh;border-radius:12px;background:#000"></video>` : `<img src="${esc(u.url)}" alt="" style="width:100%;max-height:66vh;object-fit:contain;border-radius:12px">`); });
   lib.querySelectorAll('[data-dl]').forEach(b => b.onclick = async () => { const u = await drSigned(b.dataset.dl); if (!u || !u.url) return toast('Not ready yet'); const a = document.createElement('a'); a.href = u.url; a.download = ''; a.target = '_blank'; a.rel = 'noopener'; a.click(); });
   drThumbs(lib);

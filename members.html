@@ -71,6 +71,7 @@
   .who{display:flex;gap:10px;align-items:center;font-size:14px}
   .badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--blush);color:var(--pink-deep)}
   .badge.admin{background:var(--pink);color:#fff}
+  .nb{float:right;min-width:19px;height:19px;line-height:19px;border-radius:999px;background:#e11d48;color:#fff;font-size:11px;font-weight:800;text-align:center;padding:0 5px;margin-left:6px}
   .app{display:grid;grid-template-columns:210px 1fr;gap:24px}
   .side{display:flex;flex-direction:column;gap:4px;position:sticky;top:84px;align-self:start}
   .side button{text-align:left;border:0;background:transparent;padding:10px 14px;border-radius:12px;font-weight:600;color:var(--muted)}
@@ -277,7 +278,7 @@
       <aside class="side" id="side">
         <button data-tab="plan" class="adm" hidden>📋 My plan</button>
         <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
-        <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone</button>
+        <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone<span class="nb" id="nbSms" hidden></span></button>
         <button data-tab="dropp" data-perm="dropp" hidden>💸 Dropp</button>
         <button data-tab="personas" data-perm="personas" hidden>🎀 Personas</button>
         <button data-tab="docs" data-perm="docs" hidden>📚 Docs & scripts</button>
@@ -286,7 +287,7 @@
         <div class="sep adm" hidden>Admin</div>
         
         <button data-tab="train" class="adm" hidden>🧠 Train AI</button>
-        <button data-tab="members" class="adm" hidden>👥 Access board</button>
+        <button data-tab="members" class="adm" hidden>👥 Access board<span class="nb" id="nbAcc" hidden></span></button>
         <button data-tab="topups" class="adm" hidden>🪙 Top-ups</button>
         <button data-tab="sales" class="adm" hidden>💰 Sales & fees</button>
         <button data-tab="edit" class="adm" hidden>✏️ Edit docs</button>
@@ -398,9 +399,28 @@ async function boot(session){
   document.querySelectorAll('[data-perm]').forEach(el => el.hidden = !can(el.dataset.perm));
   const first = document.querySelector('#side button:not([hidden])');
   if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }
+  badgesStart();
   const h = location.hash.slice(1);
   show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'plan' : first.dataset.tab));
 }
+
+// little red numbers in the menu: unread texts, and new accounts waiting for access
+let nbTimer, nbChan;
+async function badges(){
+  if (!me || !me.approved) return;
+  const set = (id, n) => { const el = $(id); el.hidden = !n; el.textContent = n > 99 ? '99+' : n; return n || 0; };
+  const [s, a] = await Promise.all([
+    can('sms') ? sb.from('sms_messages').select('id', { count:'exact', head:true }).eq('direction', 'in').eq('is_read', false).eq('is_test', false) : { count:0 },
+    me.role === 'admin' ? sb.from('profiles').select('id', { count:'exact', head:true }).eq('approved', false) : { count:0 } ]);
+  const n = set('#nbSms', s.count) + set('#nbAcc', a.count);
+  document.title = (n ? '(' + n + ') ' : '') + 'Members · Unreal Agency';
+}
+function badgesStart(){
+  badges(); clearInterval(nbTimer); nbTimer = setInterval(badges, 30000);
+  if (nbChan) sb.removeChannel(nbChan);
+  if (can('sms')) nbChan = sb.channel('nb-live').on('postgres_changes', { event:'*', schema:'public', table:'sms_messages' }, () => setTimeout(badges, 400)).subscribe();
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) badges(); });
 
 let lastSession;
 sb.auth.onAuthStateChange((ev, session) => {
@@ -414,7 +434,7 @@ document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.
 const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
-  tab = t; history.replaceState(null, '', '#' + t);
+  tab = t; history.replaceState(null, '', '#' + t); badges();
   document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'dropp');
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
@@ -710,7 +730,7 @@ function smsThread(first){
     if (row && !row.is_test){ const r = await smsGate({ action:'send', id:row.id }); if (r.error) toast(r.error); }
   };
   const unread = a.filter(x => x.direction === 'in' && !x.is_read).map(x => x.id);
-  if (unread.length) sb.from('sms_messages').update({ is_read:true }).in('id', unread).then(() => {});
+  if (unread.length) sb.from('sms_messages').update({ is_read:true }).in('id', unread).then(() => badges());
 }
 function smsInfo(){
   const box = $('#cinfo'); if (!box) return;
@@ -760,7 +780,7 @@ async function membersView(){
     v.querySelectorAll(`[data-u="${u.id}"][data-k]`).forEach(c => c.checked = set.has(c.dataset.k));
   });
   v.querySelectorAll('[data-appr]').forEach(box => box.onchange = async () => {
-    const { error } = await sb.from('profiles').update({ approved: box.checked }).eq('id', box.dataset.appr); toast(error ? error.message : (box.checked ? 'Approved' : 'Access removed'));
+    const { error } = await sb.from('profiles').update({ approved: box.checked }).eq('id', box.dataset.appr); toast(error ? error.message : (box.checked ? 'Approved' : 'Access removed')); badges();
   });
   v.querySelectorAll('[data-docs]').forEach(b => b.onclick = () => { const r = v.querySelector(`[data-docrow="${b.dataset.docs}"]`); r.hidden = !r.hidden; });
   v.querySelectorAll('[data-allu]').forEach(box => box.onchange = async () => { const { error } = await sb.from('profiles').update({ all_access: box.checked }).eq('id', box.dataset.allu); toast(error ? error.message : 'Saved'); });

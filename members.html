@@ -135,6 +135,35 @@
   .fix:hover{color:var(--pink)}
   .compose{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
   .compose input{border-radius:999px}
+  /* ---- SMS mini phone ---- */
+  .phone{width:min(390px,100%);height:min(760px,78vh);margin:0 auto;border-radius:44px;padding:12px;background:#0d0a0c;box-shadow:0 30px 60px -20px rgba(226,54,127,.45),0 0 0 2px #2a1f25 inset;position:relative}
+  .phone::before{content:"";position:absolute;top:20px;left:50%;transform:translateX(-50%);width:96px;height:26px;border-radius:999px;background:#000;z-index:3}
+  .pscreen{height:100%;border-radius:34px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column}
+  .pbar{padding:52px 16px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;background:var(--card)}
+  .pbar h3{font-size:17px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pbar small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+  .pback{border:0;background:none;color:var(--pink-deep);font-size:15px;font-weight:700;cursor:pointer;padding:6px 4px}
+  .plist{flex:1;overflow:auto}
+  .prow{display:flex;gap:12px;align-items:center;padding:12px 16px;border:0;border-bottom:1px solid var(--line);background:none;width:100%;text-align:left;color:inherit;cursor:pointer;font:inherit}
+  .prow:hover{background:var(--blush)}
+  .pav{width:42px;height:42px;border-radius:50%;background:var(--pink-soft);color:var(--pink-deep);display:grid;place-items:center;font-weight:800;flex:none}
+  .pmeta{flex:1;min-width:0}
+  .pmeta b{display:flex;justify-content:space-between;gap:8px;font-size:14.5px}
+  .pmeta b span{font-weight:400;color:var(--muted);font-size:12px;flex:none}
+  .pmeta p{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pdot{width:10px;height:10px;border-radius:50%;background:var(--pink);flex:none}
+  .pthread{flex:1;overflow:auto;padding:14px 12px;display:flex;flex-direction:column;gap:4px}
+  .pday{align-self:center;color:var(--muted);font-size:11.5px;margin:10px 0 4px}
+  .bub{max-width:78%;padding:8px 12px;border-radius:18px;font-size:14.5px;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere}
+  .bub.in{align-self:flex-start;background:var(--blush);border:1px solid var(--line);border-bottom-left-radius:6px}
+  .bub.out{align-self:flex-end;background:var(--pink);color:#fff;border-bottom-right-radius:6px}
+  .bst{align-self:flex-end;color:var(--muted);font-size:11px;margin:0 4px 4px}
+  .psend{display:flex;gap:8px;padding:10px 12px 16px;border-top:1px solid var(--line);background:var(--card)}
+  .psend textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:20px;padding:9px 14px;font:inherit;font-size:14.5px;background:var(--surface);color:var(--ink);max-height:96px}
+  .psend button{border:0;border-radius:50%;width:38px;height:38px;background:var(--pink);color:#fff;font-size:17px;font-weight:800;cursor:pointer;flex:none;align-self:flex-end}
+  .psend button:disabled{opacity:.45;cursor:default}
+  .pnote{padding:8px 16px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--card)}
+  .pempty{padding:40px 20px;text-align:center;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -192,6 +221,7 @@
         <button data-tab="bot">🤖 AI chatbot</button>
         <button data-tab="wallet">💳 Wallet</button>
         <div class="sep adm" hidden>Admin</div>
+        <button data-tab="sms" class="adm" hidden>📱 SMS phone</button>
         <button data-tab="train" class="adm" hidden>🧠 Train AI</button>
         <button data-tab="members" class="adm" hidden>👥 Members</button>
         <button data-tab="topups" class="adm" hidden>🪙 Top-ups</button>
@@ -302,14 +332,14 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Members','Approve people and choose what they can see.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'] };
+const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Members','Approve people and choose what they can see.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Admin only.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t);
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView })[t]();
+  ({ plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, sms:smsView })[t]();
 }
 
 
@@ -444,6 +474,62 @@ async function walletView(){
     if (error) return toast(error.message);
     toast('Top-up submitted'); walletView();
   };
+}
+
+// ---------- SMS mini phone (admin only) ----------
+let smsChan = null, smsOpen = null, smsMsgs = [], smsNames = {};
+const smsTime = d => new Date(d).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
+const smsDay = d => { const x = new Date(d), t = new Date(); return x.toDateString() === t.toDateString() ? 'Today' : x.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }); };
+const smsName = p => smsNames[p]?.name || p;
+async function smsView(){
+  const v = $('#view');
+  v.innerHTML = '<div class="phone"><div class="pscreen" id="pscreen"><p class="pempty">Loading…</p></div></div><p class="muted" style="text-align:center;margin-top:14px;font-size:13px">Test messages for now. Real texts show up here once the new number is connected through TextBee.</p>';
+  const [m, c] = await Promise.all([ sb.from('sms_messages').select('*').order('created_at').limit(2000), sb.from('sms_contacts').select('*') ]);
+  if (m.error){ $('#pscreen').innerHTML = `<p class="pempty">${esc(m.error.message)}</p>`; return; }
+  smsMsgs = m.data || []; smsNames = Object.fromEntries((c.data||[]).map(x => [x.phone, x]));
+  if (smsChan) sb.removeChannel(smsChan);
+  smsChan = sb.channel('sms-live').on('postgres_changes', { event:'*', schema:'public', table:'sms_messages' }, p => {
+    if (p.eventType === 'DELETE') smsMsgs = smsMsgs.filter(x => x.id !== p.old.id);
+    else { const i = smsMsgs.findIndex(x => x.id === p.new.id); if (i >= 0) smsMsgs[i] = p.new; else smsMsgs.push(p.new); }
+    if (tab === 'sms') smsDraw();
+  }).subscribe();
+  smsOpen = null; smsDraw();
+}
+function smsDraw(){ smsOpen ? smsThread() : smsList(); }
+function smsList(){
+  const by = {}; smsMsgs.forEach(x => (by[x.phone] ||= []).push(x));
+  const rows = Object.entries(by).map(([p, a]) => ({ p, last:a[a.length-1], unread:a.filter(x => x.direction==='in' && !x.is_read).length })).sort((a,b) => new Date(b.last.created_at) - new Date(a.last.created_at));
+  $('#pscreen').innerHTML = `<div class="pbar"><h3>Messages<small>${rows.length} conversation${rows.length===1?'':'s'}</small></h3></div>
+    <div class="plist">${rows.length ? rows.map(r => `<button class="prow" data-p="${esc(r.p)}"><span class="pav">${esc(smsName(r.p).replace(/^Test · /,'').slice(0,1).toUpperCase())}</span><span class="pmeta"><b>${esc(smsName(r.p))}<span>${smsTime(r.last.created_at)}</span></b><p>${r.last.direction==='out'?'You: ':''}${esc(r.last.body)}</p></span>${r.unread?'<i class="pdot" title="Unread"></i>':''}</button>`).join('') : '<p class="pempty">No messages yet.</p>'}</div>`;
+  document.querySelectorAll('.prow').forEach(b => b.onclick = () => { smsOpen = b.dataset.p; smsThread(true); });
+}
+async function smsThread(first){
+  const p = smsOpen, a = smsMsgs.filter(x => x.phone === p), box = $('#pthread'), keep = $('#ptext')?.value || '';
+  const atEnd = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  let day = '', html = '';
+  a.forEach(x => { const d = smsDay(x.created_at); if (d !== day){ day = d; html += `<div class="pday">${d}</div>`; } html += `<div class="bub ${x.direction}" title="${smsTime(x.created_at)}">${esc(x.body)}</div>`; });
+  const last = a[a.length-1]; if (last?.direction === 'out') html += `<div class="bst">${esc({queued:'Waiting to send',sent:'Sent',delivered:'Delivered',failed:'Not sent'}[last.status]||'')} · ${smsTime(last.created_at)}</div>`;
+  $('#pscreen').innerHTML = `<div class="pbar"><button class="pback" id="pback">‹ Back</button><h3>${esc(smsName(p))}<small>${esc(p)}</small></h3><button class="pback" id="pname">Edit</button></div>
+    ${smsNames[p]?.note ? `<div class="pnote">📝 ${esc(smsNames[p].note)}</div>` : ''}
+    <div class="pthread" id="pthread">${html}</div>
+    <form class="psend" id="psend"><textarea id="ptext" rows="1" placeholder="Text message" aria-label="Text message"></textarea><button aria-label="Send">↑</button></form>`;
+  const t = $('#ptext'); t.value = keep; if (first || atEnd) $('#pthread').scrollTop = 1e9;
+  $('#pback').onclick = () => { smsOpen = null; smsList(); };
+  $('#pname').onclick = async () => {
+    const name = prompt('Name for this contact:', smsNames[p]?.name || ''); if (name === null) return;
+    const note = prompt('Short note (job, interests, key points):', smsNames[p]?.note || ''); if (note === null) return;
+    const row = { phone:p, name:name.trim() || null, note:note.trim() || null, updated_at:new Date().toISOString() };
+    const { error } = await sb.from('sms_contacts').upsert(row); if (error) return toast(error.message);
+    smsNames[p] = row; smsThread();
+  };
+  t.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('#psend').requestSubmit(); } };
+  $('#psend').onsubmit = async e => {
+    e.preventDefault(); const body = t.value.trim(); if (!body) return;
+    t.value = ''; const { error } = await sb.from('sms_messages').insert({ phone:p, direction:'out', body, status:'queued', is_read:true, is_test:a.some(x => x.is_test) });
+    if (error){ t.value = body; toast(error.message); }
+  };
+  const unread = a.filter(x => x.direction === 'in' && !x.is_read).map(x => x.id);
+  if (unread.length) sb.from('sms_messages').update({ is_read:true }).in('id', unread).then(() => {});
 }
 
 // ---------- admin ----------

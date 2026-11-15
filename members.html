@@ -509,9 +509,28 @@ let smsChan = null, smsOpen = null, smsMsgs = [], smsNames = {};
 const smsTime = d => new Date(d).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
 const smsDay = d => { const x = new Date(d), t = new Date(); return x.toDateString() === t.toDateString() ? 'Today' : x.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }); };
 const smsName = p => smsNames[p]?.name || p;
+async function smsGate(body){
+  const { data, error } = await sb.functions.invoke('sms-gate', { body });
+  if (error){ let m = error.message; try { m = (await error.context.json()).error || m; } catch(e){} return { error:m }; }
+  return data || {};
+}
+async function smsGatePanel(){
+  const box = $('#gateBox'); if (!box) return;
+  const st = await smsGate({ action:'status' });
+  if (st.error) return box.innerHTML = `<div class="msg err">${esc(st.error)}</div>`;
+  const mode = st.allow === '*' ? 'Live: every text is saved' : st.allow ? 'Test: only the numbers below' : 'Off: nothing is saved';
+  box.innerHTML = `<h2>Phone link (SMSGate)</h2>
+    <p class="muted" style="font-size:13px">Login saved in Supabase: <b>${st.creds ? 'yes' : 'not yet'}</b> · Mode: <b>${mode}</b></p>
+    <label for="gAllow">Numbers allowed (comma separated). Empty = off, * = everyone</label>
+    <input id="gAllow" value="${esc(st.allow || '')}" placeholder="+15145550000">
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="gSave">Save numbers</button><button class="btn sm ghost" id="gSetup" ${st.creds ? '' : 'disabled'}>Connect the phone</button></div>`;
+  $('#gSave').onclick = async () => { const r = await smsGate({ action:'allow', value:$('#gAllow').value.trim() }); toast(r.error || 'Saved'); smsGatePanel(); };
+  $('#gSetup').onclick = async () => { const r = await smsGate({ action:'setup' }); toast(r.error || (r.already ? 'Already connected' : 'Phone connected')); };
+}
 async function smsView(){
   const v = $('#view');
-  v.innerHTML = '<div class="phone"><div class="pscreen" id="pscreen"><p class="pempty">Loading…</p></div></div><p class="muted" style="text-align:center;margin-top:14px;font-size:13px">Test messages for now. Real texts show up here once the new number is connected through TextBee.</p>';
+  v.innerHTML = '<div class="phone"><div class="pscreen" id="pscreen"><p class="pempty">Loading…</p></div></div><div class="card" id="gateBox" style="max-width:520px;margin:18px auto 0"><p class="muted">Checking the phone link…</p></div>';
+  smsGatePanel();
   const [m, c] = await Promise.all([ sb.from('sms_messages').select('*').order('created_at').limit(2000), sb.from('sms_contacts').select('*') ]);
   if (m.error){ $('#pscreen').innerHTML = `<p class="pempty">${esc(m.error.message)}</p>`; return; }
   smsMsgs = m.data || []; smsNames = Object.fromEntries((c.data||[]).map(x => [x.phone, x]));
@@ -553,8 +572,9 @@ async function smsThread(first){
   t.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('#psend').requestSubmit(); } };
   $('#psend').onsubmit = async e => {
     e.preventDefault(); const body = t.value.trim(); if (!body) return;
-    t.value = ''; const { error } = await sb.from('sms_messages').insert({ phone:p, direction:'out', body, status:'queued', is_read:true, is_test:a.some(x => x.is_test) });
-    if (error){ t.value = body; toast(error.message); }
+    t.value = ''; const { data: row, error } = await sb.from('sms_messages').insert({ phone:p, direction:'out', body, status:'queued', is_read:true, is_test:a.some(x => x.is_test) }).select().single();
+    if (error){ t.value = body; return toast(error.message); }
+    if (row && !row.is_test){ const r = await smsGate({ action:'send', id:row.id }); if (r.error) toast(r.error); }
   };
   const unread = a.filter(x => x.direction === 'in' && !x.is_read).map(x => x.id);
   if (unread.length) sb.from('sms_messages').update({ is_read:true }).in('id', unread).then(() => {});

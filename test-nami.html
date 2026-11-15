@@ -214,14 +214,16 @@
   }
 
   /* Nami hero: plain video on the page colour, edges melted into the page */
-  .head img,.head .nv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:none;
+  .head .nv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .head img,.head .nvw{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:none;
     -webkit-mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 9%,#000 86%,transparent 100%);
     mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 9%,#000 86%,transparent 100%);
     -webkit-mask-composite:source-in;mask-composite:intersect}
   .head .nv{opacity:0;transition:opacity .4s ease;pointer-events:none}
   .head .nv.on{opacity:1}
   .head img[hidden]{display:none}
-  :root[data-mode="dark"] .head img,:root[data-mode="dark"] .head .nv{-webkit-mask-image:none;mask-image:none;border-radius:32px;box-shadow:0 0 0 1px rgba(255,199,221,.35),0 30px 90px -20px rgba(255,95,162,.55)}
+  :root[data-mode="dark"] .head .nvw{overflow:hidden}
+  :root[data-mode="dark"] .head img,:root[data-mode="dark"] .head .nvw{-webkit-mask-image:none;mask-image:none;border-radius:32px;box-shadow:0 0 0 1px rgba(255,199,221,.35),0 30px 90px -20px rgba(255,95,162,.55)}
   :root[data-mode="dark"] .stage::before,:root[data-mode="dark"] .ring,:root[data-mode="dark"] .floor{display:none}
   .head .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
   :root[data-mode="dark"] .head .fx{border-radius:32px}
@@ -545,20 +547,22 @@
     canvas.style.display = 'none'; face.hidden = false;
     var v = document.createElement('video'); v.className = 'nv'; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true;
     v.setAttribute('playsinline',''); v.setAttribute('muted',''); v.preload = 'auto'; v.poster = 'live/nami_idle.jpg'; v.src = 'live/nami_idle.mp4?v=3';
-    head.appendChild(v);
+    var wrap = document.createElement('div'); wrap.className = 'nvw'; head.appendChild(wrap); wrap.appendChild(v);
     v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ face.hidden = true; }, 400); }, { once:true });
     var p = v.play(); if (p && p.catch) p.catch(function(){});
-    /* Blow a kiss: action clip starts and ends on the idle frame, blended in and out */
+    /* Blow a kiss: the clip covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
-      var btn = document.querySelector('#moves button[data-m="kiss"]'); if (!btn) return; var act = null, busy = false;
-      function mk(){ act = document.createElement('video'); act.className = 'nv'; act.muted = true; act.playsInline = true; act.setAttribute('playsinline',''); act.setAttribute('muted',''); act.preload = 'auto'; act.src = 'live/nami_kiss.mp4?v=2'; head.insertBefore(act, v.nextSibling); }
-      v.addEventListener('playing', function(){ if (!act) mk(); setTimeout(function(){ if (!busy && !document.hidden) btn.click(); }, 3000); }, { once:true });
-      function done(){ v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function(){}); setTimeout(function(){ act.classList.remove('on'); }, 80); busy = false; btn.disabled = false; }
-      btn.addEventListener('click', function(){
-        if (busy) return; if (!act) mk(); busy = true; btn.disabled = true;
-        act.currentTime = 0; act.onended = done; var p = act.play(); if (p && p.catch) p.catch(function(){ done(); });
-        act.classList.add('on'); setTimeout(function(){ if (busy) v.pause(); }, 450);
-      });
+      var btn = document.querySelector('#moves button[data-m="kiss"]'); if (!btn) return; var act = null, busy = false, FADE = 420;
+      function mk(){ act = document.createElement('video'); act.className = 'nv'; act.muted = true; act.playsInline = true; act.setAttribute('playsinline',''); act.setAttribute('muted',''); act.preload = 'auto'; act.src = 'live/nami_kiss.mp4?v=3'; wrap.appendChild(act); }
+      function finish(){ if (!busy) return; busy = false; var p = v.play(); if (p && p.catch) p.catch(function(){}); act.classList.remove('on'); setTimeout(function(){ act.pause(); btn.disabled = false; }, FADE + 40); }
+      function watch(){ if (!busy) return; if (act.ended || (act.duration && act.currentTime >= act.duration - .5)) return finish(); requestAnimationFrame(watch); }
+      function start(){ if (busy) return; if (!act) mk(); busy = true; btn.disabled = true; act.currentTime = 0;
+        var go = function(){ act.classList.add('on'); setTimeout(function(){ if (busy){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
+        var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; btn.disabled = false; }); else go(); }
+      btn.addEventListener('click', start);
+      /* the loop starts 2.6s in, so at the 3 second mark she is in the pose the kiss starts from */
+      v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 2.6; } catch(e){} }, { once:true });
+      v.addEventListener('playing', function(){ if (!act) mk(); setTimeout(function(){ if (!busy && !document.hidden) start(); }, 3000); }, { once:true });
     })();
     var ring = document.getElementById('ring');
     function tick(t){ if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; } requestAnimationFrame(tick); }

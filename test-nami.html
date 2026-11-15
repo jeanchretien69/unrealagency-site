@@ -264,7 +264,7 @@
         <div class="shine" id="shine"></div>
       
       </div>
-      <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button></div>
+      <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button><button data-m="hat">⚓ Construction la semaine</button></div>
       <div class="chip a" id="status"><span class="dot"></span><span id="statusText">Nami · online now</span></div>
       <div class="chip b"><b>+$412</b> PPV today</div>
       <div class="chip c">AI chatter replied in <b>8s</b></div>
@@ -550,19 +550,21 @@
     var wrap = document.createElement('div'); wrap.className = 'nvw'; head.appendChild(wrap); wrap.appendChild(v);
     v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ face.hidden = true; }, 400); }, { once:true });
     var p = v.play(); if (p && p.catch) p.catch(function(){});
-    /* Blow a kiss: the clip covers the breathing loop completely, then hands back to it while both are moving */
+    /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
-      var btn = document.querySelector('#moves button[data-m="kiss"]'); if (!btn) return; var act = null, busy = false, FADE = 420;
-      function mk(){ act = document.createElement('video'); act.className = 'nv'; act.muted = true; act.playsInline = true; act.setAttribute('playsinline',''); act.setAttribute('muted',''); act.preload = 'auto'; act.src = 'live/nami_kiss.mp4?v=3'; wrap.appendChild(act); }
-      function finish(){ if (!busy) return; busy = false; var p = v.play(); if (p && p.catch) p.catch(function(){}); act.classList.remove('on'); setTimeout(function(){ act.pause(); btn.disabled = false; }, FADE + 40); }
-      function watch(){ if (!busy) return; if (act.ended || (act.duration && act.currentTime >= act.duration - .5)) return finish(); requestAnimationFrame(watch); }
-      function start(){ if (busy) return; if (!act) mk(); busy = true; btn.disabled = true; act.currentTime = 0;
+      var SRC = { kiss:'live/nami_kiss.mp4?v=3', hat:'live/nami_hat_test.mp4?v=1' }, vids = {}, busy = false, FADE = 420;
+      var btns = [].slice.call(document.querySelectorAll('#moves button[data-m]')); if (!btns.length) return;
+      function lock(on){ btns.forEach(function(b){ b.disabled = on; }); }
+      function mk(m){ if (vids[m] || !SRC[m]) return vids[m]; var a = document.createElement('video'); a.className = 'nv'; a.muted = true; a.playsInline = true; a.setAttribute('playsinline',''); a.setAttribute('muted',''); a.preload = 'auto'; a.src = SRC[m]; wrap.appendChild(a); return (vids[m] = a); }
+      function start(m){ if (busy) return; var act = mk(m); if (!act) return; busy = true; lock(true); act.currentTime = 0;
+        function finish(){ if (!busy) return; busy = false; var p = v.play(); if (p && p.catch) p.catch(function(){}); act.classList.remove('on'); setTimeout(function(){ act.pause(); lock(false); }, FADE + 40); }
+        function watch(){ if (!busy) return; if (act.ended || (act.duration && act.currentTime >= act.duration - .5)) return finish(); requestAnimationFrame(watch); }
         var go = function(){ act.classList.add('on'); setTimeout(function(){ if (busy){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
-        var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; btn.disabled = false; }); else go(); }
-      btn.addEventListener('click', start);
+        var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); }); else go(); }
+      btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
       /* the loop starts 2.6s in, so at the 3 second mark she is in the pose the kiss starts from */
       v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 2.6; } catch(e){} }, { once:true });
-      v.addEventListener('playing', function(){ if (!act) mk(); setTimeout(function(){ if (!busy && !document.hidden) start(); }, 3000); }, { once:true });
+      v.addEventListener('playing', function(){ mk('kiss'); mk('hat'); setTimeout(function(){ if (!busy && !document.hidden) start('kiss'); }, 3000); }, { once:true });
     })();
     var ring = document.getElementById('ring');
     function tick(t){ if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; } requestAnimationFrame(tick); }

@@ -219,6 +219,7 @@
     mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 9%,#000 86%,transparent 100%);
     -webkit-mask-composite:source-in;mask-composite:intersect}
   .head .nv{opacity:0;transition:opacity .4s ease;pointer-events:none}
+  .head .nv.quick{transition:opacity .13s linear}
   .head .nv.on{opacity:1}
   .head img[hidden]{display:none}
   :root[data-mode="dark"] .head .nvw{overflow:hidden}
@@ -551,14 +552,19 @@
     var p = v.play(); if (p && p.catch) p.catch(function(){});
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
-      var SRC = { kiss:'live/nami_kiss.mp4?v=3', hat:'live/nami_hat.mp4?v=1' }, vids = {}, busy = false, FADE = 420;
+      var SRC = { kiss:'live/nami_kiss.mp4?v=3', hat:'live/nami_hat.mp4?v=2' }, vids = {}, busy = false, FADE = 420;
       var btns = [].slice.call(document.querySelectorAll('#moves button[data-m]')); if (!btns.length) return;
       function lock(on){ btns.forEach(function(b){ b.disabled = on; }); }
       function mk(m){ if (vids[m] || !SRC[m]) return vids[m]; var a = document.createElement('video'); a.className = 'nv'; a.muted = true; a.playsInline = true; a.setAttribute('playsinline',''); a.setAttribute('muted',''); a.preload = 'auto'; a.src = SRC[m]; wrap.appendChild(a); return (vids[m] = a); }
-      function start(m){ if (busy) return; var act = mk(m); if (!act) return; busy = true; lock(true); act.currentTime = 0;
-        function finish(){ if (!busy) return; busy = false; var p = v.play(); if (p && p.catch) p.catch(function(){}); act.classList.remove('on'); setTimeout(function(){ act.pause(); lock(false); }, FADE + 40); }
-        function watch(){ if (!busy) return; if (act.ended || (act.duration && act.currentTime >= act.duration - .5)) return finish(); requestAnimationFrame(watch); }
-        var go = function(){ act.classList.add('on'); setTimeout(function(){ if (busy){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
+      function start(m){ if (busy) return; var act = mk(m); if (!act) return; busy = true; lock(true); act.currentTime = 0; var over = false;
+        /* hand back only on the clip's very last frame, where her pose matches the breathing loop */
+        function finish(){ if (over) return; over = true; v.currentTime = 0;
+          var swap = function(){ act.classList.add('quick'); act.classList.remove('on');
+            setTimeout(function(){ act.pause(); act.classList.remove('quick'); busy = false; lock(false); }, 220); };
+          var p = v.play(); if (p && p.then) p.then(function(){ requestAnimationFrame(swap); }).catch(swap); else requestAnimationFrame(swap); }
+        function watch(){ if (over) return; if (act.ended || (act.duration && act.currentTime >= act.duration - .10)) return finish(); requestAnimationFrame(watch); }
+        act.onended = finish;
+        var go = function(){ act.classList.add('on'); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
         var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); }); else go(); }
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
       /* the loop starts 2.6s in, so at the 3 second mark she is in the pose the kiss starts from */

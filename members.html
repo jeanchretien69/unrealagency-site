@@ -929,7 +929,7 @@ async function drLinks(){
 let drLinkRows = [], drLinkStats = {};
 async function drLinkList(){
   const box = $('#drLinkList'); if (!box) return;
-  const [r, o] = await Promise.all([drAll('/links', { folder_id:$('#drLFold').value || undefined, is_active:$('#drLAct').value || undefined }), can('dropp.sales') ? drAll('/orders', { status:'paid' }) : { ok:false }]);
+  const [r, o] = await Promise.all([drAll('/links', { folder_id:$('#drLFold').value || undefined, is_active:$('#drLAct').value || undefined }), can('dropp.sales') ? drAll('/orders', { status:'PAID' }) : { ok:false }]);
   if (!r.ok) return box.innerHTML = drErr(r.msg);
   drLinkRows = r.rows.filter(x => !x.is_archived && (!x.seller || x.seller.id === drPid));
   drLinkStats = {}; if (o.ok) o.rows.forEach(x => { if (!x.link) return; const s = drLinkStats[x.link.id] = drLinkStats[x.link.id] || { n:0, c:{} }; s.n++; s.c[x.amount.currency_code] = (s.c[x.amount.currency_code] || 0) + x.amount.total_cents; });
@@ -953,7 +953,7 @@ function drLinkDraw(){
 let drOrders = [];
 async function drSales(){
   const box = $('#drBody');
-  box.innerHTML = `<div class="card"><div class="row" style="align-items:flex-end;gap:8px;flex-wrap:wrap"><div><label for="sStat">Status</label><select id="sStat"><option value="">All</option><option value="paid" selected>Paid</option><option value="pending">Pending</option></select></div>
+  box.innerHTML = `<div class="card"><div class="row" style="align-items:flex-end;gap:8px;flex-wrap:wrap"><div><label for="sStat">Status</label><select id="sStat"><option value="">All</option><option value="PAID" selected>Paid</option><option value="CREATED">Not paid yet</option><option value="REFUNDED">Refunded</option><option value="PENDING_REFUND">Refund pending</option><option value="CHARGEBACK">Chargeback</option><option value="ERROR">Failed</option></select></div>
     <div><label for="sType">Type</label><select id="sType"><option value="">All</option><option value="purchase">Link sale</option><option value="donation">Tip</option><option value="wishlist">Wishlist</option><option value="paid_chat">Paid chat</option></select></div>
     <div><label for="sFrom">From</label><input type="date" id="sFrom"></div><div><label for="sTo">To</label><input type="date" id="sTo"></div><div><label for="sQ">Search</label><input id="sQ" placeholder="tag, link, who sent it"></div>
     <label style="margin:0 0 10px"><input type="checkbox" id="sAll" style="width:auto"> All models</label><button class="btn sm ghost" id="sCsv">Export CSV</button></div>
@@ -968,13 +968,13 @@ async function drSales(){
   };
   const rowsNow = () => { const q = $('#sQ').value.trim().toLowerCase(), ty = $('#sType').value, all = $('#sAll').checked; return drOrders.filter(x => (all || !x.seller || x.seller.id === drPid) && (!ty || x.type === ty) && (!q || JSON.stringify([x.metadata, x.link, x.id]).toLowerCase().includes(q))); };
   const draw = () => {
-    const rows = rowsNow(), paid = rows.filter(x => x.status === 'paid'), today = new Date().toDateString(), wk = Date.now() - 7 * 864e5;
+    const rows = rowsNow(), paid = rows.filter(x => String(x.status).toLowerCase() === 'paid'), today = new Date().toDateString(), wk = Date.now() - 7 * 864e5;
     const when = x => new Date(x.paid_at || x.created_at), tot = x => [x.amount.currency_code, x.amount.total_cents];
     const grp = key => { const g = {}; paid.forEach(x => { const k = key(x) || '—'; (g[k] = g[k] || []).push(x); }); return Object.entries(g).sort((a, b) => b[1].length - a[1].length).slice(0, 12); };
     const tbl = (title, g) => `<div class="card tbl"><h2>${title}</h2>${g.length ? `<table><tbody>${g.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v.length}</td><td class="num">${drSum(v, tot)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing yet.</p>'}</div>`;
     $('#sOut').innerHTML = `<div class="tiles"><div class="card tile"><span>Paid orders</span><b>${paid.length}</b></div><div class="card tile"><span>Today</span><b>${drSum(paid.filter(x => when(x).toDateString() === today), tot)}</b></div><div class="card tile"><span>Last 7 days</span><b>${drSum(paid.filter(x => when(x) > wk), tot)}</b></div><div class="card tile"><span>Collected</span><b class="pink">${drSum(paid, tot)}</b></div></div>
       <div class="two" style="margin-bottom:14px">${tbl('By who sent the link', grp(x => x.metadata && x.metadata.by))}${tbl('By link', grp(x => x.link && (x.link.name || x.link.id)))}</div>
-      <div class="card tbl">${rows.length ? `<table><thead><tr><th>Date</th><th>Model</th><th>What</th><th>Type</th><th>For</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(x => `<tr><td>${drDate(x.paid_at || x.created_at)}</td><td>${esc(x.seller ? x.seller.display_name : '')}</td><td>${esc(x.link ? x.link.name || x.link.id : '—')}</td><td>${esc(x.type)}</td><td class="muted">${esc(x.metadata ? [x.metadata.tag, x.metadata.by].filter(Boolean).join(' · ') : '')}</td><td class="num">${esc(x.amount.display_total || drMoney(x.amount.total_cents, x.amount.currency_code))}</td><td><span class="pill ${x.status==='paid'?'yes':'pending'}">${esc(x.status)}</span></td><td><button class="btn sm ghost" data-ord="${esc(x.id)}">Details</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No orders match.</p>'}</div>`;
+      <div class="card tbl">${rows.length ? `<table><thead><tr><th>Date</th><th>Model</th><th>What</th><th>Type</th><th>For</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(x => `<tr><td>${drDate(x.paid_at || x.created_at)}</td><td>${esc(x.seller ? x.seller.display_name : '')}</td><td>${esc(x.link ? x.link.name || x.link.id : '—')}</td><td>${esc(x.type)}</td><td class="muted">${esc(x.metadata ? [x.metadata.tag, x.metadata.by].filter(Boolean).join(' · ') : '')}</td><td class="num">${esc(x.amount.display_total || drMoney(x.amount.total_cents, x.amount.currency_code))}</td><td><span class="pill ${String(x.status).toLowerCase()==='paid'?'yes':/refund|charge|error/i.test(x.status)?'no':'pending'}">${esc(String(x.status).toLowerCase().replace('_',' '))}</span></td><td><button class="btn sm ghost" data-ord="${esc(x.id)}">Details</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No orders match.</p>'}</div>`;
     document.querySelectorAll('#sOut [data-ord]').forEach(b => b.onclick = async () => { const m = drModal('Order', '<p class="muted">Loading…</p>'); const r = await dr('GET', '/orders/' + b.dataset.ord); m.innerHTML = r.ok ? drKV(r.data.data || r.data) : drErr(r.msg); });
   };
   ['sStat','sFrom','sTo'].forEach(i => $('#' + i).onchange = load); $('#sType').onchange = draw; $('#sAll').onchange = draw; $('#sQ').oninput = draw;

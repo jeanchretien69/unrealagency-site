@@ -1419,6 +1419,9 @@ async function brainsView(){
         <div><label for="bBak-${c}">2 · Backup brain</label><select id="bBak-${c}" data-f="backup">${opts(cfg.backup, true)}</select><small data-d="backup">${cfg.backup ? esc(brainInfo(cfg.backup).d) : 'Nobody takes over. If the main brain fails, you get an error and a person answers.'}</small></div>
         <div><label for="bProf-${c}">3 · Script she follows</label><div class="row"><select id="bProf-${c}" data-f="profile">${profs.map(p => `<option value="${esc(p.model)}" ${p.model === cfg.profile ? 'selected' : ''}>${esc(p.display_name || p.model)}</option>`).join('')}</select><button type="button" class="btn sm ghost" data-open>Open her boxes</button></div><small>Who she is, how she texts, her rules. You edit it in 🧠 Train AI.</small></div>
       </div>
+      ${c === 'sms' ? `<div style="margin-top:14px"><label>4 · Wait before she answers <small class="muted" data-delaystate style="font-weight:400"></small></label>
+        <div class="cfilt" data-delay style="padding:0;border:0;flex-wrap:wrap">${[5, 10, 20, 30, 45, 60, 90].map(d => `<button type="button" data-d="${d}">${d} s</button>`).join('')}<input type="number" min="0" max="90" step="1" data-delaynum aria-label="Seconds to wait" style="width:84px;margin:0;padding:6px 10px"><span class="muted" style="font-size:13px">seconds (0 to 90)</span></div>
+        <small>How long she waits after his text before answering by herself (Auto mode). If he sends another text meanwhile, the wait starts again. Saves as soon as you pick.</small></div>` : ''}
       <div class="row" style="margin-top:14px;align-items:center"><div style="flex:0"><button type="button" class="btn" data-save>Save ${k.t} brain</button></div><div><p class="muted" style="font-size:13px" data-dirty>${k.send}</p></div></div>
       <p class="muted bstat">Last 24 h: ${n ? Object.entries(t).map(([id, x]) => `${x} by ${esc(brainInfo(id).name)}`).join(', ') : 'no real replies yet'}.</p>
       ${err[1] ? `<p class="msg err">Last problem (${esc(new Date(err[0]).toLocaleString())}): ${esc(err.slice(1).join('|'))}</p>` : ''}
@@ -1455,6 +1458,15 @@ async function brainsView(){
       refresh();
     });
     el.querySelector('[data-open]').onclick = () => { trainModel = f('profile').value; show('train'); };
+    const dBox = el.querySelector('[data-delay]');
+    if (dBox){
+      const num = el.querySelector('[data-delaynum]'), state = el.querySelector('[data-delaystate]');
+      const draw = () => { const cur = Number(settings.sms_ai_delay ?? 20); num.value = cur; dBox.querySelectorAll('button').forEach(b => b.classList.toggle('on', Number(b.dataset.d) === cur)); state.textContent = '· now ' + cur + ' seconds'; };
+      const setDelay = async v => { const d = Math.max(0, Math.min(90, Math.round(Number(v) || 0))); const { error } = await sb.from('settings').upsert({ key:'sms_ai_delay', value:String(d) }); if (error) return toast(error.message); settings.sms_ai_delay = String(d); draw(); toast('She now waits ' + d + ' seconds'); };
+      dBox.querySelectorAll('button').forEach(b => b.onclick = () => setDelay(b.dataset.d));
+      num.onchange = () => setDelay(num.value);
+      draw();
+    }
     el.querySelector('[data-save]').onclick = async () => {
       const rows = ['engine','backup','profile'].map(n => ({ key:k.pre + n, value:f(n).value }));
       const { error } = await sb.from('settings').upsert(rows); if (error) return toast(error.message);

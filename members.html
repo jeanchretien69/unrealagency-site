@@ -419,10 +419,22 @@ async function badges(){
   const n = set('#nbSms', s.count) + set('#nbAcc', a.count);
   document.title = (n ? '(' + n + ') ' : '') + 'Members · Unreal Agency';
 }
+// sound for a new client text. Browsers only allow sound after one click on the page, so the first click unlocks it.
+let dingCtx = null;
+const dingOn = () => { try { return localStorage.getItem('unreal-sms-sound') !== 'off'; } catch(e){ return true; } };
+document.addEventListener('pointerdown', () => { try { dingCtx = dingCtx || new (window.AudioContext || window.webkitAudioContext)(); if (dingCtx.state === 'suspended') dingCtx.resume(); } catch(e){} }, { passive:true });
+function ding(force){
+  if ((!force && !dingOn()) || !dingCtx) return;
+  try {
+    if (dingCtx.state === 'suspended') dingCtx.resume();
+    const t = dingCtx.currentTime;
+    [[880, 0], [1318.5, .14]].forEach(([f, d]) => { const o = dingCtx.createOscillator(), g = dingCtx.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.35, t + d + .02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + .55); o.connect(g).connect(dingCtx.destination); o.start(t + d); o.stop(t + d + .6); });
+  } catch(e){}
+}
 function badgesStart(){
   badges(); clearInterval(nbTimer); nbTimer = setInterval(badges, 30000);
   if (nbChan) sb.removeChannel(nbChan);
-  if (can('sms')) nbChan = sb.channel('nb-live').on('postgres_changes', { event:'*', schema:'public', table:'sms_messages' }, () => setTimeout(badges, 400)).subscribe();
+  if (can('sms')) nbChan = sb.channel('nb-live').on('postgres_changes', { event:'*', schema:'public', table:'sms_messages' }, p => { setTimeout(badges, 400); if (p.eventType === 'INSERT' && p.new.direction === 'in' && !p.new.is_test) ding(); }).subscribe();
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) badges(); });
 
@@ -624,7 +636,7 @@ async function smsGatePanel(){
 }
 async function smsView(){
   const v = $('#view');
-  v.innerHTML = `<div class="smstop"><div class="stats"><div class="cfilt" id="smsMode" style="padding:0;border:0"><button data-m="chat" class="on">💬 Chat</button><button data-m="board">📋 Client notes</button></div><div id="smsStats" class="stats"></div></div><div id="gateChips" class="stats"></div></div>
+  v.innerHTML = `<div class="smstop"><div class="stats"><div class="cfilt" id="smsMode" style="padding:0;border:0"><button data-m="chat" class="on">💬 Chat</button><button data-m="board">📋 Client notes</button></div><div id="smsStats" class="stats"></div><button class="btn sm ghost" id="smsBell" title="Sound when a new text arrives"></button></div><div id="gateChips" class="stats"></div></div>
   <div class="chat">
     <aside class="clist">
       <div class="chead"><input id="csearch" type="search" placeholder="Search" aria-label="Search conversations"><button class="btn sm" id="pnew">＋ New</button></div>
@@ -641,6 +653,8 @@ async function smsView(){
   smsGatePanel();
   $('#csearch').oninput = e => { smsQ = e.target.value.toLowerCase(); smsRows(); };
   document.querySelectorAll('#smsMode button').forEach(b => b.onclick = () => smsSetMode(b.dataset.m));
+  const bell = $('#smsBell'), bellDraw = () => { bell.textContent = dingOn() ? '🔔 Sound on' : '🔕 Sound off'; };
+  bellDraw(); bell.onclick = () => { try { localStorage.setItem('unreal-sms-sound', dingOn() ? 'off' : 'on'); } catch(e){} bellDraw(); if (dingOn()) setTimeout(() => ding(true), 50); };
   smsPad();
   document.querySelectorAll('.clist .cfilt button').forEach(b => b.onclick = () => { smsFilter = b.dataset.f; document.querySelectorAll('.clist .cfilt button').forEach(x => x.classList.toggle('on', x === b)); smsRows(); });
   $('#pnew').onclick = () => { let n = prompt('Phone number to text (with country code, e.g. +15145550000):'); if (!n) return; n = n.replace(/[^\d+]/g, ''); if (n.replace(/\D/g,'').length < 10) return toast('That number looks too short'); if (!n.startsWith('+')) n = '+' + (n.length === 10 ? '1' : '') + n; smsOpen = n; smsDraw(true); };

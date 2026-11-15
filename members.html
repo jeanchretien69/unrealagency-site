@@ -753,6 +753,7 @@ function smsThread(first){
   const main = $('#cmain'); if (!main) return;
   if (!smsOpen){ main.innerHTML = '<div class="cblank"><b>Pick a conversation</b><span>or press ＋ New to text a number</span></div>'; return; }
   const p = smsOpen, a = smsMsgs.filter(x => x.phone === p), box = $('#cthread'), keep = $('#ptext')?.value || '';
+  const old = $('#ptext'), ae = document.activeElement, hadFocus = !!(ae && ae.closest && ae.closest('#psend')), sel = old && ae === old ? [old.selectionStart, old.selectionEnd] : null;
   const atEnd = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 80;
   const label = { queued:'Sending…', sent:'Sent', delivered:'Delivered', failed:'Not sent' };
   let day = '', html = '';
@@ -774,7 +775,7 @@ function smsThread(first){
   $('#pclip').onclick = () => $('#pfile').click();
   $('#pfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; toast('Preparing the photo…'); const b = await smsShrink(f); if (!b) return toast('This file cannot be sent as a picture message'); if (smsPend) URL.revokeObjectURL(smsPend.url); smsPend = { p, blob:b, url:URL.createObjectURL(b) }; smsThread(); };
   if ($('#pdrop')) $('#pdrop').onclick = () => { URL.revokeObjectURL(smsPend.url); smsPend = null; smsThread(); };
-  const t = $('#ptext'); t.value = keep; if (first) t.focus();
+  const t = $('#ptext'); t.value = keep; if (first || hadFocus){ t.focus(); try { if (sel) t.setSelectionRange(sel[0], sel[1]); else t.setSelectionRange(keep.length, keep.length); } catch(e){} }
   if (first || atEnd) $('#cthread').scrollTop = 1e9;
   t.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('#psend').requestSubmit(); } };
   $('#psend').onsubmit = async e => {
@@ -788,7 +789,9 @@ function smsThread(first){
     }
     t.value = ''; const { data: row, error } = await sb.from('sms_messages').insert({ phone:p, direction:'out', body, media, status:'queued', is_read:true, is_test:a.some(x => x.is_test) }).select().single();
     if (error){ t.value = body; return toast(error.message); }
+    $('#ptext')?.focus();
     if (row && !row.is_test){ const r = await smsGate({ action:'send', id:row.id }); if (r.error) toast(r.error); }
+    $('#ptext')?.focus();
   };
   const unread = a.filter(x => x.direction === 'in' && !x.is_read).map(x => x.id);
   if (unread.length) sb.from('sms_messages').update({ is_read:true }).in('id', unread).then(() => badges());

@@ -127,12 +127,13 @@
   .led{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:#bbb}
   .led.ok{background:#1f8a4c}.led.warn{background:#d99a00}.led.bad{background:#d23b3b}
   .dash li{margin:6px 0;list-style:none;font-size:14px}
+  .wrap.wide{max-width:1700px}
   .smstop{display:flex;flex-wrap:wrap;gap:10px 18px;justify-content:space-between;margin-bottom:12px}
   .stats{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   .stat{display:inline-flex;align-items:center;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);white-space:nowrap}
   .stat b{margin-right:5px}
   .stat.hot{border-color:var(--pink);color:var(--pink-deep)} .stat.bad{border-color:#d23b3b;color:#d23b3b}
-  .chat{display:grid;grid-template-columns:270px minmax(0,1fr) 230px;height:calc(100vh - 250px);min-height:520px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--card)}
+  .chat{display:grid;grid-template-columns:300px minmax(0,1fr) 270px;height:calc(100vh - 275px);min-height:480px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--card)}
   @media(max-width:1100px){.chat{grid-template-columns:240px minmax(0,1fr)}.cinfo{display:none}}
   @media(max-width:700px){.chat{grid-template-columns:1fr;height:auto}.clist{max-height:260px}.cmain{height:70vh}}
   .clist{display:flex;flex-direction:column;border-right:1px solid var(--line);min-height:0}
@@ -403,6 +404,7 @@ const titles = { plan:['My plan','Your private business plan — only you can se
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t);
+  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms');
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
@@ -589,7 +591,7 @@ async function smsView(){
   v.innerHTML = `<div class="smstop"><div id="smsStats" class="stats"></div><div id="gateChips" class="stats"></div></div>
   <div class="chat">
     <aside class="clist">
-      <div class="chead"><input id="csearch" type="search" placeholder="Search name, number or text" aria-label="Search conversations"><button class="btn sm" id="pnew">＋ New</button></div>
+      <div class="chead"><input id="csearch" type="search" placeholder="Search" aria-label="Search conversations"><button class="btn sm" id="pnew">＋ New</button></div>
       <div class="cfilt"><button data-f="all" class="on">All</button><button data-f="unread">Unread</button><button data-f="waiting">Waiting for reply</button></div>
       <div class="crows" id="crows"><p class="pempty">Loading…</p></div>
     </aside>

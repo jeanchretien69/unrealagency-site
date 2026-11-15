@@ -320,6 +320,7 @@
         <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
         <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone<span class="nb" id="nbSms" hidden></span></button>
         <button data-tab="dropp" data-perm="dropp" hidden>💸 Dropp</button>
+        <button data-tab="quotes" data-perm="quotes" hidden>💬 Quotes</button>
         <button data-tab="personas" data-perm="personas" hidden>🎀 Personas</button>
         <button data-tab="docs" data-perm="docs" hidden>📚 Docs & scripts</button>
         <button data-tab="bot" data-perm="bot" hidden>🤖 AI chatbot</button>
@@ -417,6 +418,7 @@ const PERMS = [
   { k:'team', l:'✅ Team to-do', sub:[['team:Before posting','Before posting'],['team:Daily posting','Daily posting'],['team:Rules','Rules']] },
   { k:'sms', l:'📱 SMS phone', sub:[] },
   { k:'dropp', l:'💸 Dropp', sub:[['dropp.links','Links'],['dropp.content','Content'],['dropp.sales','Sales'],['dropp.wallet','Wallet'],['dropp.extras','Tips & wishlists']] },
+  { k:'quotes', l:'💬 Quotes', sub:[] },
   { k:'personas', l:'🎀 Personas', sub:[] },
   { k:'docs', l:'📚 Docs', sub:[] },
   { k:'bot', l:'🤖 AI chatbot', sub:[['bot.sms','SMS'],['bot.of','OnlyFans'],['bot.telegram','Telegram'],['bot.billing','Billing']] },
@@ -484,7 +486,7 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t); badges();
@@ -492,7 +494,7 @@ function show(t){
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, dropp:droppView })[t]();
+  ({ quotes:quotesView, plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, dropp:droppView })[t]();
 }
 
 
@@ -1369,6 +1371,46 @@ function settingsView(){
   };
 }
 
+
+// ---------- quotes bank ----------
+let quoteFilter = 'all', quoteQ = '';
+async function quotesView(){
+  const v = $('#view');
+  const { data, error } = await sb.from('quotes').select('*').order('created_at', { ascending:false });
+  if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
+  const all = data || [], admin = me.role === 'admin';
+  const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));
+  v.innerHTML = `<div class="card"><h2>Add a quote</h2>
+      <div class="two"><div><label for="qEn">English</label><textarea id="qEn" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="the quote in English"></textarea></div>
+      <div><label for="qIt">Italian</label><textarea id="qIt" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="la frase in italiano"></textarea></div></div>
+      <div class="row" style="align-items:flex-end;margin-top:8px"><div><label for="qPhoto">Photo it goes with (optional)</label><input id="qPhoto" placeholder="e.g. Florence balcony, white sundress"></div><div style="flex:0 0 150px"><label for="qModel">Model</label><input id="qModel" value="Kaya"></div><button class="btn" id="qAdd">Add</button></div></div>
+    <div class="smstop" style="margin-top:14px"><div class="cfilt" id="qFilt" style="padding:0;border:0"><button data-f="all">All (${all.length})</button><button data-f="new">Not used yet (${all.filter(x => !x.used_at).length})</button><button data-f="used">Used (${all.filter(x => x.used_at).length})</button></div><input id="qSearch" type="search" placeholder="Search" value="${esc(quoteQ)}" style="width:220px;margin:0"></div>
+    <div id="qList" style="display:grid;gap:10px"></div>`;
+  const draw = () => {
+    document.querySelectorAll('#qFilt button').forEach(b => b.classList.toggle('on', b.dataset.f === quoteFilter));
+    const q = quoteQ.trim().toLowerCase();
+    const rows = all.filter(x => (quoteFilter === 'all' || (quoteFilter === 'used') === !!x.used_at) && (!q || [x.en, x.it, x.photo, x.model].join(' ').toLowerCase().includes(q)));
+    $('#qList').innerHTML = rows.length ? rows.map(x => `<article class="card" style="padding:14px 16px${x.used_at ? ';opacity:.6' : ''}" data-id="${x.id}">
+        <div class="row" style="justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><small class="muted">${esc(x.model || '')}${x.photo ? ' · 📷 ' + esc(x.photo) : ''}${x.used_at ? ' · used ' + new Date(x.used_at).toLocaleDateString() : ''}</small>
+          <span style="white-space:nowrap"><button class="btn sm ghost" data-used>${x.used_at ? 'Mark as not used' : 'Mark as used'}</button>${admin ? ' <button class="btn sm ghost" data-del>✕</button>' : ''}</span></div>
+        <div class="two"><div><small class="muted">🇬🇧 English</small><p style="margin:2px 0 6px;font-size:15.5px">${esc(x.en)}</p><button class="btn sm" data-copy="en">Copy English</button></div>
+        <div><small class="muted">🇮🇹 Italian</small><p style="margin:2px 0 6px;font-size:15.5px">${esc(x.it || '—')}</p>${x.it ? '<button class="btn sm" data-copy="it">Copy Italian</button>' : ''}</div></div></article>`).join('') : '<div class="card empty">No quotes here yet.</div>';
+    $('#qList').querySelectorAll('article').forEach(el => {
+      const x = all.find(r => r.id === el.dataset.id);
+      el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(x[b.dataset.copy]));
+      el.querySelector('[data-used]').onclick = async () => { const used_at = x.used_at ? null : new Date().toISOString(); const { error } = await sb.from('quotes').update({ used_at }).eq('id', x.id); if (error) return toast(error.message); quotesView(); };
+      const del = el.querySelector('[data-del]'); if (del) del.onclick = async () => { if (!confirm('Delete this quote?')) return; const { error } = await sb.from('quotes').delete().eq('id', x.id); if (error) return toast(error.message); quotesView(); };
+    });
+  };
+  document.querySelectorAll('#qFilt button').forEach(b => b.onclick = () => { quoteFilter = b.dataset.f; draw(); });
+  $('#qSearch').oninput = e => { quoteQ = e.target.value; draw(); };
+  $('#qAdd').onclick = async () => {
+    const en = $('#qEn').value.trim(), it = $('#qIt').value.trim(); if (!en && !it) return toast('Write the quote first');
+    const { error } = await sb.from('quotes').insert({ en: en || it, it: it || null, photo: $('#qPhoto').value.trim() || null, model: $('#qModel').value.trim() || 'Kaya' });
+    if (error) return toast(error.message); toast('Quote added'); quotesView();
+  };
+  draw();
+}
 
 // ---------- AI brains ----------
 // One brain per channel. Main brain answers; if it refuses or breaks and a backup brain is set, the backup answers.

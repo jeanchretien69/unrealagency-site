@@ -226,6 +226,13 @@
   .head .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
   :root[data-mode="dark"] .head .fx{border-radius:32px}
   .head{touch-action:pan-y;cursor:crosshair}
+  .stage .dont{bottom:-6px}
+  .dont button{color:var(--ink);background:var(--surface);border:1px solid var(--pink);box-shadow:0 8px 22px -10px rgba(226,54,127,.6)}
+  .dont button:hover{background:var(--pink);color:#fff}
+  .dont button:disabled{opacity:.45;cursor:default}
+  .say{position:absolute;left:62%;top:9%;z-index:5;max-width:230px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px 18px 18px 4px;padding:10px 14px;font-size:14px;font-weight:600;line-height:1.35;box-shadow:0 14px 34px -14px rgba(42,20,32,.45)}
+  .say[hidden]{display:none}
+  .chip.off .dot{background:#9a9a9a}
 </style>
 </head>
 <body>
@@ -256,7 +263,9 @@
         <div class="shine" id="shine"></div>
       
       </div>
-      <div class="chip a"><span class="dot"></span>Nami · online now</div>
+      <div class="moves dont" id="moves"><button data-m="leave">🔴 Don't touch this</button></div>
+      <div class="say" id="say" hidden></div>
+      <div class="chip a" id="status"><span class="dot"></span><span id="statusText">Nami · online now</span></div>
       <div class="chip b"><b>+$412</b> PPV today</div>
       <div class="chip c">AI chatter replied in <b>8s</b></div>
     </div>
@@ -551,7 +560,7 @@
         fx.width = Math.round(W*dpr); fx.height = Math.round(H*dpr); cols = Math.ceil(W/CELL); rows = Math.ceil(H/CELL); off.width = cols; off.height = rows; gone = new Float64Array(cols*rows); parts = []; }
       function sample(){ if (sampledAt === frame || !v.videoWidth) return !!data; try { octx.drawImage(v, 0, 0, cols, rows); data = octx.getImageData(0, 0, cols, rows).data; sampledAt = frame;
           bg = 'rgb(' + data[4] + ',' + data[5] + ',' + data[6] + ')'; } catch(e){ data = null; } return !!data; }
-      function burst(px, py, R){ if (!gone || !sample()) return; var now = performance.now(), c0 = Math.max(0, Math.floor((px-R)/CELL)), c1 = Math.min(cols-1, Math.floor((px+R)/CELL)), r0 = Math.max(0, Math.floor((py-R)/CELL)), r1 = Math.min(rows-1, Math.floor((py+R)/CELL));
+      function burst(px, py, R){ if (window.__namiBusy || !gone || !sample()) return; var now = performance.now(), c0 = Math.max(0, Math.floor((px-R)/CELL)), c1 = Math.min(cols-1, Math.floor((px+R)/CELL)), r0 = Math.max(0, Math.floor((py-R)/CELL)), r1 = Math.min(rows-1, Math.floor((py+R)/CELL));
         for (var r = r0; r <= r1; r++) for (var c = c0; c <= c1; c++){ var x = (c+.5)*CELL, y = (r+.5)*CELL, dx = x-px, dy = y-py, d = Math.sqrt(dx*dx+dy*dy); if (d > R) continue; var i = r*cols+c; if (gone[i] > now) continue;
           gone[i] = now + 800 + Math.random()*500; if (parts.length < 2600 && Math.random() < .7){ var k = i*4, a = Math.atan2(dy, dx) + (Math.random()-.5)*1.2, sp = 1 + Math.random()*3.2;
             parts.push({ x:x, y:y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - .6, life:1, col:'rgb(' + data[k] + ',' + data[k+1] + ',' + data[k+2] + ')' }); } }
@@ -560,7 +569,7 @@
       head.addEventListener('pointermove', function(e){ var p = at(e); burst(p[0], p[1], 34); });
       head.addEventListener('pointerdown', function(e){ var p = at(e); burst(p[0], p[1], 72); });
       window.addEventListener('resize', size); size();
-      setInterval(function(){ if (!document.hidden && v.classList.contains('on')){ glitchUntil = performance.now() + 240; activeUntil = Math.max(activeUntil, glitchUntil + 60); } }, 8000);
+      setInterval(function(){ if (!document.hidden && !window.__namiBusy && v.classList.contains('on')){ glitchUntil = performance.now() + 240; activeUntil = Math.max(activeUntil, glitchUntil + 60); } }, 8000);
       function edge(x, y){ if (document.documentElement.getAttribute('data-mode') === 'dark') return 1; var fx_ = x/W, fy = y/H; return Math.max(0, Math.min(1, fx_/.16, (1-fx_)/.16, fy/.09, (1-fy)/.14)); }
       function draw(now){ frame++; requestAnimationFrame(draw); if (!gone) { size(); return; }
         if (now > activeUntil){ if (fx.__dirty){ ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,fx.width,fx.height); fx.__dirty = false; } return; }
@@ -576,6 +585,22 @@
       }
       requestAnimationFrame(draw);
       window.__fx = { burst:burst, glitch:function(){ glitchUntil = performance.now()+240; activeUntil = glitchUntil+60; } };
+    })();
+    /* "Don't touch this": she says a line, walks out, the frame stays empty, she comes back */
+    (function(){
+      var btn = document.querySelector('#moves button[data-m="leave"]'), say = document.getElementById('say'), chip = document.getElementById('status'), chipText = document.getElementById('statusText');
+      if (!btn) return; var act = null, busy = false, EMPTY_AT = 2.42, HOLD = 1800;
+      function type(txt){ say.hidden = false; say.textContent = ''; var i = 0; (function step(){ say.textContent = txt.slice(0, ++i); if (i < txt.length) setTimeout(step, 38); })(); }
+      btn.addEventListener('click', function(){
+        if (busy) return; busy = true; window.__namiBusy = true; btn.disabled = true; type('I told you not to touch this…');
+        if (!act){ act = document.createElement('video'); act.className = 'nv'; act.muted = true; act.playsInline = true; act.setAttribute('playsinline',''); act.preload = 'auto'; act.src = 'live/nami_leave_test.mp4'; head.insertBefore(act, v.nextSibling); }
+        var held = false;
+        setTimeout(function(){ act.currentTime = 0; var p = act.play(); if (p && p.catch) p.catch(function(){ done(); }); act.classList.add('on'); setTimeout(function(){ v.pause(); }, 450); }, 900);
+        act.ontimeupdate = function(){ if (!held && act.currentTime >= EMPTY_AT){ held = true; act.pause(); say.hidden = true; chip.classList.add('off'); chipText.textContent = 'Nami · offline';
+          setTimeout(function(){ chip.classList.remove('off'); chipText.textContent = 'Nami · online now'; act.play(); }, HOLD); } };
+        act.onended = done;
+        function done(){ v.currentTime = 0; var p = v.play(); if (p && p.catch) p.catch(function(){}); setTimeout(function(){ act.classList.remove('on'); }, 80); say.hidden = true; busy = false; window.__namiBusy = false; btn.disabled = false; }
+      });
     })();
     var ring = document.getElementById('ring');
     function tick(t){ if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; } requestAnimationFrame(tick); }

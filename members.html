@@ -154,6 +154,10 @@
   .bub.fail{background:#d23b3b}
   .csend{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
   .csend textarea{flex:1;resize:none;margin:0;min-height:44px;max-height:140px;border-radius:14px}
+  .csend{flex-wrap:wrap} .cattach{flex-basis:100%;display:flex;align-items:center;gap:10px;font-size:13px}
+  .cattach img{width:56px;height:56px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+  .bub .mm{display:block;max-width:240px;max-height:300px;border-radius:12px;margin-bottom:4px;cursor:zoom-in;background:rgba(0,0,0,.08);min-height:60px;min-width:60px}
+  .bub video.mm,.bub audio.mm{cursor:auto}
   .cblank{flex:1;display:grid;place-content:center;text-align:center;color:var(--muted);gap:4px}
   .cinfo{border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
   .cinfo #cinfo{padding:14px;overflow:auto;flex:1;min-height:0}
@@ -605,6 +609,7 @@ async function smsGatePanel(){
   const mode = st.allow === '*' ? 'Live' : st.allow ? 'Test numbers only' : 'Off';
   chips.innerHTML = `<span class="stat">${led(st.creds && st.gate === 200)}Login ${!st.creds ? 'missing' : st.gate === 200 ? 'OK' : 'refused'}</span>
     <span class="stat">${led(st.hook)}${st.hook ? 'Phone connected' : 'Phone not connected'}</span>
+    <span class="stat">${led(st.pics, st.hook)}${st.pics ? 'Pictures on' : 'Pictures: receiving not on yet'}</span>
     <span class="stat">${led(mins !== null && mins < 20, mins !== null)}Seen ${mins === null ? 'unknown' : mins < 2 ? 'just now' : mins < 120 ? mins + ' min ago' : seen.toLocaleDateString()}</span>
     <span class="stat">${led(st.allow === '*', !!st.allow)}Mode: ${mode}</span>
     <button class="btn sm ghost" id="gRefresh">Check again</button>`;
@@ -613,9 +618,9 @@ async function smsGatePanel(){
   if (!st.admin) return;
   box.innerHTML = `<label for="gAllow">Numbers allowed (comma separated). Empty = off, * = everyone</label>
     <input id="gAllow" value="${esc(st.allow || '')}" placeholder="+15145550000">
-    <div class="row" style="margin-top:10px"><button class="btn sm" id="gSave">Save numbers</button><button class="btn sm ghost" id="gSetup" ${st.creds ? '' : 'disabled'}>Connect the phone</button></div>`;
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="gSave">Save numbers</button><button class="btn sm ghost" id="gSetup" ${st.creds ? '' : 'disabled'}>${st.hook && !st.pics ? 'Turn on receiving pictures' : 'Connect the phone'}</button></div>`;
   $('#gSave').onclick = async () => { const r = await smsGate({ action:'allow', value:$('#gAllow').value.trim() }); toast(r.error || 'Saved'); smsGatePanel(); };
-  $('#gSetup').onclick = async () => { const r = await smsGate({ action:'setup' }); toast(r.error || (r.already ? 'Already connected' : 'Phone connected')); smsGatePanel(); };
+  $('#gSetup').onclick = async () => { const r = await smsGate({ action:'setup' }); toast(r.error || (r.already ? 'Already connected' : 'Phone connected (texts + pictures)')); smsGatePanel(); };
 }
 async function smsView(){
   const v = $('#view');
@@ -703,8 +708,26 @@ function smsRows(){
   if (smsFilter === 'unread') rows = rows.filter(r => r.unread);
   if (smsFilter === 'waiting') rows = rows.filter(r => r.last.direction === 'in');
   if (smsQ) rows = rows.filter(r => (smsName(r.p) + ' ' + r.p).toLowerCase().includes(smsQ) || r.a.some(x => x.body.toLowerCase().includes(smsQ)));
-  box.innerHTML = rows.length ? rows.map(r => `<button class="crow ${r.p===smsOpen?'on':''}" data-p="${esc(r.p)}"><span class="pav">${esc(smsName(r.p).replace(/^Test · /,'').replace(/^\+/,'').slice(0,1).toUpperCase())}</span><span class="pmeta"><b>${esc(smsName(r.p))}<span>${smsDay(r.last.created_at)==='Today'?smsTime(r.last.created_at):smsDay(r.last.created_at)}</span></b><p>${r.last.direction==='out'?'You: ':''}${esc(r.last.body)}</p></span>${r.unread?`<i class="cbadge">${r.unread}</i>`:''}</button>`).join('') : '<p class="pempty">No conversations here.</p>';
+  box.innerHTML = rows.length ? rows.map(r => `<button class="crow ${r.p===smsOpen?'on':''}" data-p="${esc(r.p)}"><span class="pav">${esc(smsName(r.p).replace(/^Test · /,'').replace(/^\+/,'').slice(0,1).toUpperCase())}</span><span class="pmeta"><b>${esc(smsName(r.p))}<span>${smsDay(r.last.created_at)==='Today'?smsTime(r.last.created_at):smsDay(r.last.created_at)}</span></b><p>${r.last.direction==='out'?'You: ':''}${esc(r.last.body || (r.last.media ? '📷 Photo' : ''))}</p></span>${r.unread?`<i class="cbadge">${r.unread}</i>`:''}</button>`).join('') : '<p class="pempty">No conversations here.</p>';
   box.querySelectorAll('.crow').forEach(b => b.onclick = () => { smsOpen = b.dataset.p; smsDraw(true); });
+}
+// pictures: private files, shown through short-lived links kept in memory
+let smsPend = null; const smsUrls = {};
+async function smsMediaFill(root){
+  const els = [...root.querySelectorAll('[data-m]')], need = [...new Set(els.map(e => e.dataset.m).filter(p => !smsUrls[p]))];
+  if (need.length){ const { data } = await sb.storage.from('sms-media').createSignedUrls(need, 3600); (data || []).forEach(x => { if (x.signedUrl) smsUrls[x.path] = x.signedUrl; }); }
+  els.forEach(e => { if (smsUrls[e.dataset.m] && e.isConnected && e.src !== smsUrls[e.dataset.m]) e.src = smsUrls[e.dataset.m]; });
+}
+const smsMediaHtml = x => (x.media || []).map(m => { const src = smsUrls[m.path] ? ` src="${esc(smsUrls[m.path])}"` : ''; return /^video\//.test(m.type) ? `<video class="mm" data-m="${esc(m.path)}"${src} controls preload="metadata"></video>` : /^audio\//.test(m.type) ? `<audio class="mm" data-m="${esc(m.path)}"${src} controls></audio>` : `<img class="mm" data-m="${esc(m.path)}"${src} alt="Photo" loading="lazy">`; }).join('');
+// shrink a photo so the phone carrier accepts it (picture messages are tiny: ~300 KB)
+async function smsShrink(file){
+  const img = await createImageBitmap(file).catch(() => null); if (!img) return null;
+  for (const [side, q] of [[1280,.8],[1280,.6],[1024,.6],[800,.6],[640,.55],[480,.5]]){
+    const k = Math.min(1, side / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+    const b = await new Promise(r => c.toBlob(r, 'image/jpeg', q)); if (b && b.size <= 280000) return b;
+  }
+  return null;
 }
 function smsThread(first){
   const main = $('#cmain'); if (!main) return;
@@ -715,17 +738,31 @@ function smsThread(first){
   let day = '', html = '';
   a.forEach((x, i) => {
     const d = smsDay(x.created_at); if (d !== day){ day = d; html += `<div class="pday">${d}</div>`; }
-    html += `<div class="bub ${x.direction} ${x.status==='failed'?'fail':''}">${esc(x.body)}<small>${smsTime(x.created_at)}${x.direction==='out' && (x.status==='failed' || i===a.length-1) ? ' · ' + (label[x.status]||'') : ''}</small></div>`;
+    html += `<div class="bub ${x.direction} ${x.status==='failed'?'fail':''}">${smsMediaHtml(x)}${esc(x.body)}<small>${smsTime(x.created_at)}${x.direction==='out' && (x.status==='failed' || i===a.length-1) ? ' · ' + (label[x.status]||'') : ''}</small></div>`;
   });
   main.innerHTML = `<header class="cbar"><div><b>${esc(smsName(p))}</b><small>${esc(p)}${a.some(x=>x.is_test)?' · test conversation':''}</small></div></header>
     <div class="cthread" id="cthread">${html || '<p class="pempty">No messages yet. Write the first one below.</p>'}</div>
-    <form class="csend" id="psend"><textarea id="ptext" rows="2" placeholder="Write a message. Enter sends, Shift+Enter makes a new line." aria-label="Message"></textarea><button class="btn" aria-label="Send">Send</button></form>`;
+    <form class="csend" id="psend">${smsPend && smsPend.p === p ? `<div class="cattach"><img src="${esc(smsPend.url)}" alt=""><span>Photo ready to send (${Math.round(smsPend.blob.size / 1024)} KB)</span><button type="button" class="btn sm ghost" id="pdrop">Remove</button></div>` : ''}
+      <input type="file" id="pfile" accept="image/*" hidden><button type="button" class="btn ghost" id="pclip" title="Send a photo" aria-label="Attach a photo">📎</button>
+      <textarea id="ptext" rows="2" placeholder="Write a message. Enter sends, Shift+Enter makes a new line." aria-label="Message"></textarea><button class="btn" aria-label="Send">Send</button></form>`;
+  smsMediaFill(main);
+  main.querySelectorAll('img.mm').forEach(i => i.onclick = () => { if (i.src) window.open(i.src, '_blank', 'noopener'); });
+  $('#pclip').onclick = () => $('#pfile').click();
+  $('#pfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; toast('Preparing the photo…'); const b = await smsShrink(f); if (!b) return toast('This file cannot be sent as a picture message'); if (smsPend) URL.revokeObjectURL(smsPend.url); smsPend = { p, blob:b, url:URL.createObjectURL(b) }; smsThread(); };
+  if ($('#pdrop')) $('#pdrop').onclick = () => { URL.revokeObjectURL(smsPend.url); smsPend = null; smsThread(); };
   const t = $('#ptext'); t.value = keep; if (first) t.focus();
   if (first || atEnd) $('#cthread').scrollTop = 1e9;
   t.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('#psend').requestSubmit(); } };
   $('#psend').onsubmit = async e => {
-    e.preventDefault(); const body = t.value.trim(); if (!body) return;
-    t.value = ''; const { data: row, error } = await sb.from('sms_messages').insert({ phone:p, direction:'out', body, status:'queued', is_read:true, is_test:a.some(x => x.is_test) }).select().single();
+    e.preventDefault(); const body = t.value.trim(), pend = smsPend && smsPend.p === p ? smsPend : null; if (!body && !pend) return;
+    let media = null;
+    if (pend){
+      const path = 'out/' + crypto.randomUUID() + '.jpg';
+      const up = await sb.storage.from('sms-media').upload(path, pend.blob, { contentType:'image/jpeg' });
+      if (up.error) return toast('Photo upload failed: ' + up.error.message);
+      smsUrls[path] = pend.url; media = [{ path, type:'image/jpeg', name:'photo.jpg' }]; smsPend = null;
+    }
+    t.value = ''; const { data: row, error } = await sb.from('sms_messages').insert({ phone:p, direction:'out', body, media, status:'queued', is_read:true, is_test:a.some(x => x.is_test) }).select().single();
     if (error){ t.value = body; return toast(error.message); }
     if (row && !row.is_test){ const r = await smsGate({ action:'send', id:row.id }); if (r.error) toast(r.error); }
   };

@@ -615,7 +615,7 @@ async function smsView(){
   $('#csearch').oninput = e => { smsQ = e.target.value.toLowerCase(); smsRows(); };
   document.querySelectorAll('#smsMode button').forEach(b => b.onclick = () => smsSetMode(b.dataset.m));
   smsPad();
-  document.querySelectorAll('.cfilt button').forEach(b => b.onclick = () => { smsFilter = b.dataset.f; document.querySelectorAll('.cfilt button').forEach(x => x.classList.toggle('on', x === b)); smsRows(); });
+  document.querySelectorAll('.clist .cfilt button').forEach(b => b.onclick = () => { smsFilter = b.dataset.f; document.querySelectorAll('.clist .cfilt button').forEach(x => x.classList.toggle('on', x === b)); smsRows(); });
   $('#pnew').onclick = () => { let n = prompt('Phone number to text (with country code, e.g. +15145550000):'); if (!n) return; n = n.replace(/[^\d+]/g, ''); if (n.replace(/\D/g,'').length < 10) return toast('That number looks too short'); if (!n.startsWith('+')) n = '+' + (n.length === 10 ? '1' : '') + n; smsOpen = n; smsDraw(true); };
   const [m, c] = await Promise.all([ sb.from('sms_messages').select('*').order('created_at').limit(5000), sb.from('sms_contacts').select('*') ]);
   if (m.error){ $('#crows').innerHTML = `<p class="pempty">${esc(m.error.message)}</p>`; return; }

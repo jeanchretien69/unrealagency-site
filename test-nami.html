@@ -225,7 +225,6 @@
   :root[data-mode="dark"] .stage::before,:root[data-mode="dark"] .ring,:root[data-mode="dark"] .floor{display:none}
   .head .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
   :root[data-mode="dark"] .head .fx{border-radius:32px}
-  .head{touch-action:pan-y;cursor:crosshair}
   .stage .dont{bottom:-6px}
   .dont button{color:var(--ink);background:var(--surface);border:1px solid var(--pink);box-shadow:0 8px 22px -10px rgba(226,54,127,.6)}
   .dont button:hover{background:var(--pink);color:#fff}
@@ -263,7 +262,7 @@
         <div class="shine" id="shine"></div>
       
       </div>
-      <div class="moves dont" id="moves"><button data-m="leave">🔴 Don't touch this</button></div>
+      <div class="moves dont" id="moves" hidden style="display:none"><button data-m="leave">🔴 Don't touch this</button></div>
       <div class="say" id="say" hidden></div>
       <div class="chip a" id="status"><span class="dot"></span><span id="statusText">Nami · online now</span></div>
       <div class="chip b"><b>+$412</b> PPV today</div>
@@ -566,8 +565,6 @@
             parts.push({ x:x, y:y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - .6, life:1, col:'rgb(' + data[k] + ',' + data[k+1] + ',' + data[k+2] + ')' }); } }
         activeUntil = now + 2200; }
       function at(e){ var r = head.getBoundingClientRect(); return [ (e.clientX-r.left), (e.clientY-r.top) ]; }
-      head.addEventListener('pointermove', function(e){ var p = at(e); burst(p[0], p[1], 34); });
-      head.addEventListener('pointerdown', function(e){ var p = at(e); burst(p[0], p[1], 72); });
       window.addEventListener('resize', size); size();
       setInterval(function(){ if (!document.hidden && !window.__namiBusy && v.classList.contains('on')){ glitchUntil = performance.now() + 240; activeUntil = Math.max(activeUntil, glitchUntil + 60); } }, 8000);
       function edge(x, y){ if (document.documentElement.getAttribute('data-mode') === 'dark') return 1; var fx_ = x/W, fy = y/H; return Math.max(0, Math.min(1, fx_/.16, (1-fx_)/.16, fy/.09, (1-fy)/.14)); }

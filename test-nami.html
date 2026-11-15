@@ -552,7 +552,7 @@
     var p = v.play(); if (p && p.catch) p.catch(function(){});
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
-      var SRC = { kiss:'live/nami_kiss.mp4?v=3', hat:'live/nami_hat_test.mp4?v=2' }, vids = {}, busy = false, FADE = 420;
+      var SRC = { kiss:'live/nami_kiss.mp4?v=3', hat:'live/nami_hat.mp4?v=1' }, vids = {}, busy = false, FADE = 420;
       var btns = [].slice.call(document.querySelectorAll('#moves button[data-m]')); if (!btns.length) return;
       function lock(on){ btns.forEach(function(b){ b.disabled = on; }); }
       function mk(m){ if (vids[m] || !SRC[m]) return vids[m]; var a = document.createElement('video'); a.className = 'nv'; a.muted = true; a.playsInline = true; a.setAttribute('playsinline',''); a.setAttribute('muted',''); a.preload = 'auto'; a.src = SRC[m]; wrap.appendChild(a); return (vids[m] = a); }
@@ -564,7 +564,7 @@
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
       /* the loop starts 2.6s in, so at the 3 second mark she is in the pose the kiss starts from */
       v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 2.6; } catch(e){} }, { once:true });
-      v.addEventListener('playing', function(){ mk('kiss'); mk('hat'); setTimeout(function(){ if (!busy && !document.hidden) start('kiss'); }, 3000); }, { once:true });
+      v.addEventListener('playing', function(){ mk('kiss'); setTimeout(function(){ mk('hat'); }, 9000); setTimeout(function(){ if (!busy && !document.hidden) start('kiss'); }, 3000); }, { once:true });
     })();
     var ring = document.getElementById('ring');
     function tick(t){ if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; } requestAnimationFrame(tick); }

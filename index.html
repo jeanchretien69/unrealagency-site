@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-mode="dark">
 <head>
+<script>(function(){var m=null;try{m=localStorage.getItem("unreal-mode")}catch(e){}if(!m)m=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.setAttribute("data-mode",m)})();</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Unreal Agency</title>
@@ -357,11 +358,14 @@
 <script>
 (function(){
 
-  /* ---------- Dark / light mode (dark by default) ---------- */
+  /* ---------- Dark / light mode (follows the visitor's system until they click) ---------- */
   var root = document.documentElement, mb = document.getElementById('modeBtn'), ml = document.getElementById('modeLbl');
   function setMode(m){ root.setAttribute('data-mode', m); ml.textContent = m === 'dark' ? 'Light' : 'Dark'; mb.setAttribute('aria-pressed', m === 'dark'); try{ localStorage.setItem('unreal-mode', m); }catch(e){} }
   var saved = null; try{ saved = localStorage.getItem('unreal-mode'); }catch(e){}
-  setMode(saved || 'dark');
+  var sys = matchMedia('(prefers-color-scheme: light)');
+  function setView(m){ root.setAttribute('data-mode', m); ml.textContent = m === 'dark' ? 'Light' : 'Dark'; mb.setAttribute('aria-pressed', m === 'dark'); }
+  setView(saved || (sys.matches ? 'light' : 'dark'));
+  sys.addEventListener('change', function(e){ var s=null; try{ s = localStorage.getItem('unreal-mode'); }catch(x){} if (!s) setView(e.matches ? 'light' : 'dark'); });
   mb.addEventListener('click', function(){ setMode(root.getAttribute('data-mode') === 'dark' ? 'light' : 'dark'); });
   /* ---------- Hash routing ---------- */
   var views = {home:'v-home', formations:'v-formations', models:'v-models'};

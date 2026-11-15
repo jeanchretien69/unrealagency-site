@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-mode="dark">
 <head>
+<script>(function(){var m=null;try{m=localStorage.getItem("unreal-mode")}catch(e){}if(!m)m=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.setAttribute("data-mode",m)})();</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
@@ -260,7 +261,10 @@ function md(src){
 
 // theme
 const root = document.documentElement;
-try { const m = localStorage.getItem('unreal-mode'); if (m) root.dataset.mode = m; } catch(e){}
+const sysLight = matchMedia('(prefers-color-scheme: light)');
+let savedMode = null; try { savedMode = localStorage.getItem('unreal-mode'); } catch(e){}
+root.dataset.mode = savedMode || (sysLight.matches ? 'light' : 'dark');
+sysLight.addEventListener('change', e => { let s=null; try{ s=localStorage.getItem('unreal-mode'); }catch(x){} if (!s){ root.dataset.mode = e.matches ? 'light' : 'dark'; syncMode(); } });
 const modeBtn = $('#modeBtn');
 const syncMode = () => modeBtn.textContent = root.dataset.mode === 'dark' ? 'Light' : 'Dark';
 syncMode();

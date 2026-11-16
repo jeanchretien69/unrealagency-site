@@ -1376,6 +1376,9 @@ function settingsView(){
 
 // ---------- quotes bank ----------
 let quoteFilter = 'all', quoteQ = '';
+async function translateIt(text){
+  try { const { data, error } = await sb.functions.invoke('quote-translate', { body:{ text } }); return error ? '' : (data && data.it) || ''; } catch (e) { return ''; }
+}
 async function quotesView(){
   const v = $('#view');
   const { data, error } = await sb.from('quotes').select('*').order('created_at', { ascending:false });
@@ -1388,7 +1391,7 @@ async function quotesView(){
   const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));
   v.innerHTML = `<div class="card"><h2>Add a quote</h2>
       <div class="two"><div><label for="qEn">English</label><textarea id="qEn" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="the quote in English"></textarea></div>
-      <div><label for="qIt">Italian</label><textarea id="qIt" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="la frase in italiano"></textarea></div></div>
+      <div><label for="qIt">Italian <button type="button" class="btn sm ghost" id="qTr" style="margin-left:6px">✨ Translate</button></label><textarea id="qIt" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="auto-translated if you leave it empty"></textarea></div></div>
       <div class="row" style="align-items:flex-end;margin-top:8px"><div><label for="qPhoto">Photo it goes with (optional)</label><input id="qPhoto" placeholder="e.g. Florence balcony, white sundress"></div><div style="flex:0 0 150px"><label for="qModel">Model</label><input id="qModel" value="Kaya"></div><button class="btn" id="qAdd">Add</button></div>
       ${ph.length ? `<div class="row" style="align-items:center;margin-top:8px"><div><label for="qPhotoId">Photo from the library (optional)</label><select id="qPhotoId"><option value="">— none —</option>${ph.map(p => `<option value="${p.id}"${p.id === pick ? ' selected' : ''}>${esc(p.model)} · ${esc(p.caption || p.path.split('/').pop())}</option>`).join('')}</select></div><img id="qPrev" alt="" style="height:84px;border-radius:10px;${pick ? '' : 'display:none'}"${pick && phById[pick] ? ` src="${purl(phById[pick].thumb || phById[pick].path)}"` : ''}></div>` : ''}</div>
     <div class="smstop" style="margin-top:14px"><div class="cfilt" id="qFilt" style="padding:0;border:0"><button data-f="all">All (${all.length})</button><button data-f="new">Not used yet (${all.filter(x => !x.used_at).length})</button><button data-f="used">Used (${all.filter(x => x.used_at).length})</button></div><input id="qSearch" type="search" placeholder="Search" value="${esc(quoteQ)}" style="width:220px;margin:0"></div>
@@ -1402,11 +1405,12 @@ async function quotesView(){
         <div class="row" style="justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><small class="muted">${esc(x.model || '')}${x.photo ? ' · 📷 ' + esc(x.photo) : ''}${x.used_at ? ' · used ' + new Date(x.used_at).toLocaleDateString() : ''}</small>
           <span style="white-space:nowrap"><button class="btn sm ghost" data-used>${x.used_at ? 'Mark as not used' : 'Mark as used'}</button>${admin ? ' <button class="btn sm ghost" data-del>✕</button>' : ''}</span></div>
         <div class="two"><div><small class="muted">🇬🇧 English</small><p style="margin:2px 0 6px;font-size:15.5px">${esc(x.en)}</p><button class="btn sm" data-copy="en">Copy English</button></div>
-        <div><small class="muted">🇮🇹 Italian</small><p style="margin:2px 0 6px;font-size:15.5px">${esc(x.it || '—')}</p>${x.it ? '<button class="btn sm" data-copy="it">Copy Italian</button>' : ''}</div></div></div></article>`; }).join('') : '<div class="card empty">No quotes here yet.</div>';
+        <div><small class="muted">🇮🇹 Italian</small><p style="margin:2px 0 6px;font-size:15.5px">${esc(x.it || '—')}</p>${x.it ? '<button class="btn sm" data-copy="it">Copy Italian</button>' : '<button class="btn sm" data-tr>✨ Translate</button>'}</div></div></div></article>`; }).join('') : '<div class="card empty">No quotes here yet.</div>';
     $('#qList').querySelectorAll('article').forEach(el => {
       const x = all.find(r => r.id === el.dataset.id);
       el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(x[b.dataset.copy]));
       el.querySelectorAll('[data-open]').forEach(i => i.onclick = () => openPhoto(i.dataset.open));
+      const tr = el.querySelector('[data-tr]'); if (tr) tr.onclick = async () => { tr.disabled = true; tr.textContent = 'Translating…'; const it = await translateIt(x.en); if (!it) { tr.disabled = false; tr.textContent = '✨ Translate'; return toast('Translation failed, try again'); } const { error } = await sb.from('quotes').update({ it }).eq('id', x.id); if (error) return toast(error.message); x.it = it; draw(); };
       el.querySelector('[data-used]').onclick = async () => { const used_at = x.used_at ? null : new Date().toISOString(); const { error } = await sb.from('quotes').update({ used_at }).eq('id', x.id); if (error) return toast(error.message); quotesView(); };
       const del = el.querySelector('[data-del]'); if (del) del.onclick = async () => { if (!confirm('Delete this quote?')) return; const { error } = await sb.from('quotes').delete().eq('id', x.id); if (error) return toast(error.message); quotesView(); };
     });
@@ -1414,12 +1418,22 @@ async function quotesView(){
   document.querySelectorAll('#qFilt button').forEach(b => b.onclick = () => { quoteFilter = b.dataset.f; draw(); });
   $('#qSearch').oninput = e => { quoteQ = e.target.value; draw(); };
   $('#qAdd').onclick = async () => {
-    const en = $('#qEn').value.trim(), it = $('#qIt').value.trim(); if (!en && !it) return toast('Write the quote first');
+    const en = $('#qEn').value.trim(); let it = $('#qIt').value.trim(); if (!en && !it) return toast('Write the quote first');
+    const ab = $('#qAdd'); ab.disabled = true;
+    if (en && !it) { ab.textContent = 'Translating…'; it = await translateIt(en); if (!it) toast('Could not translate, saved without Italian'); }
     const { error } = await sb.from('quotes').insert({ en: en || it, it: it || null, photo: $('#qPhoto').value.trim() || null, photo_id: ($('#qPhotoId') || {}).value || null, model: $('#qModel').value.trim() || 'Kaya' });
-    if (error) return toast(error.message); toast('Quote added'); quotesView();
+    if (error) { ab.disabled = false; ab.textContent = 'Add'; return toast(error.message); } toast('Quote added'); quotesView();
   };
+  $('#qTr').onclick = async () => { const en = $('#qEn').value.trim(); if (!en) return toast('Write the English first'); const b = $('#qTr'); b.disabled = true; b.textContent = '…'; const it = await translateIt(en); b.disabled = false; b.textContent = '✨ Translate'; if (it) $('#qIt').value = it; else toast('Translation failed, try again'); };
   const sel = $('#qPhotoId'); if (sel) sel.onchange = () => { const p = phById[sel.value], im = $('#qPrev'); if (p){ im.src = purl(p.thumb || p.path); im.style.display = ''; const m = $('#qModel'); if (p.model && p.model !== 'Unassigned') m.value = p.model; } else im.style.display = 'none'; };
   draw();
+  (async () => { // fill any quote that has no Italian yet
+    for (const x of all.filter(r => !r.it && r.en).slice(0, 12)) {
+      const it = await translateIt(x.en); if (!it) continue;
+      const { error } = await sb.from('quotes').update({ it }).eq('id', x.id);
+      if (!error) { x.it = it; if ($('#qList')) draw(); }
+    }
+  })();
 }
 
 // ---------- photo library ----------

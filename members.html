@@ -321,6 +321,7 @@
         <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone<span class="nb" id="nbSms" hidden></span></button>
         <button data-tab="dropp" data-perm="dropp" hidden>💸 Dropp</button>
         <button data-tab="quotes" data-perm="quotes" hidden>💬 Quotes</button>
+        <button data-tab="photos" data-perm="photos" hidden>📸 Photos</button>
         <button data-tab="personas" data-perm="personas" hidden>🎀 Personas</button>
         <button data-tab="docs" data-perm="docs" hidden>📚 Docs & scripts</button>
         <button data-tab="bot" data-perm="bot" hidden>🤖 AI chatbot</button>
@@ -419,6 +420,7 @@ const PERMS = [
   { k:'sms', l:'📱 SMS phone', sub:[] },
   { k:'dropp', l:'💸 Dropp', sub:[['dropp.links','Links'],['dropp.content','Content'],['dropp.sales','Sales'],['dropp.wallet','Wallet'],['dropp.extras','Tips & wishlists']] },
   { k:'quotes', l:'💬 Quotes', sub:[] },
+  { k:'photos', l:'📸 Photos', sub:[] },
   { k:'personas', l:'🎀 Personas', sub:[] },
   { k:'docs', l:'📚 Docs', sub:[] },
   { k:'bot', l:'🤖 AI chatbot', sub:[['bot.sms','SMS'],['bot.of','OnlyFans'],['bot.telegram','Telegram'],['bot.billing','Billing']] },
@@ -486,7 +488,7 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t); badges();
@@ -494,7 +496,7 @@ function show(t){
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ quotes:quotesView, plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, dropp:droppView })[t]();
+  ({ photos:photosView, quotes:quotesView, plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, dropp:droppView })[t]();
 }
 
 
@@ -1379,25 +1381,32 @@ async function quotesView(){
   const { data, error } = await sb.from('quotes').select('*').order('created_at', { ascending:false });
   if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
   const all = data || [], admin = me.role === 'admin';
+  let ph = []; if (can('photos')) { const r = await sb.from('photos').select('id,model,caption,path,thumb').order('created_at', { ascending:false }); ph = r.data || []; }
+  const purl = ph.length ? await photoUrls(ph.map(p => p.thumb || p.path)) : (() => '');
+  const phById = Object.fromEntries(ph.map(p => [p.id, p]));
+  const pick = quotePhotoPick; quotePhotoPick = null;
   const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));
   v.innerHTML = `<div class="card"><h2>Add a quote</h2>
       <div class="two"><div><label for="qEn">English</label><textarea id="qEn" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="the quote in English"></textarea></div>
       <div><label for="qIt">Italian</label><textarea id="qIt" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="la frase in italiano"></textarea></div></div>
-      <div class="row" style="align-items:flex-end;margin-top:8px"><div><label for="qPhoto">Photo it goes with (optional)</label><input id="qPhoto" placeholder="e.g. Florence balcony, white sundress"></div><div style="flex:0 0 150px"><label for="qModel">Model</label><input id="qModel" value="Kaya"></div><button class="btn" id="qAdd">Add</button></div></div>
+      <div class="row" style="align-items:flex-end;margin-top:8px"><div><label for="qPhoto">Photo it goes with (optional)</label><input id="qPhoto" placeholder="e.g. Florence balcony, white sundress"></div><div style="flex:0 0 150px"><label for="qModel">Model</label><input id="qModel" value="Kaya"></div><button class="btn" id="qAdd">Add</button></div>
+      ${ph.length ? `<div class="row" style="align-items:center;margin-top:8px"><div><label for="qPhotoId">Photo from the library (optional)</label><select id="qPhotoId"><option value="">— none —</option>${ph.map(p => `<option value="${p.id}"${p.id === pick ? ' selected' : ''}>${esc(p.model)} · ${esc(p.caption || p.path.split('/').pop())}</option>`).join('')}</select></div><img id="qPrev" alt="" style="height:84px;border-radius:10px;${pick ? '' : 'display:none'}"${pick && phById[pick] ? ` src="${purl(phById[pick].thumb || phById[pick].path)}"` : ''}></div>` : ''}</div>
     <div class="smstop" style="margin-top:14px"><div class="cfilt" id="qFilt" style="padding:0;border:0"><button data-f="all">All (${all.length})</button><button data-f="new">Not used yet (${all.filter(x => !x.used_at).length})</button><button data-f="used">Used (${all.filter(x => x.used_at).length})</button></div><input id="qSearch" type="search" placeholder="Search" value="${esc(quoteQ)}" style="width:220px;margin:0"></div>
     <div id="qList" style="display:grid;gap:10px"></div>`;
   const draw = () => {
     document.querySelectorAll('#qFilt button').forEach(b => b.classList.toggle('on', b.dataset.f === quoteFilter));
     const q = quoteQ.trim().toLowerCase();
     const rows = all.filter(x => (quoteFilter === 'all' || (quoteFilter === 'used') === !!x.used_at) && (!q || [x.en, x.it, x.photo, x.model].join(' ').toLowerCase().includes(q)));
-    $('#qList').innerHTML = rows.length ? rows.map(x => `<article class="card" style="padding:14px 16px${x.used_at ? ';opacity:.6' : ''}" data-id="${x.id}">
+    $('#qList').innerHTML = rows.length ? rows.map(x => { const pp = x.photo_id ? phById[x.photo_id] : null; return `<article class="card" style="padding:14px 16px${x.used_at ? ';opacity:.6' : ''}${pp ? ';display:flex;gap:14px;align-items:flex-start' : ''}" data-id="${x.id}">
+        ${pp ? `<img src="${purl(pp.thumb || pp.path)}" alt="" data-open="${pp.path}" style="width:92px;border-radius:10px;flex:none;cursor:zoom-in">` : ''}<div style="flex:1;min-width:0">
         <div class="row" style="justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><small class="muted">${esc(x.model || '')}${x.photo ? ' · 📷 ' + esc(x.photo) : ''}${x.used_at ? ' · used ' + new Date(x.used_at).toLocaleDateString() : ''}</small>
           <span style="white-space:nowrap"><button class="btn sm ghost" data-used>${x.used_at ? 'Mark as not used' : 'Mark as used'}</button>${admin ? ' <button class="btn sm ghost" data-del>✕</button>' : ''}</span></div>
         <div class="two"><div><small class="muted">🇬🇧 English</small><p style="margin:2px 0 6px;font-size:15.5px">${esc(x.en)}</p><button class="btn sm" data-copy="en">Copy English</button></div>
-        <div><small class="muted">🇮🇹 Italian</small><p style="margin:2px 0 6px;font-size:15.5px">${esc(x.it || '—')}</p>${x.it ? '<button class="btn sm" data-copy="it">Copy Italian</button>' : ''}</div></div></article>`).join('') : '<div class="card empty">No quotes here yet.</div>';
+        <div><small class="muted">🇮🇹 Italian</small><p style="margin:2px 0 6px;font-size:15.5px">${esc(x.it || '—')}</p>${x.it ? '<button class="btn sm" data-copy="it">Copy Italian</button>' : ''}</div></div></div></article>`; }).join('') : '<div class="card empty">No quotes here yet.</div>';
     $('#qList').querySelectorAll('article').forEach(el => {
       const x = all.find(r => r.id === el.dataset.id);
       el.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy(x[b.dataset.copy]));
+      el.querySelectorAll('[data-open]').forEach(i => i.onclick = () => openPhoto(i.dataset.open));
       el.querySelector('[data-used]').onclick = async () => { const used_at = x.used_at ? null : new Date().toISOString(); const { error } = await sb.from('quotes').update({ used_at }).eq('id', x.id); if (error) return toast(error.message); quotesView(); };
       const del = el.querySelector('[data-del]'); if (del) del.onclick = async () => { if (!confirm('Delete this quote?')) return; const { error } = await sb.from('quotes').delete().eq('id', x.id); if (error) return toast(error.message); quotesView(); };
     });
@@ -1406,9 +1415,89 @@ async function quotesView(){
   $('#qSearch').oninput = e => { quoteQ = e.target.value; draw(); };
   $('#qAdd').onclick = async () => {
     const en = $('#qEn').value.trim(), it = $('#qIt').value.trim(); if (!en && !it) return toast('Write the quote first');
-    const { error } = await sb.from('quotes').insert({ en: en || it, it: it || null, photo: $('#qPhoto').value.trim() || null, model: $('#qModel').value.trim() || 'Kaya' });
+    const { error } = await sb.from('quotes').insert({ en: en || it, it: it || null, photo: $('#qPhoto').value.trim() || null, photo_id: ($('#qPhotoId') || {}).value || null, model: $('#qModel').value.trim() || 'Kaya' });
     if (error) return toast(error.message); toast('Quote added'); quotesView();
   };
+  const sel = $('#qPhotoId'); if (sel) sel.onchange = () => { const p = phById[sel.value], im = $('#qPrev'); if (p){ im.src = purl(p.thumb || p.path); im.style.display = ''; const m = $('#qModel'); if (p.model && p.model !== 'Unassigned') m.value = p.model; } else im.style.display = 'none'; };
+  draw();
+}
+
+// ---------- photo library ----------
+let photoModel = 'all', photoFilter = 'all', photoQ = '', quotePhotoPick = null;
+const photoUrlCache = {};
+async function photoUrls(paths){
+  const need = [...new Set(paths.filter(p => p && !(photoUrlCache[p] && photoUrlCache[p].exp > Date.now())))];
+  if (need.length){ const { data } = await sb.storage.from('model-photos').createSignedUrls(need, 3600); (data || []).forEach(x => { if (x.signedUrl) photoUrlCache[x.path] = { url:x.signedUrl, exp:Date.now() + 3300000 }; }); }
+  return p => (photoUrlCache[p] || {}).url || '';
+}
+async function openPhoto(path){ const { data } = await sb.storage.from('model-photos').createSignedUrl(path, 3600); if (data?.signedUrl) window.open(data.signedUrl, '_blank'); else toast('Could not open this photo'); }
+async function downloadPhoto(path){ const { data } = await sb.storage.from('model-photos').createSignedUrl(path, 120, { download:true }); if (data?.signedUrl){ const a = document.createElement('a'); a.href = data.signedUrl; a.download = ''; document.body.appendChild(a); a.click(); a.remove(); } else toast('Could not download this photo'); }
+const imgFrom = file => new Promise(res => { const u = URL.createObjectURL(file), im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => { URL.revokeObjectURL(u); res(null); }; im.src = u; });
+async function imgScaled(file, max, q){ const im = await imgFrom(file); if (!im) return null; const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return new Promise(res => c.toBlob(b => res(b), 'image/jpeg', q)); }
+async function photoUpload(files, model, caption){
+  let ok = 0;
+  for (const f of files){
+    if (!/^image\/(png|jpeg|webp)$/.test(f.type)){ toast(f.name + ': png, jpg or webp only'); continue; }
+    let blob = f, mime = f.type;
+    if (f.size > 24 * 1048576){ blob = await imgScaled(f, 4096, .92); mime = 'image/jpeg'; if (!blob){ toast(f.name + ' is too big'); continue; } }
+    const id = crypto.randomUUID(), dir = model.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'unassigned', ex = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg', path = `${dir}/${id}.${ex}`;
+    const up = await sb.storage.from('model-photos').upload(path, blob, { contentType:mime });
+    if (up.error){ toast(up.error.message); continue; }
+    let thumb = null; const tb = await imgScaled(blob, 640, .82);
+    if (tb){ thumb = `${dir}/thumb-${id}.jpg`; const tu = await sb.storage.from('model-photos').upload(thumb, tb, { contentType:'image/jpeg' }); if (tu.error) thumb = null; }
+    const { error } = await sb.from('photos').insert({ id, model, caption: caption || null, path, thumb, mime, bytes: blob.size });
+    if (error){ toast(error.message); continue; } ok++;
+  }
+  return ok;
+}
+async function photosView(){
+  const v = $('#view'), admin = me.role === 'admin';
+  const { data, error } = await sb.from('photos').select('*').order('created_at', { ascending:false });
+  if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
+  const all = data || [];
+  const models = [...new Set([...all.map(x => x.model), 'Kaya', 'Nami', 'Hakura', 'Jade'])].sort((a, b) => a === 'Unassigned' ? -1 : b === 'Unassigned' ? 1 : a.localeCompare(b));
+  const url = await photoUrls(all.map(x => x.thumb || x.path));
+  const count = m => all.filter(x => m === 'all' || x.model === m).length;
+  v.innerHTML = `<div class="card" id="pDrop"><h2>Add photos</h2>
+      <p class="muted" style="margin:-6px 0 10px;font-size:13.5px">Pick files or drop them here. Photos are private: only people with the Photos box ticked can see them.</p>
+      <div class="row" style="align-items:flex-end;gap:10px"><div style="flex:0 0 170px"><label for="pModel">Model</label><input id="pModel" list="pModels" value="${photoModel !== 'all' ? esc(photoModel) : ''}" placeholder="Kaya, Nami…"><datalist id="pModels">${models.map(m => `<option value="${esc(m)}">`).join('')}</datalist></div>
+      <div><label for="pCap">Caption (optional)</label><input id="pCap" placeholder="e.g. cozy bed selfie, black lace"></div>
+      <input type="file" id="pFiles" accept="image/png,image/jpeg,image/webp" multiple hidden><button class="btn" id="pPick">Choose photos</button></div></div>
+    <div class="smstop" style="margin-top:14px"><div class="cfilt" id="pModels2" style="padding:0;border:0"><button data-m="all">All (${count('all')})</button>${models.filter(m => count(m)).map(m => `<button data-m="${esc(m)}">${esc(m)} (${count(m)})</button>`).join('')}</div>
+      <div class="cfilt" id="pFilt" style="padding:0;border:0"><button data-f="all">Any</button><button data-f="new">Not used</button><button data-f="used">Used</button></div>
+      <input id="pSearch" type="search" placeholder="Search" value="${esc(photoQ)}" style="width:200px;margin:0"></div>
+    <div id="pGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px"></div>`;
+  const draw = () => {
+    document.querySelectorAll('#pModels2 button').forEach(b => b.classList.toggle('on', b.dataset.m === photoModel));
+    document.querySelectorAll('#pFilt button').forEach(b => b.classList.toggle('on', b.dataset.f === photoFilter));
+    const q = photoQ.trim().toLowerCase();
+    const rows = all.filter(x => (photoModel === 'all' || x.model === photoModel) && (photoFilter === 'all' || (photoFilter === 'used') === !!x.used_at) && (!q || [x.model, x.caption].join(' ').toLowerCase().includes(q)));
+    $('#pGrid').innerHTML = rows.length ? rows.map(x => `<article class="card" style="padding:10px;display:flex;flex-direction:column;gap:8px${x.used_at ? ';opacity:.65' : ''}" data-id="${x.id}">
+        <img src="${url(x.thumb || x.path)}" alt="" loading="lazy" data-act="open" style="width:100%;border-radius:12px;cursor:zoom-in;background:var(--blush);min-height:120px;object-fit:cover">
+        <div><b style="font-size:13.5px">${esc(x.model)}</b>${x.used_at ? ' <small class="muted">· used</small>' : ''}<br><small class="muted">${esc(x.caption || '')}</small></div>
+        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="dl">Download</button><button class="btn sm ghost" data-act="quote">💬 Quote</button><button class="btn sm ghost" data-act="used">${x.used_at ? 'Not used' : 'Used'}</button><button class="btn sm ghost" data-act="edit">Edit</button>${admin ? '<button class="btn sm ghost" data-act="del">✕</button>' : ''}</div></article>`).join('') : '<div class="card empty">No photos here yet.</div>';
+    $('#pGrid').querySelectorAll('article').forEach(el => {
+      const x = all.find(r => r.id === el.dataset.id);
+      el.querySelector('[data-act=open]').onclick = () => openPhoto(x.path);
+      el.querySelector('[data-act=dl]').onclick = () => downloadPhoto(x.path);
+      el.querySelector('[data-act=quote]').onclick = () => { quotePhotoPick = x.id; if (!can('quotes')) return toast('The Quotes box is not ticked for you'); show('quotes'); };
+      el.querySelector('[data-act=used]').onclick = async () => { const used_at = x.used_at ? null : new Date().toISOString(); const { error } = await sb.from('photos').update({ used_at }).eq('id', x.id); if (error) return toast(error.message); photosView(); };
+      el.querySelector('[data-act=edit]').onclick = async () => { const m = prompt('Model name:', x.model); if (m === null) return; const c = prompt('Caption:', x.caption || ''); if (c === null) return; const { error } = await sb.from('photos').update({ model: m.trim() || 'Unassigned', caption: c.trim() || null }).eq('id', x.id); if (error) return toast(error.message); photosView(); };
+      const del = el.querySelector('[data-act=del]'); if (del) del.onclick = async () => { if (!confirm('Delete this photo for good?')) return; await sb.storage.from('model-photos').remove([x.path, x.thumb].filter(Boolean)); const { error } = await sb.from('photos').delete().eq('id', x.id); if (error) return toast(error.message); photosView(); };
+    });
+  };
+  document.querySelectorAll('#pModels2 button').forEach(b => b.onclick = () => { photoModel = b.dataset.m; draw(); });
+  document.querySelectorAll('#pFilt button').forEach(b => b.onclick = () => { photoFilter = b.dataset.f; draw(); });
+  $('#pSearch').oninput = e => { photoQ = e.target.value; draw(); };
+  const go = async files => {
+    files = [...files].filter(f => f.type.startsWith('image/')); if (!files.length) return;
+    const model = $('#pModel').value.trim() || 'Unassigned', btn = $('#pPick'); btn.disabled = true; btn.textContent = 'Uploading…';
+    const n = await photoUpload(files, model, $('#pCap').value.trim()); toast(n ? `${n} photo${n > 1 ? 's' : ''} saved` : 'Nothing was saved');
+    if (n) photoModel = model === 'Unassigned' ? 'all' : model; photosView();
+  };
+  $('#pPick').onclick = () => $('#pFiles').click();
+  $('#pFiles').onchange = e => go(e.target.files);
+  const dz = $('#pDrop'); dz.ondragover = e => { e.preventDefault(); dz.style.outline = '2px dashed var(--pink)'; }; dz.ondragleave = () => dz.style.outline = ''; dz.ondrop = e => { e.preventDefault(); dz.style.outline = ''; go(e.dataTransfer.files); };
   draw();
 }
 

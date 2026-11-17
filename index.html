@@ -838,7 +838,7 @@
     v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ face.hidden = true; }, 400); }, { once:true });
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
-      var SRC = { kissauto:'live/nami_kiss_fast.mp4?v=1', kiss:'live/nami_kiss_btn.mp4?v=1', hat:'live/nami_hat.mp4?v=14' }, vids = {}, busy = false, FADE = 420;
+      var SRC = { kissauto:'live/nami_kiss_fast.mp4?v=1', kiss:'live/nami_kiss_btn.mp4?v=1', hat:'live/nami_hat.mp4?v=14' }, vids = {}, busy = false, curAct = null, FADE = 420;
       var btns = [].slice.call(document.querySelectorAll('#moves button[data-m]')); if (!btns.length) return;
       function lock(on){ btns.forEach(function(b){ b.disabled = on; }); }
       /* song for "Construction la semaine": only plays after a click, with a mute button */
@@ -852,7 +852,7 @@
       /* blinks in the breathing loop (seconds); an action never starts during one, it waits until her eyes are open again */
       var BLINKS = [[1.30, 1.85], [7.00, 7.70]];
       function blinkWait(){ var t = v.currentTime || 0; for (var i = 0; i < BLINKS.length; i++){ var k = BLINKS[i]; if (t >= k[0] - 0.15 && t < k[1]) return (k[1] - t) * 1000 + 40; } return 0; }
-      function start(m){ if (busy) return; var w = blinkWait(); if (w > 0){ busy = true; lock(true); setTimeout(function(){ busy = false; start(m); }, w); return; } var act = mk(m); if (!act) return; busy = true; lock(true); act.currentTime = 0; var over = false;
+      function start(m){ if (busy) return; var w = blinkWait(); if (w > 0){ busy = true; lock(true); setTimeout(function(){ busy = false; start(m); }, w); return; } var act = mk(m); if (!act) return; curAct = act; busy = true; lock(true); act.currentTime = 0; var over = false;
         /* hand back only on the clip's very last frame, where her pose matches the breathing loop */
         function finish(){ if (over) return; over = true; v.currentTime = 0;
           var swap = function(){ act.classList.add('quick'); act.classList.remove('on');
@@ -869,6 +869,14 @@
       function fireKiss(){ if (fired) return; fired = true; if (!busy && !document.hidden) start('kissauto'); else loadLoop(true); }
       if (kissClip.readyState >= 3) fireKiss(); else { kissClip.addEventListener('canplay', fireKiss, { once:true }); setTimeout(fireKiss, 2500); }
       setTimeout(function(){ mk('kiss'); mk('hat'); }, 9000);
+      /* Safari pauses videos when you leave the tab or lock the phone: when you come back (or if the system pauses her), she starts breathing again by herself */
+      function wake(){ if (document.hidden) return;
+        if (!busy){ if (loopLoaded){ var q = v.play(); if (q && q.catch) q.catch(function(){}); } else if (fired) loadLoop(true); }
+        else if (curAct && curAct.paused && !curAct.ended){ var q2 = curAct.play(); if (q2 && q2.catch) q2.catch(function(){}); } }
+      document.addEventListener('visibilitychange', wake);
+      window.addEventListener('pageshow', wake);
+      window.addEventListener('focus', wake);
+      v.addEventListener('pause', function(){ if (!busy && !document.hidden && loopLoaded) setTimeout(wake, 120); });
       setTimeout(function(){ if (!loopLoaded) loadLoop(true); }, 4000); /* safety: never leave the page without the breathing loop */
     })();
     var ring = document.getElementById('ring');

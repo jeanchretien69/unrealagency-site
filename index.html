@@ -417,19 +417,20 @@
 
       <div class="calc">
         <div>
-          <label for="ageIn">How old are you?</label>
-          <div class="age"><span id="ageOut">30</span> <small>years old</small></div>
-          <input id="ageIn" type="range" min="18" max="70" value="30" aria-describedby="calcNote">
-          <p class="fine">Average life on Earth: about 73 years.</p>
+          <label for="hrsIn">How many hours a day do you put into your business?</label>
+          <div class="age"><span id="hrsOut">10</span> <small>hours a day</small></div>
+          <input id="hrsIn" type="range" min="2" max="16" step="0.5" value="10" aria-describedby="calcNote">
+          <p class="fine">Emails, DMs, posting, follow-ups, checking on the team…</p>
         </div>
         <div>
-          <p class="bigwin">You have about <span id="daysLeft">15,700</span> days left. AI can give you back <span id="yearsBack">4.3</span> years of them.</p>
+          <p class="bigwin">You: <span>30 min</span> a day to decide.<br>AI: the other <span id="aiDo">9h30</span>.</p>
           <div class="bars" style="margin-top:18px">
-            <div class="bar me"><div class="lbl"><span>Doing everything yourself</span><b id="meH">0 h</b></div><div class="trk"><div class="fill" id="meF" style="width:100%"></div></div></div>
-            <div class="bar ai"><div class="lbl"><span>With Unreal OS (AI does the busywork)</span><b id="aiH">0 h</b></div><div class="trk"><div class="fill" id="aiF" style="width:50%"></div></div></div>
+            <div class="bar me"><div class="lbl"><span>Your day now</span><b id="meH">10 h</b></div><div class="trk"><div class="fill" id="meF" style="width:62%"></div></div></div>
+            <div class="bar ai"><div class="lbl"><span>Your day with Unreal OS</span><b>30 min</b></div><div class="trk"><div class="fill" style="width:3%"></div></div></div>
+            <div class="bar ai"><div class="lbl"><span>Your business, run by AI</span><b>24 h / day</b></div><div class="trk"><div class="fill" style="width:100%"></div></div></div>
           </div>
           <div class="dreams" id="dreams" aria-live="polite"></div>
-          <p class="fine" id="calcNote">Hours of admin, follow-ups and busywork left in your working life (until 65), assuming 30 h/week of it today and 15 h/week saved with AI. An illustration, not a promise.</p>
+          <p class="fine" id="calcNote">Illustration: you keep 30 minutes a day for the decisions, AI and your team handle the rest. Results depend on your business.</p>
         </div>
       </div>
 
@@ -759,17 +760,17 @@
     setTimeout(function(){row.classList.add('gone');setTimeout(function(){tasks.push(tasks.shift());render();if(done>=6){done=0;}},500)},1300);
   }
   if(!reduce){var io=new IntersectionObserver(function(e){if(e[0].isIntersecting&&!window._osT){window._osT=setInterval(step,2600);step();}},{threshold:.3});io.observe(box);}
-  var a=document.getElementById('ageIn');
+  var a=document.getElementById('hrsIn');
   function fmt(n){return Math.round(n).toLocaleString('en-US')}
+  function hm(h){var H=Math.floor(h),M=Math.round((h-H)*60);return H+'h'+(M?String(M).padStart(2,'0'):'')}
   function calc(){
-    var age=+a.value; document.getElementById('ageOut').textContent=age;
-    var days=Math.max(0,(73-age)*365); document.getElementById('daysLeft').textContent=fmt(days);
-    var wy=Math.max(0,65-age), me=wy*48*30, ai=wy*48*15;
-    document.getElementById('meH').textContent=fmt(me)+' h'; document.getElementById('aiH').textContent=fmt(ai)+' h';
-    document.getElementById('aiF').style.width=(me?50:0)+'%'; document.getElementById('meF').style.width=(me?100:0)+'%';
-    var saved=me-ai, days=saved/16;
-    document.getElementById('yearsBack').textContent=(days/365).toFixed(1);
-    document.getElementById('dreams').innerHTML=saved?['🌍 <b>'+fmt(days/80)+'</b> trips around the world (80 days each)','🛥️ <b>'+fmt(days/2)+'</b> weekends on a boat','🏝️ <b>'+fmt(days/30)+'</b> months living in Bali','👨‍👩‍👧 <b>'+fmt(days/365*52)+'</b> full weeks with family'].map(function(x){return '<span>'+x+'</span>'}).join(''):'';
+    var h=+a.value, back=Math.max(0,h-0.5);
+    document.getElementById('hrsOut').textContent=h;
+    document.getElementById('aiDo').textContent=hm(back);
+    document.getElementById('meH').textContent=hm(h).replace(/h$/,' h');
+    document.getElementById('meF').style.width=(h/16*100)+'%';
+    var wk=back*7, yr=back*365;
+    document.getElementById('dreams').innerHTML=['⏰ <b>+'+hm(back)+'</b> free every single day','📅 <b>'+fmt(wk)+' h</b> a week, '+(wk/40).toFixed(1)+' full-time jobs of free time','🌍 <b>'+(yr/16/80).toFixed(1)+'</b> trips around the world a year','🛥️ every weekend on the boat. <b>And Friday.</b>'].map(function(x){return '<span>'+x+'</span>'}).join('');
   }
   a.addEventListener('input',calc); calc();
 })();

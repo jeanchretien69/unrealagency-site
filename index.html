@@ -855,9 +855,15 @@
         var go = function(){ act.classList.add('on'); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
         var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); }); else go(); }
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
-      /* the loop starts 4.85s in, so at the 0.75 second mark (loop time 5.6s) she is in the pose the kiss starts from */
-      v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 4.85; } catch(e){} }, { once:true });
-      v.addEventListener('playing', function(){ mk('kiss'); setTimeout(function(){ mk('hat'); }, 9000); setTimeout(function(){ if (!busy && !document.hidden) start('kiss'); }, 750); }, { once:true });
+      /* the loop starts 5.6s in: that is the pose the kiss clip starts from, so the kiss can begin the moment the page plays.
+         The kiss clip is created right away so it is already loaded when the loop starts playing. */
+      v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 5.6; } catch(e){} }, { once:true });
+      var kissClip = mk('kiss'), fired = false;
+      function fireKiss(){ if (fired) return; fired = true; if (!busy && !document.hidden) start('kiss'); }
+      v.addEventListener('playing', function(){
+        setTimeout(function(){ mk('hat'); }, 9000);
+        if (kissClip.readyState >= 3) fireKiss(); else { kissClip.addEventListener('canplay', fireKiss, { once:true }); setTimeout(fireKiss, 2500); }
+      }, { once:true });
     })();
     var ring = document.getElementById('ring');
     function tick(t){ if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; } requestAnimationFrame(tick); }

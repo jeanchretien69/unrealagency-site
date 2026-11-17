@@ -1621,7 +1621,7 @@ function askInit(){
     const { data, error } = await sb.functions.invoke('ask', { body: { q, history: askHist } });
     $('#askGo').disabled = false;
     const a = data?.a || data?.error || (error && (await error.context?.json?.().catch(() => null))?.error) || 'Something went wrong, try again.';
-    w.textContent = a; if (data?.a){ askHist.push({ role:'user', content:q }, { role:'assistant', content:a }); askHist = askHist.slice(-8); }
+    w.innerHTML = esc(a).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); if (data?.a){ askHist.push({ role:'user', content:q }, { role:'assistant', content:a }); askHist = askHist.slice(-8); }
   };
 }
 

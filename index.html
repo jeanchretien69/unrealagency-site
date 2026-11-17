@@ -263,12 +263,12 @@
 <body>
 
 <header class="nav">
-  <a class="logo" href="#home"><i></i><span class="lw"><span class="l1">UN<b>REAL</b></span><span class="l2">AGEN<b>CY</b></span></span></a>
+  <a class="logo" href="/" data-view="home"><i></i><span class="lw"><span class="l1">UN<b>REAL</b></span><span class="l2">AGEN<b>CY</b></span></span></a>
   <nav class="links" aria-label="Main">
-    <a href="#home">Home</a>
-    <a href="#formations">Coaching</a>
-    <a href="#models">Models</a>
-    <a href="/members.html" class="studio">Members 🔒</a>
+    <a href="/" data-view="home">Home</a>
+    <a href="/coaching" data-view="formations">Coaching</a>
+    <a href="/models" data-view="models">Models</a>
+    <a href="/members" class="studio">Members 🔒</a>
     <button type="button" class="mode" id="modeBtn" aria-pressed="true"><i></i><span id="modeLbl">Light</span></button>
   </nav>
 </header>
@@ -413,30 +413,35 @@
   setView(saved || (sys.matches ? 'light' : 'dark'));
   sys.addEventListener('change', function(e){ var s=null; try{ s = localStorage.getItem('unreal-mode'); }catch(x){} if (!s) setView(e.matches ? 'light' : 'dark'); });
   mb.addEventListener('click', function(){ setMode(root.getAttribute('data-mode') === 'dark' ? 'light' : 'dark'); });
-  /* ---------- Hash routing ---------- */
+  /* ---------- Clean URL routing: /, /coaching, /models (old #links still work) ---------- */
   var views = {home:'v-home', formations:'v-formations', models:'v-models'};
-  function route(){
-    var h = (location.hash || '#home').slice(1) || 'home';
-    if (h.indexOf('studio') === 0) { location.href = '/members.html'; return; }
-    var base = views[h] ? h : 'home';
-    Object.keys(views).forEach(function(k){
-      document.getElementById(views[k]).classList.toggle('on', k === base);
-    });
-    document.querySelectorAll('.links a').forEach(function(a){
-      var t = a.getAttribute('href').slice(1);
-      if (t === base) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
-    });
-    if (base === 'studio'){
-      var sub = document.getElementById('p-' + h) ? h : 'studio';
-      document.querySelectorAll('.sp').forEach(function(p){ p.style.display = (p.id === 'p-' + sub) ? 'flex' : 'none'; });
-      document.querySelectorAll('.side-nav a').forEach(function(a){
-        if (a.getAttribute('href') === '#' + sub) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
-      });
-    }
-    var anchor = (base === 'home' && h !== 'home') ? document.getElementById(h) : null;
-    if (anchor) { setTimeout(function(){ anchor.scrollIntoView({behavior:'smooth', block:'start'}); }, 30); }
-    else window.scrollTo(0,0);
+  var PATH = {home:'/', formations:'/coaching', models:'/models'};
+  function viewFromPath(){ var p = location.pathname.replace(/\/+$/, '') || '/'; for (var k in PATH){ if (PATH[k] === p) return k; } return 'home'; }
+  function show(base, anchorId){
+    Object.keys(views).forEach(function(k){ document.getElementById(views[k]).classList.toggle('on', k === base); });
+    document.querySelectorAll('.links a[data-view]').forEach(function(a){ if (a.dataset.view === base) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+    var anchor = anchorId ? document.getElementById(anchorId) : null;
+    if (anchor) setTimeout(function(){ anchor.scrollIntoView({behavior:'smooth', block:'start'}); }, 30); else window.scrollTo(0,0);
   }
+  function route(){
+    var h = location.hash.slice(1);
+    if (h.indexOf('studio') === 0) { location.href = '/members'; return; }
+    if (h && views[h]) { history.replaceState(null, '', PATH[h]); return show(h); }
+    var base = viewFromPath();
+    if (h) { history.replaceState(null, '', location.pathname); return show(base, h); }
+    show(base);
+  }
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a'); if (!a || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    if (a.dataset.view){ e.preventDefault(); var v = a.dataset.view; if (location.pathname !== PATH[v]) history.pushState(null, '', PATH[v]); show(v); return; }
+    var href = a.getAttribute('href') || '';
+    if (href.charAt(0) === '#' && href.length > 1){
+      var id = href.slice(1);
+      if (views[id]){ e.preventDefault(); history.pushState(null, '', PATH[id]); show(id); return; }
+      var t = document.getElementById(id); if (t){ e.preventDefault(); t.scrollIntoView({behavior:'smooth', block:'start'}); }
+    }
+  });
+  window.addEventListener('popstate', route);
   window.addEventListener('hashchange', route);
   route();
 

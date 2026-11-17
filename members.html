@@ -265,6 +265,35 @@
   .psend button:disabled{opacity:.45;cursor:default}
   .pnote{padding:8px 16px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line);background:var(--card)}
   .pempty{padding:40px 20px;text-align:center;color:var(--muted)}
+  /* Twitter staff + tracking */
+  .xgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:16px}
+  @media(max-width:520px){.xgrid{grid-template-columns:1fr}}
+  .xcard{padding:18px}
+  .xcard.alldone{border-color:var(--ok)}
+  .xc-h{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .xc-h h2{margin:0;font-size:16px}
+  .xgoals{display:grid;gap:9px}
+  .xg-t{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:3px}
+  .xg.d .xg-t span{color:var(--muted)}
+  .xbar{height:8px;border-radius:99px;background:var(--blush);overflow:hidden}
+  .xbar i{display:block;height:100%;background:var(--pink);border-radius:99px;transition:width .4s}
+  .xg.d .xbar i{background:var(--ok)}
+  .xslots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  @media(max-width:700px){.xslots{grid-template-columns:1fr}}
+  .xslot{border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+  .xslot.posted{opacity:.6}
+  .xslot img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;cursor:zoom-in;background:var(--blush)}
+  .xs-none{aspect-ratio:3/4;display:grid;place-items:center;border:1px dashed var(--line);border-radius:10px;color:var(--muted);font-size:13px;text-align:center;padding:6px}
+  .xq p{font-size:14px;margin:2px 0 6px;word-break:break-word}
+  .xs-adm select{width:100%;margin-top:4px;font-size:12px}
+  .xtiles{display:flex;gap:8px;flex-wrap:wrap}
+  .xbadstat{border-color:var(--bad);color:var(--bad)}
+  .xhr{display:flex;gap:10px;align-items:center;margin:6px 0}
+  .xhr>span{flex:0 0 150px;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .xhs{flex:1;display:grid;grid-template-columns:repeat(24,1fr);gap:2px}
+  .xh{height:34px;border-radius:4px;border:1px solid var(--line);display:flex;align-items:flex-end}
+  .xh i{display:block;width:100%;background:var(--pink);border-radius:3px}
+  .xhlab em{font-style:normal;font-size:10px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -318,6 +347,7 @@
       <aside class="side" id="side">
         <button data-tab="plan" class="adm" hidden>📋 My plan</button>
         <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
+        <button data-tab="twitter" data-perm="twitter" hidden>🐦 Twitter</button>
         <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone<span class="nb" id="nbSms" hidden></span></button>
         <button data-tab="dropp" data-perm="dropp" hidden>💸 Dropp</button>
         <button data-tab="quotes" data-perm="quotes" hidden>💬 Quotes</button>
@@ -417,6 +447,7 @@ document.querySelectorAll('[data-signout]').forEach(b => b.onclick = () => sb.au
 let me = null, settings = {}, tab = 'personas';
 const PERMS = [
   { k:'team', l:'✅ Team to-do', sub:[['team:Before posting','Before posting'],['team:Daily posting','Daily posting'],['team:Rules','Rules']] },
+  { k:'twitter', l:'🐦 Twitter', sub:[] },
   { k:'sms', l:'📱 SMS phone', sub:[] },
   { k:'dropp', l:'💸 Dropp', sub:[['dropp.links','Links'],['dropp.content','Content'],['dropp.sales','Sales'],['dropp.wallet','Wallet'],['dropp.extras','Tips & wishlists']] },
   { k:'quotes', l:'💬 Quotes', sub:[] },
@@ -488,15 +519,15 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t); badges();
-  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'dropp' || t === 'brains');
+  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'dropp' || t === 'brains' || t === 'twitter');
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ photos:photosView, quotes:quotesView, plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, dropp:droppView })[t]();
+  ({ photos:photosView, quotes:quotesView, plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, dropp:droppView })[t]();
 }
 
 
@@ -1293,6 +1324,195 @@ async function teamView(){
     const { error } = await sb.from('team_tasks').insert({ section: $('#ttS').value, daily: $('#ttD').value === '1', text: $('#ttT').value.trim(), hint: $('#ttH').value.trim() || null, sort: Date.now() % 100000 });
     toast(error ? error.message : 'Added'); teamView();
   });
+}
+
+// ---------- Twitter: staff to-do + live tracking (data comes from the Chrome extension) ----------
+let xDay = null, xMode = 'todo', xTimer = null, xFlt = { acc: 'all', act: 'all', bad: false };
+const X_ACT = { post: '✍ post', reply: '💬 reply', like: '❤ like', unlike: '💔 unlike', follow: '➕ follow', unfollow: '➖ unfollow', retweet: '🔁 retweet', quote: '❝ quote' };
+const xOk = u => /^https:\/\/x\.com\//.test(u || '');
+const xNum = (o, k) => Number((o && o[k]) || 0);
+const xTime = d => d ? new Date(d).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—';
+const xAgo = d => { if (!d) return 'never'; const s = Math.max(0, (Date.now() - new Date(d).getTime()) / 1000); if (s < 90) return 'just now'; if (s < 3600) return Math.round(s / 60) + ' min ago'; if (s < 86400) return Math.round(s / 3600) + ' h ago'; return Math.round(s / 86400) + ' d ago'; };
+const xShift = (d, n) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+const xLabel = d => new Date(d + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const xGoals = (a, s, slotsDone) => [['✍', 'Post today’s pictures', 'posts', a.t_posts], ['💬', 'Replies', 'replies', a.t_replies], ['❤', 'Likes', 'likes', a.t_likes], ['➕', 'Follows', 'follows', a.t_follows], ['⏱', 'Active minutes', 'active_min', a.t_minutes]]
+  .filter(g => g[3] > 0).map(g => ({ icon: g[0], label: g[1], key: g[2], goal: g[3], have: g[2] === 'active_min' ? Math.round(xNum(s, g[2])) : g[2] === 'posts' ? Math.max(xNum(s, g[2]), slotsDone) : xNum(s, g[2]) }));
+
+async function xLoad(){
+  const admin = me.role === 'admin';
+  const today = (await sb.rpc('x_today')).data;
+  if (!admin) { xDay = today; xMode = 'todo'; }
+  if (!xDay) xDay = today;
+  const [acc, st, plan, hr, cfg] = await Promise.all([
+    sb.from('x_accounts').select('*').order('sort').order('handle'),
+    sb.rpc('x_day_stats', { p_day: xDay }),
+    sb.from('x_plan').select('*').eq('day', xDay),
+    admin ? sb.rpc('x_hourly', { p_day: xDay }) : Promise.resolve({ data: [] }),
+    admin ? sb.from('x_config').select('*') : Promise.resolve({ data: [] })
+  ]);
+  const err = acc.error || st.error || plan.error || hr.error; if (err) throw err;
+  const planRows = plan.data || [];
+  const qIds = [...new Set(planRows.map(p => p.quote_id).filter(Boolean))], pIds = [...new Set(planRows.map(p => p.photo_id).filter(Boolean))];
+  const [q, ph] = await Promise.all([
+    qIds.length ? sb.from('quotes').select('id,en,it,model').in('id', qIds) : Promise.resolve({ data: [] }),
+    pIds.length ? sb.from('photos').select('id,model,caption,path,thumb').in('id', pIds) : Promise.resolve({ data: [] })
+  ]);
+  let logs = [], pool = { quotes: [], photos: [] };
+  if (admin) {
+    const [lg, pq, pp] = await Promise.all([
+      sb.from('x_events_v').select('*').eq('day', xDay).order('ts', { ascending: false }).limit(400),
+      sb.from('quotes').select('id,en,model,used_at').order('created_at', { ascending: false }),
+      sb.from('photos').select('id,model,caption,path,used_at').order('created_at', { ascending: false })
+    ]);
+    logs = lg.data || []; pool = { quotes: pq.data || [], photos: pp.data || [] };
+  }
+  const photos = Object.fromEntries((ph.data || []).map(x => [x.id, x]));
+  const urls = Object.keys(photos).length ? await photoUrls(Object.values(photos).map(x => x.thumb || x.path)) : (() => '');
+  return { admin, today, accounts: acc.data || [], stats: Object.fromEntries((st.data || []).map(r => [r.account, r])), plan: planRows,
+    quotes: Object.fromEntries((q.data || []).map(x => [x.id, x])), photos, urls, hourly: hr.data || [], logs, pool,
+    tz: ((cfg.data || []).find(r => r.key === 'tz') || {}).value || '' };
+}
+
+function xSlot(D, a, i){
+  const p = D.plan.find(r => r.account === a.handle && r.slot === i);
+  const q = p && p.quote_id ? D.quotes[p.quote_id] : null, ph = p && p.photo_id ? D.photos[p.photo_id] : null;
+  let h = `<div class="xslot${p && p.posted_at ? ' posted' : ''}" data-slot="${esc(a.handle)}|${i}"><div class="xs-h"><b>Picture ${i}</b>${p && p.posted_at ? ` <span class="pill yes">posted ${xTime(p.posted_at)}</span>` : ''}</div>`;
+  h += ph ? `<img src="${esc(D.urls(ph.thumb || ph.path))}" alt="" data-open="${esc(ph.path)}"><div class="xs-b"><button class="btn sm ghost" data-dl="${esc(ph.path)}">⬇ Download</button></div>`
+          : `<div class="xs-none">${q ? 'No picture yet' : 'Not ready yet'}</div>`;
+  if (q) {
+    h += `<div class="xq"><small class="muted">🇬🇧 English</small><p>${esc(q.en)}</p><button class="btn sm" data-cp="${esc(q.en)}">Copy</button></div>`;
+    if (q.it) h += `<div class="xq"><small class="muted">🇮🇹 Italian</small><p>${esc(q.it)}</p><button class="btn sm" data-cp="${esc(q.it)}">Copy</button></div>`;
+  }
+  if (p) h += `<button class="btn sm ${p.posted_at ? 'ghost' : ''}" data-posted="${p.id}" data-v="${p.posted_at ? 0 : 1}">${p.posted_at ? 'Undo posted' : '✓ I posted it'}</button>`;
+  if (D.admin) {
+    h += `<div class="xs-adm"><select data-sq><option value="">— quote —</option>${D.pool.quotes.filter(x => !x.used_at || (p && p.quote_id === x.id)).map(x => `<option value="${x.id}"${p && p.quote_id === x.id ? ' selected' : ''}>${esc((x.en || '').slice(0, 44))}</option>`).join('')}</select>
+      <select data-sp><option value="">— photo —</option>${D.pool.photos.map(x => `<option value="${x.id}"${p && p.photo_id === x.id ? ' selected' : ''}>${esc(x.model)} · ${esc((x.caption || x.path.split('/').pop()).slice(0, 36))}</option>`).join('')}</select></div>`;
+  }
+  return h + '</div>';
+}
+
+function xCard(D, a){
+  const s = D.stats[a.handle] || {};
+  const slotsDone = D.plan.filter(r => r.account === a.handle && r.posted_at).length;
+  const goals = xGoals(a, s, slotsDone), fin = goals.filter(g => g.have >= g.goal).length;
+  const flagged = xNum(s, 'flagged');
+  return `<article class="card xcard${goals.length && fin === goals.length ? ' alldone' : ''}">
+    <div class="xc-h"><h2>@${esc(a.handle)}</h2><span class="badge">${esc(a.label ? 'profile ' + a.label : a.model)}</span>${goals.length && fin === goals.length ? '<span class="pill yes">all done ✅</span>' : `<span class="muted" style="font-size:13px">${fin}/${goals.length} goals</span>`}</div>
+    <div class="xgoals">${goals.map(g => `<div class="xg${g.have >= g.goal ? ' d' : ''}"><div class="xg-t"><span>${g.icon} ${esc(g.label)}</span><b>${g.have}/${g.goal}${g.have >= g.goal ? ' ✅' : ''}</b></div><div class="xbar"><i style="width:${Math.min(100, Math.round(g.have / g.goal * 100))}%"></i></div></div>`).join('')}</div>
+    ${flagged ? `<div class="msg err" style="margin:10px 0 0;padding:8px 12px">⚠ ${flagged} action${flagged > 1 ? 's' : ''} not counted (too many per minute, same tweet twice, too fast or a copy-paste reply)</div>` : ''}
+    <div class="xslots">${[1, 2, 3].map(i => xSlot(D, a, i)).join('')}</div>
+  </article>`;
+}
+
+function xTodo(D){
+  const act = D.accounts.filter(a => a.active);
+  return `<p class="muted" style="margin-bottom:12px;font-size:13.5px">Do your work on each account in AdsPower — the boxes fill in by themselves while you work. A like or reply only counts on a different tweet each time, up to 10 likes a minute, replies of 8+ characters that are never copy-pasted.</p>
+    ${D.admin ? `<div style="margin-bottom:14px"><button class="btn sm" id="xFill">✨ Fill the 3 pictures for every account</button> <span class="muted" style="font-size:13px">uses the next unused quotes + Kaya photos, never the same on two accounts</span></div>` : ''}
+    <div class="xgrid">${act.map(a => xCard(D, a)).join('') || '<div class="card empty">No accounts yet.</div>'}</div>`;
+}
+
+function xTrack(D){
+  const rows = D.accounts.map(a => ({ a, s: D.stats[a.handle] || {}, known: true }));
+  Object.keys(D.stats).filter(h => !D.accounts.some(a => a.handle === h)).forEach(h => rows.push({ a: { handle: h, t_posts: 0, t_replies: 0, t_likes: 0, t_follows: 0, t_minutes: 0 }, s: D.stats[h], known: false }));
+  const sum = k => rows.reduce((t, r) => t + xNum(r.s, k), 0);
+  const valid = sum('posts') + sum('replies') + sum('likes') + sum('follows') + sum('retweets'), bad = sum('flagged');
+  const maxV = Math.max(1, ...D.hourly.map(h => Number(h.valid)));
+  const note = r => {
+    const s = r.s, acts = xNum(s, 'posts') + xNum(s, 'replies') + xNum(s, 'likes') + xNum(s, 'follows'), am = xNum(s, 'active_min'), fl = xNum(s, 'flagged'), out = [];
+    if (!s.account) return '<span class="muted">nothing recorded</span>';
+    if (am >= 10 && acts === 0) out.push('active but no actions');
+    if (xNum(s, 'moves') > 500 && xNum(s, 'keys') === 0 && acts === 0) out.push('mouse moves only');
+    if (fl && fl / Math.max(1, fl + acts) > 0.3) out.push('lots of spam-like actions');
+    if (acts > 0 && am === 0) out.push('no activity ticks (extension off?)');
+    return out.length ? `<span class="pill no">${esc(out.join(' · '))}</span>` : '<span class="pill yes">looks fine</span>';
+  };
+  const hourRow = h => {
+    const cells = Array.from({ length: 24 }, (_, hr) => { const r = D.hourly.find(x => x.account === h && Number(x.hr) === hr); const v = r ? Number(r.valid) : 0, fl = r ? Number(r.flagged) : 0, am = r ? Number(r.active_min) : 0;
+      return `<div class="xh" title="${hr}:00 · ${v} counted · ${fl} not counted · ${Math.round(am)} active min" style="background:rgba(214,51,132,${Math.min(0.55, am / 40).toFixed(2)})"><i style="height:${Math.round(v / maxV * 100)}%"></i></div>`; }).join('');
+    return `<div class="xhr"><span>@${esc(h)}</span><div class="xhs">${cells}</div></div>`;
+  };
+  return `<div class="xtiles"><div class="stat">✅ <b style="margin:0 4px">${valid}</b> counted actions</div><div class="stat">⏱ <b style="margin:0 4px">${Math.round(sum('active_min'))}</b> active min</div><div class="stat${bad ? ' xbadstat' : ''}">⚠ <b style="margin:0 4px">${bad}</b> not counted</div><div class="stat">👥 <b style="margin:0 4px">${rows.filter(r => r.s.account && (xNum(r.s, 'posts') + xNum(r.s, 'replies') + xNum(r.s, 'likes') + xNum(r.s, 'follows')) > 0).length}/${D.accounts.filter(a => a.active).length}</b> accounts worked</div></div>
+    <div class="card tbl" style="margin-top:12px"><table><thead><tr><th>Account</th><th>Posts</th><th>Replies</th><th>Likes</th><th>Follows</th><th>Not counted</th><th>Active</th><th>Mouse · keys</th><th>First → last action</th><th>Last seen</th><th>Check</th></tr></thead><tbody>
+    ${rows.map(r => { const s = r.s, a = r.a, live = s.last_beat && Date.now() - new Date(s.last_beat).getTime() < 180000; const c = (k, t) => `${xNum(s, k)}${t ? '<span class="muted">/' + t + '</span>' : ''}`;
+      return `<tr><td><b>@${esc(a.handle)}</b>${r.known ? '' : ` <span class="pill no">not in list</span> <button class="btn sm ghost" data-addacc="${esc(a.handle)}">Add</button>`}</td><td class="num">${c('posts', a.t_posts)}</td><td class="num">${c('replies', a.t_replies)}</td><td class="num">${c('likes', a.t_likes)}</td><td class="num">${c('follows', a.t_follows)}</td><td class="num">${xNum(s, 'flagged') ? `<span class="pill no">${xNum(s, 'flagged')}</span>` : '0'}</td><td class="num">${Math.round(xNum(s, 'active_min'))}${a.t_minutes ? '<span class="muted">/' + a.t_minutes + 'm</span>' : 'm'}</td><td class="num">${xNum(s, 'moves')} · ${xNum(s, 'keys')}</td><td class="num">${s.first_ts ? xTime(s.first_ts) + ' → ' + xTime(s.last_ts) : '—'}</td><td class="num"><span class="led ${live ? 'ok' : s.last_beat ? 'warn' : ''}"></span>${xAgo(s.last_beat)}</td><td>${note(r)}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    <div class="card" style="margin-top:12px"><h2>Hour by hour</h2><p class="muted" style="font-size:12.5px;margin-bottom:10px">Bar = counted actions, pink background = time actually active on the tab. Hours${D.tz ? ' in ' + esc(D.tz) : ''}.</p>
+    <div class="xhr xhax"><span></span><div class="xhs xhlab">${Array.from({ length: 24 }, (_, i) => `<em>${i % 3 === 0 ? i : ''}</em>`).join('')}</div></div>
+    ${rows.map(r => hourRow(r.a.handle)).join('')}</div>`;
+}
+
+function xLog(D){
+  const accs = [...new Set(D.logs.map(l => l.account))];
+  const rows = D.logs.filter(l => (xFlt.acc === 'all' || l.account === xFlt.acc) && (xFlt.act === 'all' || l.action === xFlt.act) && (!xFlt.bad || l.flag));
+  return `<div class="row" style="margin-bottom:12px;align-items:center"><div style="flex:0 0 190px"><select id="lfA"><option value="all">All accounts</option>${accs.map(a => `<option value="${esc(a)}"${xFlt.acc === a ? ' selected' : ''}>@${esc(a)}</option>`).join('')}</select></div>
+    <div style="flex:0 0 170px"><select id="lfT"><option value="all">All actions</option>${Object.keys(X_ACT).map(k => `<option value="${k}"${xFlt.act === k ? ' selected' : ''}>${X_ACT[k]}</option>`).join('')}</select></div>
+    <label style="flex:0 0 auto;display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="lfB"${xFlt.bad ? ' checked' : ''}> only the ones not counted</label><span class="muted" style="font-size:13px">${rows.length} shown (latest 400 of the day)</span></div>
+    <div class="card tbl"><table><thead><tr><th>Time</th><th>Account</th><th>Action</th><th>On</th><th>Text</th><th>Status</th></tr></thead><tbody>
+    ${rows.map(l => `<tr><td class="num">${xTime(l.ts)}</td><td>@${esc(l.account)}</td><td>${X_ACT[l.action] || esc(l.action)}</td><td>${l.target_url && xOk(l.target_url) ? `<a href="${esc(l.target_url)}" target="_blank" rel="noopener" style="color:var(--pink)">@${esc(l.target_handle || 'tweet')}</a>` : esc(l.target_handle ? '@' + l.target_handle : '—')}</td><td style="max-width:360px;white-space:normal;font-size:13px">${esc(l.body || '')}${l.has_media ? ' 🖼' : ''}</td><td>${l.flag ? `<span class="pill no">⚠ ${esc(l.flag)}</span>` : (['unlike', 'unfollow'].includes(l.action) ? '<span class="muted">—</span>' : '<span class="pill yes">counted</span>')}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nothing recorded for this day yet.</td></tr>'}
+    </tbody></table></div>`;
+}
+
+function xSet(D){
+  const n = (k, a) => `<input type="number" min="0" data-k="${k}" value="${a[k]}" style="width:70px;margin:0">`;
+  return `<div class="card tbl"><h2>Daily goals per account</h2><table><thead><tr><th>Account</th><th>Profile #</th><th>Posts</th><th>Replies</th><th>Likes</th><th>Follows</th><th>Active min</th><th>On</th><th></th></tr></thead><tbody>
+    ${D.accounts.map(a => `<tr data-h="${esc(a.handle)}"><td><b>@${esc(a.handle)}</b></td><td><input data-k="label" value="${esc(a.label || '')}" style="width:60px;margin:0"></td><td>${n('t_posts', a)}</td><td>${n('t_replies', a)}</td><td>${n('t_likes', a)}</td><td>${n('t_follows', a)}</td><td>${n('t_minutes', a)}</td><td><input type="checkbox" data-k="active"${a.active ? ' checked' : ''}></td><td style="white-space:nowrap"><button class="btn sm" data-save>Save</button> <button class="btn sm bad" data-rm>✕</button></td></tr>`).join('')}
+    </tbody></table></div>
+    <form class="card" id="xAddAcc" style="margin-top:14px"><h2>Add an X account</h2><div class="row"><div><label for="xaH">Username (without @)</label><input id="xaH" required></div><button class="btn">Add</button></div></form>
+    <form class="card" id="xTz" style="margin-top:14px"><h2>When does a new day start?</h2><div class="row"><div><label for="xtZ">Time zone</label><input id="xtZ" value="${esc(D.tz)}" placeholder="Asia/Bangkok"></div><button class="btn">Save</button></div><p class="muted" style="font-size:13px;margin-top:8px">Goals reset at midnight in this time zone (examples: Asia/Bangkok, America/Toronto, Indian/Antananarivo, Europe/Rome).</p></form>
+    <div class="card" style="margin-top:14px"><h2>Rules for what counts</h2><ul style="padding-left:18px;font-size:14px"><li>Likes, follows, retweets: once per tweet / person per day, max 10 likes, 6 follows, 5 retweets a minute, and not faster than 1.5 s apart.</li><li>Replies: 8+ characters, never the same text twice in a day, max 3 a minute.</li><li>Posts: max 2 a minute.</li><li>Active time = the tab is open and in front, with real mouse, keyboard or scrolling in each 30-second window.</li></ul></div>`;
+}
+
+function xRender(D){
+  const v = $('#view'), admin = D.admin;
+  const modes = [['todo', '✅ To-do'], ['track', '📊 Tracking'], ['log', '🧾 Action log'], ['set', '⚙ Goals']];
+  v.innerHTML = `<div class="smstop" style="align-items:center">${admin ? `<div class="cfilt" id="xModes" style="padding:0;border:0">${modes.map(m => `<button data-m="${m[0]}" class="${xMode === m[0] ? 'on' : ''}">${m[1]}</button>`).join('')}</div>` : '<span></span>'}
+      <div class="stats">${admin ? `<button class="btn sm ghost" id="xPrev">◀</button><b>${esc(xLabel(xDay))}</b><button class="btn sm ghost" id="xNext"${xDay >= D.today ? ' disabled' : ''}>▶</button>${xDay !== D.today ? '<button class="btn sm" id="xToday">Today</button>' : ''}` : `<b>${esc(xLabel(D.today))}</b>`}<span class="muted" style="font-size:12px">● live · ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</span></div></div>
+    <div id="xBody">${xMode === 'track' && admin ? xTrack(D) : xMode === 'log' && admin ? xLog(D) : xMode === 'set' && admin ? xSet(D) : xTodo(D)}</div>`;
+  const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));
+  v.querySelectorAll('[data-cp]').forEach(b => b.onclick = () => copy(b.dataset.cp));
+  v.querySelectorAll('[data-open]').forEach(i => i.onclick = () => openPhoto(i.dataset.open));
+  v.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => downloadPhoto(b.dataset.dl));
+  v.querySelectorAll('[data-posted]').forEach(b => b.onclick = async () => { const { error } = await sb.rpc('x_mark_posted', { p_id: b.dataset.posted, p_posted: b.dataset.v === '1' }); if (error) return toast(error.message); xRefresh(); });
+  if (!admin) return;
+  const go = m => { xMode = m; xRender(D); };
+  v.querySelectorAll('#xModes [data-m]').forEach(b => b.onclick = () => go(b.dataset.m));
+  const day = d => { xDay = d; xRefresh(); };
+  $('#xPrev').onclick = () => day(xShift(xDay, -1));
+  $('#xNext').onclick = () => day(xShift(xDay, 1));
+  const tdy = $('#xToday'); if (tdy) tdy.onclick = () => day(D.today);
+  const fill = $('#xFill'); if (fill) fill.onclick = async () => { fill.disabled = true; const { data, error } = await sb.rpc('x_fill_day', { p_day: xDay }); if (error) { fill.disabled = false; return toast(error.message); } toast(data ? data + ' slot' + (data > 1 ? 's' : '') + ' filled' : 'Nothing to fill (no unused quotes left, or already full)'); xRefresh(); };
+  v.querySelectorAll('.xslot').forEach(el => {
+    const [account, slot] = el.dataset.slot.split('|'), sq = el.querySelector('[data-sq]'), sp = el.querySelector('[data-sp]');
+    if (!sq) return;
+    const save = async () => { const { error } = await sb.from('x_plan').upsert({ account, day: xDay, slot: Number(slot), quote_id: sq.value || null, photo_id: sp.value || null }, { onConflict: 'account,day,slot' }); toast(error ? error.message : 'Saved'); if (!error) xRefresh(); };
+    sq.onchange = save; sp.onchange = save;
+  });
+  v.querySelectorAll('[data-addacc]').forEach(b => b.onclick = async () => { const { error } = await sb.from('x_accounts').insert({ handle: b.dataset.addacc, sort: 99 }); toast(error ? error.message : 'Added'); if (!error) xRefresh(); });
+  const fa = $('#lfA'); if (fa) { fa.onchange = () => { xFlt.acc = fa.value; xRender(D); }; $('#lfT').onchange = e => { xFlt.act = e.target.value; xRender(D); }; $('#lfB').onchange = e => { xFlt.bad = e.target.checked; xRender(D); }; }
+  v.querySelectorAll('tr[data-h]').forEach(tr => {
+    tr.querySelector('[data-save]').onclick = async () => {
+      const row = {}; tr.querySelectorAll('[data-k]').forEach(i => { row[i.dataset.k] = i.type === 'checkbox' ? i.checked : i.type === 'number' ? Math.max(0, parseInt(i.value, 10) || 0) : (i.value.trim() || null); });
+      const { error } = await sb.from('x_accounts').update(row).eq('handle', tr.dataset.h); toast(error ? error.message : 'Saved'); if (!error) xRefresh();
+    };
+    tr.querySelector('[data-rm]').onclick = async () => { if (!confirm('Remove @' + tr.dataset.h + ' from the list? (its recorded history stays)')) return; const { error } = await sb.from('x_accounts').delete().eq('handle', tr.dataset.h); toast(error ? error.message : 'Removed'); if (!error) xRefresh(); };
+  });
+  const aa = $('#xAddAcc'); if (aa) aa.onsubmit = async e => { e.preventDefault(); const h = $('#xaH').value.trim().replace(/^@/, '').toLowerCase(); if (!/^[a-z0-9_]{1,15}$/.test(h)) return toast('Username looks wrong'); const { error } = await sb.from('x_accounts').insert({ handle: h, sort: 99 }); toast(error ? error.message : 'Added'); if (!error) xRefresh(); };
+  const tz = $('#xTz'); if (tz) tz.onsubmit = async e => { e.preventDefault(); const z = $('#xtZ').value.trim(); try { new Intl.DateTimeFormat('en', { timeZone: z }); } catch (x) { return toast('Unknown time zone'); } const { error } = await sb.from('x_config').upsert({ key: 'tz', value: z }); toast(error ? error.message : 'Saved'); if (!error) { xDay = null; xRefresh(); } };
+}
+
+async function xRefresh(){
+  try { xRender(await xLoad()); }
+  catch (e) { $('#view').innerHTML = `<div class="msg err">${esc((e && e.message) || String(e))}</div>`; }
+}
+async function twitterView(){
+  clearInterval(xTimer);
+  await xRefresh();
+  xTimer = setInterval(() => {
+    if (tab !== 'twitter') return clearInterval(xTimer);
+    if (document.hidden) return;
+    const ae = document.activeElement; if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && $('#view').contains(ae)) return;
+    xRefresh();
+  }, 20000);
 }
 
 async function topupsView(){

@@ -587,7 +587,10 @@
       if (sndBtn) sndBtn.addEventListener('click', function(){ muted = !muted; try { localStorage.setItem('unreal-sound', muted ? 'off' : 'on'); } catch(e){} sndUi(); if (song) song.muted = muted; });
       function playSong(){ if (!song){ song = new Audio('live/construction.mp3?v=2'); song.preload = 'auto'; } song.muted = muted; song.volume = 1; try { song.currentTime = 0; } catch(e){} var p = song.play(); if (p && p.catch) p.catch(function(){}); }
       function mk(m){ if (vids[m] || !SRC[m]) return vids[m]; var a = document.createElement('video'); a.className = 'nv'; a.muted = true; a.playsInline = true; a.setAttribute('playsinline',''); a.setAttribute('muted',''); a.preload = 'auto'; a.src = SRC[m]; wrap.appendChild(a); return (vids[m] = a); }
-      function start(m){ if (busy) return; var act = mk(m); if (!act) return; busy = true; lock(true); act.currentTime = 0; var over = false;
+      /* blinks in the breathing loop (seconds); an action never starts during one, it waits until her eyes are open again */
+      var BLINKS = [[1.30, 1.85], [7.00, 7.70]];
+      function blinkWait(){ var t = v.currentTime || 0; for (var i = 0; i < BLINKS.length; i++){ var k = BLINKS[i]; if (t >= k[0] - 0.15 && t < k[1]) return (k[1] - t) * 1000 + 40; } return 0; }
+      function start(m){ if (busy) return; var w = blinkWait(); if (w > 0){ busy = true; lock(true); setTimeout(function(){ busy = false; start(m); }, w); return; } var act = mk(m); if (!act) return; busy = true; lock(true); act.currentTime = 0; var over = false;
         /* hand back only on the clip's very last frame, where her pose matches the breathing loop */
         function finish(){ if (over) return; over = true; v.currentTime = 0;
           var swap = function(){ act.classList.add('quick'); act.classList.remove('on');

@@ -252,6 +252,7 @@
   .chip.a{left:-8%;top:18%}
   .chip.b{right:-18%;top:40%}
   .chip.c{left:-14%;bottom:22%}
+  .chips{display:contents}
   .btn{display:inline-flex;align-items:center;gap:8px;padding:14px 22px;border-radius:999px;border:0;background:var(--pink);color:var(--white);font-weight:700;text-decoration:none;box-shadow:0 12px 24px -10px rgba(226,54,127,.7);transition:transform .15s,background .15s}
   .btn:hover{background:var(--pink-deep);transform:translateY(-1px)}
   .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line);box-shadow:none}
@@ -345,7 +346,10 @@
     .word.l,.word.r{text-align:center}
     .side.l{align-items:center;text-align:center;order:-1}
     .side.r{align-items:center}
-    .chip.a{left:0}.chip.b{right:0}.chip.c{left:4%}
+    /* phone: the three chips become one small row in the empty strip above her hair, so they no longer cover her */
+    .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;position:absolute;top:6px;left:4px;right:4px;z-index:3;pointer-events:none}
+    .chips .chip{position:static;font-size:10px;line-height:1.2;padding:3px 8px;gap:5px;white-space:nowrap;box-shadow:0 4px 12px -6px rgba(42,20,32,.3)}
+    .chips .chip .dot{width:6px;height:6px}
     .grid3,.grid4,.grid2{grid-template-columns:1fr}
     .stats{grid-template-columns:repeat(3,1fr)}
     .studio-wrap{grid-template-columns:1fr}
@@ -480,9 +484,11 @@
       
       </div>
       <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button><button data-m="hat">⚓ Construction la semaine, boat la fin de semaine</button></div>
-      <div class="chip a" id="status"><span class="dot"></span><span id="statusText">Nami · online now</span></div>
-      <div class="chip b"><b>+$412</b> PPV today</div>
-      <div class="chip c">AI chatter replied in <b>8s</b></div>
+<div class="chips">
+        <div class="chip a" id="status"><span class="dot"></span><span id="statusText">Nami · online now</span></div>
+        <div class="chip b"><b>+$412</b> PPV today</div>
+        <div class="chip c">AI chatter replied in <b>8s</b></div>
+      </div>
     </div>
 
     <div class="below">

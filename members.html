@@ -308,6 +308,9 @@
   .xs-body{display:grid;grid-template-columns:1fr 240px;gap:16px;padding:14px}
   @media(max-width:760px){.xs-body{grid-template-columns:1fr}}
   .xsteps{margin:14px 0 10px 20px;display:grid;gap:7px;font-size:14.5px}
+  @keyframes livePulse{0%{box-shadow:0 0 0 4px var(--pink-soft),0 0 0 4px rgba(255,95,162,.5)}70%{box-shadow:0 0 0 4px var(--pink-soft),0 0 0 13px rgba(255,95,162,0)}100%{box-shadow:0 0 0 4px var(--pink-soft),0 0 0 13px rgba(255,95,162,0)}}
+  .logo i{animation:livePulse 2.4s ease-out infinite}
+  @media (prefers-reduced-motion:reduce){.logo i{animation:none}}
 </style>
 </head>
 <body>

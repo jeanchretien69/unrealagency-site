@@ -234,6 +234,9 @@
   .say{position:absolute;left:62%;top:9%;z-index:5;max-width:230px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px 18px 18px 4px;padding:10px 14px;font-size:14px;font-weight:600;line-height:1.35;box-shadow:0 14px 34px -14px rgba(42,20,32,.45)}
   .say[hidden]{display:none}
   .chip.off .dot{background:#9a9a9a}
+  @keyframes livePulse{0%{box-shadow:0 0 0 4px var(--pink-soft),0 0 0 4px rgba(255,95,162,.5)}70%{box-shadow:0 0 0 4px var(--pink-soft),0 0 0 13px rgba(255,95,162,0)}100%{box-shadow:0 0 0 4px var(--pink-soft),0 0 0 13px rgba(255,95,162,0)}}
+  .logo i{animation:livePulse 2.4s ease-out infinite}
+  @media (prefers-reduced-motion:reduce){.logo i{animation:none}}
 </style>
 </head>
 <body>

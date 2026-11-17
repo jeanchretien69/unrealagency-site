@@ -830,7 +830,7 @@
     var p = v.play(); if (p && p.catch) p.catch(function(){});
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
-      var SRC = { kiss:'live/nami_kiss_fast.mp4?v=1', hat:'live/nami_hat.mp4?v=14' }, vids = {}, busy = false, FADE = 420;
+      var SRC = { kissauto:'live/nami_kiss_fast.mp4?v=1', kiss:'live/nami_kiss_btn.mp4?v=1', hat:'live/nami_hat.mp4?v=14' }, vids = {}, busy = false, FADE = 420;
       var btns = [].slice.call(document.querySelectorAll('#moves button[data-m]')); if (!btns.length) return;
       function lock(on){ btns.forEach(function(b){ b.disabled = on; }); }
       /* song for "Construction la semaine": only plays after a click, with a mute button */
@@ -858,10 +858,10 @@
       /* the kiss clip had 1.2s of standing still before she blows, so it is cut to start right at the lean-in; the loop starts 5.9s in: that is the pose the cut clip starts from, so the kiss can begin the moment the page plays.
          The kiss clip is created right away so it is already loaded when the loop starts playing. */
       v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 5.9; } catch(e){} }, { once:true });
-      var kissClip = mk('kiss'), fired = false;
-      function fireKiss(){ if (fired) return; fired = true; if (!busy && !document.hidden) start('kiss'); }
+      var kissClip = mk('kissauto'), fired = false;
+      function fireKiss(){ if (fired) return; fired = true; if (!busy && !document.hidden) start('kissauto'); }
       v.addEventListener('playing', function(){
-        setTimeout(function(){ mk('hat'); }, 9000);
+        setTimeout(function(){ mk('kiss'); mk('hat'); }, 9000);
         if (kissClip.readyState >= 3) fireKiss(); else { kissClip.addEventListener('canplay', fireKiss, { once:true }); setTimeout(fireKiss, 2500); }
       }, { once:true });
     })();

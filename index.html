@@ -855,9 +855,9 @@
         var go = function(){ act.classList.add('on'); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
         var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); }); else go(); }
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
-      /* the loop starts 2.6s in, so at the 3 second mark she is in the pose the kiss starts from */
-      v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 2.6; } catch(e){} }, { once:true });
-      v.addEventListener('playing', function(){ mk('kiss'); setTimeout(function(){ mk('hat'); }, 9000); setTimeout(function(){ if (!busy && !document.hidden) start('kiss'); }, 3000); }, { once:true });
+      /* the loop starts 4.4s in, so at the 1.2 second mark (loop time 5.6s) she is in the pose the kiss starts from */
+      v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 4.4; } catch(e){} }, { once:true });
+      v.addEventListener('playing', function(){ mk('kiss'); setTimeout(function(){ mk('hat'); }, 9000); setTimeout(function(){ if (!busy && !document.hidden) start('kiss'); }, 1200); }, { once:true });
     })();
     var ring = document.getElementById('ring');
     function tick(t){ if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; } requestAnimationFrame(tick); }

@@ -823,11 +823,13 @@
   /* Living Kaya: real AI video clips (idle loop, head turn toward the cursor, button moves) */
   function startLive(){
     canvas.style.display = 'none'; face.hidden = false;
-    var v = document.createElement('video'); v.className = 'nv'; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true;
-    v.setAttribute('playsinline',''); v.setAttribute('muted',''); v.preload = 'auto'; v.poster = 'live/nami_idle.jpg'; v.src = 'live/nami_idle.mp4?v=3';
+    var v = document.createElement('video'); v.className = 'nv'; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = false;
+    v.setAttribute('playsinline',''); v.setAttribute('muted',''); v.preload = 'none'; v.poster = 'live/nami_idle.jpg';
+    /* load order: the kiss clip downloads first (she kisses right away), the breathing loop downloads while the kiss plays */
+    var loopLoaded = false;
+    function loadLoop(play){ if (!loopLoaded){ loopLoaded = true; v.preload = 'auto'; v.src = 'live/nami_idle.mp4?v=3'; v.load(); } if (play){ var pp = v.play(); if (pp && pp.catch) pp.catch(function(){}); } }
     var wrap = document.createElement('div'); wrap.className = 'nvw'; head.appendChild(wrap); wrap.appendChild(v);
     v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ face.hidden = true; }, 400); }, { once:true });
-    var p = v.play(); if (p && p.catch) p.catch(function(){});
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
       var SRC = { kissauto:'live/nami_kiss_fast.mp4?v=1', kiss:'live/nami_kiss_btn.mp4?v=1', hat:'live/nami_hat.mp4?v=14' }, vids = {}, busy = false, FADE = 420;
@@ -852,18 +854,16 @@
           var p = v.play(); if (p && p.then) p.then(function(){ requestAnimationFrame(swap); }).catch(swap); else requestAnimationFrame(swap); }
         function watch(){ if (over) return; if (act.ended || (act.duration && act.currentTime >= act.duration - .10)) return finish(); requestAnimationFrame(watch); }
         act.onended = finish;
-        var go = function(){ act.classList.add('on'); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
+        var go = function(){ loadLoop(false); act.classList.add('on'); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
         var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); }); else go(); }
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
-      /* the kiss clip had 1.2s of standing still before she blows, so it is cut to start right at the lean-in; the loop starts 5.9s in: that is the pose the cut clip starts from, so the kiss can begin the moment the page plays.
-         The kiss clip is created right away so it is already loaded when the loop starts playing. */
-      v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 5.9; } catch(e){} }, { once:true });
+      /* the kiss clip (cut to start right at the lean-in) starts from the same pose as the still photo, so it can play as soon as it has loaded;
+         its last frame is the pose the breathing loop starts from, and the loop downloads while the kiss plays */
       var kissClip = mk('kissauto'), fired = false;
-      function fireKiss(){ if (fired) return; fired = true; if (!busy && !document.hidden) start('kissauto'); }
-      v.addEventListener('playing', function(){
-        setTimeout(function(){ mk('kiss'); mk('hat'); }, 9000);
-        if (kissClip.readyState >= 3) fireKiss(); else { kissClip.addEventListener('canplay', fireKiss, { once:true }); setTimeout(fireKiss, 2500); }
-      }, { once:true });
+      function fireKiss(){ if (fired) return; fired = true; if (!busy && !document.hidden) start('kissauto'); else loadLoop(true); }
+      if (kissClip.readyState >= 3) fireKiss(); else { kissClip.addEventListener('canplay', fireKiss, { once:true }); setTimeout(fireKiss, 2500); }
+      setTimeout(function(){ mk('kiss'); mk('hat'); }, 9000);
+      setTimeout(function(){ if (!loopLoaded) loadLoop(true); }, 4000); /* safety: never leave the page without the breathing loop */
     })();
     var ring = document.getElementById('ring');
     function tick(t){ if (ring){ ring.style.transform = 'translate(-50%,-50%) rotate(' + (t/90%360).toFixed(1) + 'deg)'; } requestAnimationFrame(tick); }

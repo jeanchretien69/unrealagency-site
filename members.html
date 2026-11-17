@@ -1399,7 +1399,7 @@ function xCard(D, a){
   return `<article class="card xcard${goals.length && fin === goals.length ? ' alldone' : ''}">
     <div class="xc-h"><h2>@${esc(a.handle)}</h2><span class="badge">${esc(a.label ? 'profile ' + a.label : a.model)}</span>${goals.length && fin === goals.length ? '<span class="pill yes">all done ✅</span>' : `<span class="muted" style="font-size:13px">${fin}/${goals.length} goals</span>`}</div>
     <div class="xgoals">${goals.map(g => `<div class="xg${g.have >= g.goal ? ' d' : ''}"><div class="xg-t"><span>${g.icon} ${esc(g.label)}</span><b>${g.have}/${g.goal}${g.have >= g.goal ? ' ✅' : ''}</b></div><div class="xbar"><i style="width:${Math.min(100, Math.round(g.have / g.goal * 100))}%"></i></div></div>`).join('')}</div>
-    ${flagged ? `<div class="msg err" style="margin:10px 0 0;padding:8px 12px">⚠ ${flagged} action${flagged > 1 ? 's' : ''} not counted (too many per minute, same tweet twice, too fast or a copy-paste reply)</div>` : ''}
+    ${flagged ? `<div class="msg err" style="margin:10px 0 0;padding:8px 12px">⚠ ${flagged} action${flagged > 1 ? 's' : ''} not counted (too many per minute, same tweet twice, too fast, a copy-paste reply, or unliked / unfollowed after)</div>` : ''}
     <div class="xslots">${[1, 2, 3].map(i => xSlot(D, a, i)).join('')}</div>
   </article>`;
 }
@@ -1459,7 +1459,7 @@ function xSet(D){
     </tbody></table></div>
     <form class="card" id="xAddAcc" style="margin-top:14px"><h2>Add an X account</h2><div class="row"><div><label for="xaH">Username (without @)</label><input id="xaH" required></div><button class="btn">Add</button></div></form>
     <form class="card" id="xTz" style="margin-top:14px"><h2>When does a new day start?</h2><div class="row"><div><label for="xtZ">Time zone</label><input id="xtZ" value="${esc(D.tz)}" placeholder="Asia/Bangkok"></div><button class="btn">Save</button></div><p class="muted" style="font-size:13px;margin-top:8px">Goals reset at midnight in this time zone (examples: Asia/Bangkok, America/Toronto, Indian/Antananarivo, Europe/Rome).</p></form>
-    <div class="card" style="margin-top:14px"><h2>Rules for what counts</h2><ul style="padding-left:18px;font-size:14px"><li>Likes, follows, retweets: once per tweet / person per day, max 10 likes, 6 follows, 5 retweets a minute, and not faster than 1.5 s apart.</li><li>Replies: 8+ characters, never the same text twice in a day, max 3 a minute.</li><li>Posts: max 2 a minute.</li><li>Active time = the tab is open and in front, with real mouse, keyboard or scrolling in each 30-second window.</li></ul></div>`;
+    <div class="card" style="margin-top:14px"><h2>Rules for what counts</h2><ul style="padding-left:18px;font-size:14px"><li>A like or follow that is undone later (unlike / unfollow) does not count. Likes, follows, retweets: once per tweet / person, max 10 likes, 6 follows, 5 retweets a minute, and not faster than 1.5 s apart.</li><li>Replies: 8+ characters, never the same text twice in a day, max 3 a minute.</li><li>Posts: max 2 a minute.</li><li>Active time = the tab is open and in front, with real mouse, keyboard or scrolling in each 30-second window.</li></ul></div>`;
 }
 
 function xRender(D){

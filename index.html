@@ -385,7 +385,7 @@
 
   <section class="uos" id="ai-os">
     <div class="section">
-      <div class="eyebrow">Unreal OS · new</div>
+      <div class="eyebrow">Unreal Autopilot · new</div>
       <h2>You decide. <span>AI does the rest.</span></h2>
       <p class="lead">Like an AI chip for your business. Your to-do list ticks itself, your time is tracked to the minute, your team is checked live, and AI handles the busywork while you only make the calls that matter.</p>
 
@@ -398,8 +398,8 @@
           <li><i>🔔</i><span><b>A coach that calls you out.</b> Morning brief, strict alerts when you drift, a report every night.</span></li>
         </ul>
 
-        <div class="os" aria-label="Live demo of the Unreal OS dashboard">
-          <div class="os-top"><b>UNREAL OS · TODAY</b><span class="live">AI working</span></div>
+        <div class="os" aria-label="Live demo of the Unreal Autopilot dashboard">
+          <div class="os-top"><b>UNREAL AUTOPILOT · TODAY</b><span class="live">AI working</span></div>
           <div class="os-row">
             <div class="uring">
               <svg width="118" height="118" viewBox="0 0 118 118" aria-hidden="true">
@@ -417,20 +417,20 @@
 
       <div class="calc">
         <div>
-          <label for="hrsIn">How many hours a day do you put into your business?</label>
-          <div class="age"><span id="hrsOut">10</span> <small>hours a day</small></div>
-          <input id="hrsIn" type="range" min="2" max="16" step="0.5" value="10" aria-describedby="calcNote">
-          <p class="fine">Emails, DMs, posting, follow-ups, checking on the team…</p>
+          <label for="hrsIn">Keep your 9 to 5. How much time a day will you give your new business?</label>
+          <div class="age"><span id="hrsOut">5 min</span> <small>a day</small></div>
+          <input id="hrsIn" type="range" min="0" max="12" step="1" value="0" aria-describedby="calcNote">
+          <p class="fine">Starts at 5 minutes. No more "I don't have time".</p>
         </div>
         <div>
-          <p class="bigwin">You: <span>30 min</span> a day to decide.<br>AI: the other <span id="aiDo">9h30</span>.</p>
+          <p class="bigwin">You: <span id="youDo">5 min</span> a day.<br>Autopilot: the other <span id="aiDo">23h55</span>.</p>
           <div class="bars" style="margin-top:18px">
-            <div class="bar me"><div class="lbl"><span>Your day now</span><b id="meH">10 h</b></div><div class="trk"><div class="fill" id="meF" style="width:62%"></div></div></div>
-            <div class="bar ai"><div class="lbl"><span>Your day with Unreal OS</span><b>30 min</b></div><div class="trk"><div class="fill" style="width:3%"></div></div></div>
-            <div class="bar ai"><div class="lbl"><span>Your business, run by AI</span><b>24 h / day</b></div><div class="trk"><div class="fill" style="width:100%"></div></div></div>
+            <div class="bar me"><div class="lbl"><span>Your 9 to 5</span><b>8 h</b></div><div class="trk"><div class="fill" style="width:33%"></div></div></div>
+            <div class="bar ai"><div class="lbl"><span>You on your business</span><b id="youB">5 min</b></div><div class="trk"><div class="fill" id="youF" style="width:1%"></div></div></div>
+            <div class="bar ai"><div class="lbl"><span>Autopilot on your business</span><b>24 h / day</b></div><div class="trk"><div class="fill" style="width:100%"></div></div></div>
           </div>
           <div class="dreams" id="dreams" aria-live="polite"></div>
-          <p class="fine" id="calcNote">Illustration: you keep 30 minutes a day for the decisions, AI and your team handle the rest. Results depend on your business.</p>
+          <p class="fine" id="calcNote">Illustration: you make the calls, the AI and your team do the rest around the clock. Results depend on your business.</p>
         </div>
       </div>
 
@@ -442,7 +442,7 @@
       </div>
 
       <div class="cta-row">
-        <a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%20want%20Unreal%20OS%20(my%20AI%20chip)" target="_blank" rel="noopener">Install my AI chip</a>
+        <a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%20want%20Unreal%20Autopilot" target="_blank" rel="noopener">Start my Autopilot</a>
         <span class="note">Real results from one day of setup with our own business.</span>
       </div>
     </div>
@@ -761,16 +761,17 @@
   }
   if(!reduce){var io=new IntersectionObserver(function(e){if(e[0].isIntersecting&&!window._osT){window._osT=setInterval(step,2600);step();}},{threshold:.3});io.observe(box);}
   var a=document.getElementById('hrsIn');
-  function fmt(n){return Math.round(n).toLocaleString('en-US')}
-  function hm(h){var H=Math.floor(h),M=Math.round((h-H)*60);return H+'h'+(M?String(M).padStart(2,'0'):'')}
+  var STEPS=[5,10,15,20,30,45,60,90,120,150,180,240,300];
+  function lab(m){if(m<60)return m+' min';var H=Math.floor(m/60),M=m%60;return H+'h'+(M?String(M).padStart(2,'0'):'')}
   function calc(){
-    var h=+a.value, back=Math.max(0,h-0.5);
-    document.getElementById('hrsOut').textContent=h;
-    document.getElementById('aiDo').textContent=hm(back);
-    document.getElementById('meH').textContent=hm(h).replace(/h$/,' h');
-    document.getElementById('meF').style.width=(h/16*100)+'%';
-    var wk=back*7, yr=back*365;
-    document.getElementById('dreams').innerHTML=['⏰ <b>+'+hm(back)+'</b> free every single day','📅 <b>'+fmt(wk)+' h</b> a week, '+(wk/40).toFixed(1)+' full-time jobs of free time','🌍 <b>'+(yr/16/80).toFixed(1)+'</b> trips around the world a year','🛥️ every weekend on the boat. <b>And Friday.</b>'].map(function(x){return '<span>'+x+'</span>'}).join('');
+    var m=STEPS[+a.value]||5, ai=1440-m;
+    document.getElementById('hrsOut').textContent=lab(m);
+    document.getElementById('youDo').textContent=lab(m);
+    document.getElementById('youB').textContent=lab(m);
+    document.getElementById('youF').style.width=Math.max(1,m/1440*100)+'%';
+    document.getElementById('aiDo').textContent=lab(ai);
+    var wkYou=m*7/60, wkAi=ai*7/60;
+    document.getElementById('dreams').innerHTML=['🧠 You: <b>'+(wkYou<1?Math.round(wkYou*60)+' min':wkYou.toFixed(1)+' h')+'</b> a week, the decisions only','⚡ Autopilot: <b>'+Math.round(wkAi)+' h</b> a week, posting, chatting, follow-ups','🌙 It keeps selling while you <b>sleep</b>','💼 And you keep your <b>9 to 5</b> until you don\'t need it'].map(function(x){return '<span>'+x+'</span>'}).join('');
   }
   a.addEventListener('input',calc); calc();
 })();

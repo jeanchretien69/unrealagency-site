@@ -607,10 +607,10 @@
 <script type="module">
   import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
   createChat({
-    webhookUrl: 'https://jeanchretien.app.n8n.cloud/webhook/5af2ca2e-4889-4466-836c-6c150bd225b1/chat',
+    webhookUrl: 'https://ljhpdqttcxwgufcejfor.supabase.co/functions/v1/site-chat',
     mode: 'window',
     showWelcomeScreen: false,
-    loadPreviousSession: true,
+    loadPreviousSession: false,
     initialMessages: ['hey 👋 questions about building your own AI model? ask me anything about the coaching.'],
     i18n: { en: { title: 'Unreal Agency', subtitle: 'Ask anything about the coaching', footer: '', getStarted: 'New conversation', inputPlaceholder: 'Type your question…' } }
   });

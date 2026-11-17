@@ -90,9 +90,11 @@
   .head .lv{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .35s ease;filter:contrast(1.03) saturate(1.06);pointer-events:none}
   .head .lv.on{opacity:1}
   .moves{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);width:max-content;max-width:100%;z-index:4;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
-  .moves button{font:600 13px/1 inherit;font-family:inherit;color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:10px 14px;cursor:pointer;backdrop-filter:blur(8px);transition:background .2s,transform .2s}
-  .moves button:hover{background:rgba(226,54,127,.35);transform:translateY(-1px)}
-  .moves button:disabled{opacity:.5;cursor:default}
+  .moves button{font-family:var(--display);font-weight:700;font-size:12px;line-height:1;letter-spacing:.01em;color:#fff;background:linear-gradient(135deg,#ff5fa2,#e2367f);border:0;border-radius:999px;padding:12px 17px;cursor:pointer;box-shadow:0 8px 22px rgba(226,54,127,.38),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .2s,box-shadow .2s,opacity .2s}
+  .moves button:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(226,54,127,.5),inset 0 1px 0 rgba(255,255,255,.35)}
+  .moves button:disabled{opacity:.55;cursor:default;transform:none}
+  .moves button.snd{width:40px;height:40px;padding:0;display:grid;place-items:center;font-size:16px;background:rgba(255,255,255,.92);color:#e2367f;box-shadow:0 6px 16px rgba(226,54,127,.25)}
+  .moves button.snd.off{opacity:.75}
   .head .shine{display:none}
   .backword{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;font-size:clamp(120px,19vw,260px);letter-spacing:-.04em;color:transparent;-webkit-text-stroke:2px var(--pink-soft);opacity:.55;z-index:0;pointer-events:none;white-space:nowrap}
   .ring{position:absolute;left:50%;top:42%;width:86%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:2px dashed var(--pink-soft);z-index:0;pointer-events:none}
@@ -264,14 +266,14 @@
         <div class="shine" id="shine"></div>
       
       </div>
-      <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button><button data-m="hat">⚓ Construction la semaine, boat la fin de semaine</button></div>
+      <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button><button data-m="hat">⚓ Construction la semaine, boat la fin de semaine</button><button type="button" class="snd" id="sndBtn" aria-label="Mute sound" title="Mute sound">🔊</button></div>
       <div class="chip a" id="status"><span class="dot"></span><span id="statusText">Nami · online now</span></div>
       <div class="chip b"><b>+$412</b> PPV today</div>
       <div class="chip c">AI chatter replied in <b>8s</b></div>
     </div>
 
     <div class="below">
-      <p class="tagline">We run AI models that post, chat and sell 24/7. Now we coach you to build yours, step by step.</p>
+      <p class="tagline">We run AI models that post, chat and sell 24/7.</p>
       <div class="row">
         <a class="btn" href="#packages">See the packages</a>
         <a class="btn ghost" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">Text us on WhatsApp</a>
@@ -555,6 +557,13 @@
       var SRC = { kiss:'live/nami_kiss.mp4?v=3', hat:'live/nami_hat.mp4?v=14' }, vids = {}, busy = false, FADE = 420;
       var btns = [].slice.call(document.querySelectorAll('#moves button[data-m]')); if (!btns.length) return;
       function lock(on){ btns.forEach(function(b){ b.disabled = on; }); }
+      /* song for "Construction la semaine": only plays after a click, with a mute button */
+      var song = null, sndBtn = document.getElementById('sndBtn'), muted = false;
+      try { muted = localStorage.getItem('unreal-sound') === 'off'; } catch(e){}
+      function sndUi(){ if (!sndBtn) return; sndBtn.textContent = muted ? '🔇' : '🔊'; sndBtn.classList.toggle('off', muted); sndBtn.setAttribute('aria-label', muted ? 'Turn sound on' : 'Mute sound'); sndBtn.title = muted ? 'Turn sound on' : 'Mute sound'; }
+      sndUi();
+      if (sndBtn) sndBtn.addEventListener('click', function(){ muted = !muted; try { localStorage.setItem('unreal-sound', muted ? 'off' : 'on'); } catch(e){} sndUi(); if (song) song.muted = muted; });
+      function playSong(){ if (!song){ song = new Audio('live/construction.mp3?v=1'); song.preload = 'auto'; } song.muted = muted; song.volume = 1; try { song.currentTime = 0; } catch(e){} var p = song.play(); if (p && p.catch) p.catch(function(){}); }
       function mk(m){ if (vids[m] || !SRC[m]) return vids[m]; var a = document.createElement('video'); a.className = 'nv'; a.muted = true; a.playsInline = true; a.setAttribute('playsinline',''); a.setAttribute('muted',''); a.preload = 'auto'; a.src = SRC[m]; wrap.appendChild(a); return (vids[m] = a); }
       function start(m){ if (busy) return; var act = mk(m); if (!act) return; busy = true; lock(true); act.currentTime = 0; var over = false;
         /* hand back only on the clip's very last frame, where her pose matches the breathing loop */
@@ -565,6 +574,7 @@
         function watch(){ if (over) return; if (act.ended || (act.duration && act.currentTime >= act.duration - .10)) return finish(); requestAnimationFrame(watch); }
         act.onended = finish;
         var go = function(){ act.classList.add('on'); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
+        if (m === 'hat') playSong();
         var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); }); else go(); }
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
       /* the loop starts 2.6s in, so at the 3 second mark she is in the pose the kiss starts from */

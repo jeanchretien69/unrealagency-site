@@ -321,6 +321,18 @@
   .logo .l1{font-size:19px;letter-spacing:-.01em}
   .logo .l1 b,.logo .l2 b{color:var(--pink);font-weight:inherit}
   .logo .l2{font-size:8.6px;font-weight:700;letter-spacing:.62em;margin-right:-.62em}
+  /* Ask Unreal: floating helper */
+  .askbtn{position:fixed;right:20px;bottom:20px;z-index:60;border:0;border-radius:999px;padding:13px 18px;font-family:var(--display);font-weight:700;font-size:13px;color:#fff;background:linear-gradient(135deg,#ff5fa2,#e2367f);box-shadow:0 10px 26px rgba(226,54,127,.4);cursor:pointer}
+  .askp{position:fixed;right:20px;bottom:76px;z-index:61;width:min(400px,calc(100vw - 32px));height:min(560px,calc(100vh - 120px));background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden}
+  .askp header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .askp header b{font-family:var(--display);font-size:14px}
+  .askp .msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .askp .m{max-width:88%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+  .askp .m.u{align-self:flex-end;background:var(--pink);color:#fff;border-bottom-right-radius:4px}
+  .askp .m.a{align-self:flex-start;background:var(--blush);color:var(--ink);border-bottom-left-radius:4px}
+  .askp form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+  .askp textarea{flex:1;resize:none;min-height:42px;max-height:120px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--surface);font:inherit;font-size:14px}
+  .askp .hint{font-size:11.5px;color:var(--muted);padding:0 14px 8px}
 </style>
 </head>
 <body>
@@ -387,6 +399,7 @@
         
         <button data-tab="brains" class="adm" hidden>⚡ AI brains</button>
         <button data-tab="train" class="adm" hidden>🧠 Train AI</button>
+        <button data-tab="asklog" class="adm" hidden>💬 Ask log</button>
         <button data-tab="members" class="adm" hidden>👥 Access board<span class="nb" id="nbAcc" hidden></span></button>
         <button data-tab="topups" class="adm" hidden>🪙 Top-ups</button>
         <button data-tab="sales" class="adm" hidden>💰 Sales & fees</button>
@@ -398,6 +411,10 @@
   </section>
 </main>
 
+<button class="askbtn" id="askBtn" hidden>💬 Ask</button>
+<div class="askp" id="askP" hidden><header><b>💬 Ask Unreal</b><span><button class="btn ghost sm" id="askNew">New</button> <button class="btn ghost sm" id="askX">✕</button></span></header>
+  <div class="msgs" id="askMsgs"></div><div class="hint">Questions about your tasks only. Never share passwords or codes here.</div>
+  <form id="askF"><textarea id="askQ" rows="1" placeholder="Ask anything about your tasks…"></textarea><button class="btn" id="askGo">Send</button></form></div>
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const sb = createClient('https://ljhpdqttcxwgufcejfor.supabase.co', 'sb_publishable_Nu7S4SnvuTFRg1ODn4VVrA_hCH5X1wY');
@@ -502,7 +519,7 @@ async function boot(session){
   document.querySelectorAll('[data-perm]').forEach(el => el.hidden = !can(el.dataset.perm));
   const first = document.querySelector('#side button:not([hidden])');
   if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }
-  badgesStart();
+  badgesStart(); askInit();
   const h = location.hash.slice(1);
   show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'plan' : first.dataset.tab));
 }
@@ -546,7 +563,7 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t); badges();
@@ -554,7 +571,7 @@ function show(t){
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ photos:photosView, quotes:quotesView, plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, dropp:droppView })[t]();
+  ({ photos:photosView, quotes:quotesView, plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, dropp:droppView })[t]();
 }
 
 
@@ -1586,6 +1603,43 @@ async function twitterView(){
     const ae = document.activeElement; if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && $('#view').contains(ae)) return;
     xRefresh();
   }, 20000);
+}
+
+// ---------- Ask Unreal (floating helper, sees only what this person can already see) ----------
+let askHist = [];
+function askAdd(cls, t){ const m = $('#askMsgs'); const b = document.createElement('div'); b.className = 'm ' + cls; b.textContent = t; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; }
+function askHello(){ $('#askMsgs').innerHTML = ''; askHist = []; askAdd('a', `Hey ${(me.full_name || '').split(' ')[0] || 'there'} 👋 Ask me how to do a task, or "what's still missing today?"`); }
+function askInit(){
+  const btn = $('#askBtn'); if (!btn || btn.dataset.on) return; btn.dataset.on = '1'; btn.hidden = false;
+  btn.onclick = () => { const p = $('#askP'); p.hidden = !p.hidden; if (!p.hidden){ if (!$('#askMsgs').children.length) askHello(); $('#askQ').focus(); } };
+  $('#askX').onclick = () => $('#askP').hidden = true;
+  $('#askNew').onclick = askHello;
+  $('#askQ').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('#askF').requestSubmit(); } };
+  $('#askF').onsubmit = async e => {
+    e.preventDefault(); const q = $('#askQ').value.trim(); if (!q) return;
+    $('#askQ').value = ''; askAdd('u', q); const w = askAdd('a', '…'); $('#askGo').disabled = true;
+    const { data, error } = await sb.functions.invoke('ask', { body: { q, history: askHist } });
+    $('#askGo').disabled = false;
+    const a = data?.a || data?.error || (error && (await error.context?.json?.().catch(() => null))?.error) || 'Something went wrong, try again.';
+    w.textContent = a; if (data?.a){ askHist.push({ role:'user', content:q }, { role:'assistant', content:a }); askHist = askHist.slice(-8); }
+  };
+}
+
+// ---------- Ask log + what Ask knows (admin) ----------
+async function askAdminView(){
+  const v = $('#view');
+  const [lg, nt, pf] = await Promise.all([ sb.from('ask_log').select('*').order('created_at', { ascending:false }).limit(100), sb.from('ask_notes').select('*').order('sort'), sb.from('profiles').select('id,full_name,email') ]);
+  const who = Object.fromEntries((pf.data || []).map(x => [x.id, x.full_name || x.email]));
+  v.innerHTML = `<div class="card"><h2>What Ask knows</h2><p class="muted" style="font-size:13px;margin-bottom:10px">Ask also sees each person's own to-do, Twitter sessions and the docs they have access to. It never sees passwords, payments, SMS, wallet or other people's info. Leave "Access" empty for everyone, or type an access box (twitter, sms, dropp…) to limit a note.</p>
+    <div id="anList" style="display:grid;gap:12px">${(nt.data || []).map(n => `<div class="card" style="padding:14px" data-id="${n.id}"><div class="row"><div><label>Title</label><input data-k="title" value="${esc(n.title)}"></div><div style="flex:0 0 140px"><label>Access</label><input data-k="perm" value="${esc(n.perm || '')}" placeholder="everyone"></div></div><label>Text</label><textarea data-k="body" rows="5" style="width:100%;font:inherit;font-size:14px">${esc(n.body)}</textarea><div style="margin-top:8px"><button class="btn sm" data-save>Save</button> <button class="btn sm bad" data-del>Delete</button></div></div>`).join('')}</div>
+    <button class="btn sm" id="anAdd" style="margin-top:12px">+ Add a note</button></div>
+    <div class="card tbl" style="margin-top:14px"><h2>Last questions</h2><table><thead><tr><th>When</th><th>Who</th><th>Question</th><th>Answer</th></tr></thead><tbody>${(lg.data || []).map(x => `<tr><td class="num">${new Date(x.created_at).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}</td><td>${esc(who[x.user_id] || '?')}</td><td style="white-space:normal;max-width:260px">${esc(x.q)}</td><td style="white-space:normal;max-width:420px;font-size:13px">${esc(x.a || '')}${x.blocked ? ' <span class="pill no">filtered</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">No questions yet.</td></tr>'}</tbody></table></div>`;
+  v.querySelectorAll('#anList [data-id]').forEach(el => {
+    const get = k => el.querySelector(`[data-k="${k}"]`).value;
+    el.querySelector('[data-save]').onclick = async () => { const { error } = await sb.from('ask_notes').update({ title:get('title').trim(), body:get('body'), perm:get('perm').trim() || null, updated_at:new Date().toISOString() }).eq('id', el.dataset.id); toast(error ? error.message : 'Saved'); };
+    el.querySelector('[data-del]').onclick = async () => { if (!confirm('Delete this note?')) return; const { error } = await sb.from('ask_notes').delete().eq('id', el.dataset.id); toast(error ? error.message : 'Deleted'); askAdminView(); };
+  });
+  $('#anAdd').onclick = async () => { const { error } = await sb.from('ask_notes').insert({ title:'New note', body:'', sort:200 }); if (error) return toast(error.message); askAdminView(); };
 }
 
 async function topupsView(){

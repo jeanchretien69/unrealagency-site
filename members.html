@@ -1753,8 +1753,20 @@ async function timeView(){
       : `<p class="muted">No data for this day.</p>`}
       <details style="margin-top:10px"><summary class="muted" style="cursor:pointer;font-size:13px">Install / token</summary><p style="font-size:13px;margin-top:8px">1. Install <a href="https://activitywatch.net/downloads/" target="_blank" rel="noopener" style="color:var(--pink)">ActivityWatch</a> and open it.<br>2. Mac (Terminal): <code style="word-break:break-all">curl -fsSL https://unrealagency.ai/tools/aw-mac.sh | bash -s ${esc(p.token)}</code><br>Windows (PowerShell): <code style="word-break:break-all">$t='${esc(p.token)}'; irm https://unrealagency.ai/tools/aw-win.ps1 | iex</code></p></details></article>`;
   }).join('');
+  const fd = await sb.rpc('focus_day', { p_day: timeDay });
+  const f = fd.data, focus = f && f.total ? `<article class="card" style="padding:18px;margin-bottom:14px;border:2px solid var(--pink)">
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">⚡ Gael · Focus</h2><span style="font-size:28px;font-weight:800;color:${f.focus_score >= 70 ? 'var(--ok)' : f.focus_score >= 45 ? '#d97706' : 'var(--bad)'}">${f.focus_score ?? '–'}%</span></div>
+      <div class="stats" style="margin-bottom:12px"><span class="stat">💼 <b style="margin:0 4px">${h(f.work)}</b> working</span><span class="stat">🤖 <b style="margin:0 4px">${h(f.claude_handsoff)}</b> hands-off on Claude</span><span class="stat">🚶 <b style="margin:0 4px">${h(f.away)}</b> away</span><span class="stat">🎮 <b style="margin:0 4px">${h(f.break)}</b> breaks</span><span class="stat">🔥 <b style="margin:0 4px">${h(f.streak)}</b> best block</span><span class="stat" style="border-color:var(--pink)">⚡ AI did <b style="margin:0 4px">${f.delegated_n}</b> tasks · ${h(f.delegated_min)} saved</span></div>
+      ${(f.tips || []).map(t => `<div style="background:var(--soft,#fff0f6);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px">💡 ${esc(t)}</div>`).join('')}
+      <div style="display:flex;gap:3px;align-items:flex-end;height:70px;margin:14px 0 4px">${Array.from({ length: 24 }, (_, i) => { const x = (f.hours || []).find(y => y.h === i) || { active: 0, handsoff: 0, away: 0 }; return `<div title="${i}h · ${x.active}m working · ${x.handsoff}m hands-off · ${x.away}m away" style="flex:1;display:flex;flex-direction:column-reverse;height:100%"><i style="display:block;height:${x.active / 60 * 100}%;background:var(--ok)"></i><i style="display:block;height:${x.handsoff / 60 * 100}%;background:#d97706"></i><i style="display:block;height:${x.away / 60 * 100}%;background:var(--line)"></i></div>`; }).join('')}</div>
+      <div class="muted" style="display:flex;justify-content:space-between;font-size:11px"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span></div>
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer;font-size:13px">Apps, sites and most-clicked buttons</summary>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:8px;font-size:13.5px"><div>${(f.apps || []).map(a => `<div>${esc(a.app)} · <b>${h(a.min)}</b></div>`).join('')}</div>
+        <div>${(f.labels || []).map(l => `<div>“${esc(l.label)}” · <b>${l.n}×</b></div>`).join('')}</div>
+        <div class="muted">${f.clicks} clicks · ${f.keys} keys · ${f.switches} tab switches</div></div></details>
+    </article>` : '';
   v.innerHTML = `<div class="smstop" style="align-items:center"><span></span><div class="stats"><button class="btn sm ghost" id="tPrev">◀</button><b>${esc(new Date(timeDay + 'T12:00:00Z').toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', timeZone:'UTC' }))}</b><button class="btn sm ghost" id="tNext">▶</button></div></div>
-    <div class="xgrid">${people}</div>`;
+    ${focus}<div class="xgrid">${people}</div>`;
   $('#tPrev').onclick = () => shift(-1); $('#tNext').onclick = () => shift(1);
 }
 

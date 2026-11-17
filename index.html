@@ -260,13 +260,14 @@
   .logo .l2{font-size:8.6px;font-weight:700;letter-spacing:.62em;margin-right:-.62em}
 
   /* ---------- AI chip section ---------- */
-  .chip{position:relative;background:#120a0f;color:#fbeef4;overflow:hidden}
-  .chip::before{content:"";position:absolute;inset:-30% -10% auto auto;width:720px;height:720px;background:radial-gradient(circle,rgba(255,95,162,.28),transparent 62%);pointer-events:none}
-  .chip .section{position:relative}
-  .chip .eyebrow{color:#ff8fbf}
-  .chip h2{color:#fff}
-  .chip h2 span{color:var(--pink)}
-  .chip .lead{color:#c9a6b7}
+  .uos{position:relative;background:#120a0f;color:#fbeef4;overflow:hidden}
+  .uos::before{content:"";position:absolute;inset:-30% -10% auto auto;width:720px;height:720px;background:radial-gradient(circle,rgba(255,95,162,.28),transparent 62%);pointer-events:none}
+  .uos .section{position:relative}
+  .uos .eyebrow{color:#ff8fbf}
+  .uos h2{color:#fff}
+  .uos h2 span{color:var(--pink)}
+  .uos .lead{color:#c9a6b7}
+  .chip-grid>*,.calc>*{min-width:0}
   .chip-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:40px;align-items:center;margin-top:28px}
   .chip-points{display:flex;flex-direction:column;gap:14px;list-style:none;padding:0;margin:0}
   .chip-points li{display:flex;gap:12px;align-items:flex-start;color:#e8cfdb}
@@ -279,10 +280,10 @@
   .live::before{content:"";width:8px;height:8px;border-radius:50%;background:#5fe39a;box-shadow:0 0 0 0 rgba(95,227,154,.6);animation:ping 1.6s infinite}
   @keyframes ping{70%{box-shadow:0 0 0 8px rgba(95,227,154,0)}100%{box-shadow:0 0 0 0 rgba(95,227,154,0)}}
   .os-row{display:grid;grid-template-columns:118px 1fr;gap:14px}
-  .ring{position:relative;width:118px;height:118px}
-  .ring svg{transform:rotate(-90deg)}
-  .ring .val{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:11px;color:#c9a6b7}
-  .ring .val b{display:block;font-family:var(--display);font-size:20px;color:#fff}
+  .uring{position:relative;width:118px;height:118px}
+  .uring svg{transform:rotate(-90deg)}
+  .uring .val{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:11px;color:#c9a6b7}
+  .uring .val b{display:block;font-family:var(--display);font-size:20px;color:#fff}
   .todo{display:flex;flex-direction:column;gap:7px}
   .todo div{display:flex;align-items:center;gap:10px;background:#241520;border:1px solid #352030;border-radius:12px;padding:8px 10px;font-size:13px;transition:opacity .5s,transform .5s}
   .todo .bx{flex:none;width:18px;height:18px;border-radius:6px;border:2px solid #6b4a5b;display:grid;place-items:center;font-size:11px;color:#fff;transition:all .3s}
@@ -314,9 +315,9 @@
   .proof div{background:#1a0f15;border:1px solid #341f2b;border-radius:18px;padding:16px}
   .proof b{display:block;font-family:var(--display);font-size:24px;color:var(--pink)}
   .proof span{font-size:13px;color:#c9a6b7}
-  .chip .cta-row{margin-top:30px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-  .chip .cta-row .note{color:#8f6e7f;font-size:13px}
-  @media (max-width:860px){.chip-grid,.calc{grid-template-columns:1fr}.proof{grid-template-columns:1fr 1fr}.os-row{grid-template-columns:1fr}.ring{margin:0 auto}}
+  .uos .cta-row{margin-top:30px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .uos .cta-row .note{color:#8f6e7f;font-size:13px}
+  @media (max-width:860px){.chip-grid,.calc{grid-template-columns:1fr}.proof{grid-template-columns:1fr 1fr}.os-row{grid-template-columns:1fr}.uring{margin:0 auto}}
   @media (prefers-reduced-motion:reduce){.live::before{animation:none}}
 </style>
 </head>
@@ -382,7 +383,7 @@
   </section>
 
 
-  <section class="chip" id="ai-os">
+  <section class="uos" id="ai-os">
     <div class="section">
       <div class="eyebrow">Unreal OS · new</div>
       <h2>You decide. <span>AI does the rest.</span></h2>
@@ -400,7 +401,7 @@
         <div class="os" aria-label="Live demo of the Unreal OS dashboard">
           <div class="os-top"><b>UNREAL OS · TODAY</b><span class="live">AI working</span></div>
           <div class="os-row">
-            <div class="ring">
+            <div class="uring">
               <svg width="118" height="118" viewBox="0 0 118 118" aria-hidden="true">
                 <circle cx="59" cy="59" r="50" fill="none" stroke="#2b1a24" stroke-width="10"/>
                 <circle id="ringFill" cx="59" cy="59" r="50" fill="none" stroke="url(#rg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="314" stroke-dashoffset="314" style="transition:stroke-dashoffset .8s ease"/>

@@ -267,7 +267,7 @@
         <div class="shine" id="shine"></div>
       
       </div>
-      <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button><button data-m="hat">⚓ Construction la semaine, boat la fin de semaine</button><button type="button" class="snd" id="sndBtn" aria-label="Mute sound" title="Mute sound">🔊</button></div>
+      <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button><button data-m="hat">⚓ Construction la semaine, boat la fin de semaine</button></div>
       <div class="chip a" id="status"><span class="dot"></span><span id="statusText">Nami · online now</span></div>
       <div class="chip b"><b>+$412</b> PPV today</div>
       <div class="chip c">AI chatter replied in <b>8s</b></div>
@@ -575,7 +575,6 @@
         function watch(){ if (over) return; if (act.ended || (act.duration && act.currentTime >= act.duration - .10)) return finish(); requestAnimationFrame(watch); }
         act.onended = finish;
         var go = function(){ act.classList.add('on'); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
-        if (m === 'hat') playSong();
         var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); }); else go(); }
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
       /* the loop starts 2.6s in, so at the 3 second mark she is in the pose the kiss starts from */

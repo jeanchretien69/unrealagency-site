@@ -561,7 +561,7 @@
       function sndUi(){ if (!sndBtn) return; sndBtn.textContent = muted ? '🔇' : '🔊'; sndBtn.classList.toggle('off', muted); sndBtn.setAttribute('aria-label', muted ? 'Turn sound on' : 'Mute sound'); sndBtn.title = muted ? 'Turn sound on' : 'Mute sound'; }
       sndUi();
       if (sndBtn) sndBtn.addEventListener('click', function(){ muted = !muted; try { localStorage.setItem('unreal-sound', muted ? 'off' : 'on'); } catch(e){} sndUi(); if (song) song.muted = muted; });
-      function playSong(){ if (!song){ song = new Audio('live/construction.mp3?v=1'); song.preload = 'auto'; } song.muted = muted; song.volume = 1; try { song.currentTime = 0; } catch(e){} var p = song.play(); if (p && p.catch) p.catch(function(){}); }
+      function playSong(){ if (!song){ song = new Audio('live/construction.mp3?v=2'); song.preload = 'auto'; } song.muted = muted; song.volume = 1; try { song.currentTime = 0; } catch(e){} var p = song.play(); if (p && p.catch) p.catch(function(){}); }
       function mk(m){ if (vids[m] || !SRC[m]) return vids[m]; var a = document.createElement('video'); a.className = 'nv'; a.muted = true; a.playsInline = true; a.setAttribute('playsinline',''); a.setAttribute('muted',''); a.preload = 'auto'; a.src = SRC[m]; wrap.appendChild(a); return (vids[m] = a); }
       function start(m){ if (busy) return; var act = mk(m); if (!act) return; busy = true; lock(true); act.currentTime = 0; var over = false;
         /* hand back only on the clip's very last frame, where her pose matches the breathing loop */

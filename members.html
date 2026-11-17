@@ -527,6 +527,7 @@ const PERMS = [
   { k:'docs', l:'📚 Docs', sub:[] },
   { k:'bot', l:'🤖 AI chatbot', sub:[['bot.sms','SMS'],['bot.of','OnlyFans'],['bot.telegram','Telegram'],['bot.billing','Billing']] },
   { k:'wallet', l:'💳 Wallet', sub:[['wallet.topup','Top up'],['wallet.history','History']] },
+  { k:'ask', l:'💬 Ask', sub:[] },
 ];
 const can = p => me && (me.role === 'admin' || (me.perms || []).includes(p));
 
@@ -546,7 +547,7 @@ async function boot(session){
   document.querySelectorAll('[data-perm]').forEach(el => el.hidden = !can(el.dataset.perm));
   const first = document.querySelector('#side button:not([hidden])');
   if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }
-  badgesStart(); askInit();
+  badgesStart(); if (can('ask')) askInit();
   const h = location.hash.slice(1);
   show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'todo' : first.dataset.tab));
 }

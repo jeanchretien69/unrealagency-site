@@ -294,6 +294,20 @@
   .xh{height:34px;border-radius:4px;border:1px solid var(--line);display:flex;align-items:flex-end}
   .xh i{display:block;width:100%;background:var(--pink);border-radius:3px}
   .xhlab em{font-style:normal;font-size:10px;color:var(--muted)}
+  .xrules{margin-bottom:14px;padding:16px 20px}
+  .xrules summary{cursor:pointer}
+  .xrules ul{margin:10px 0 0 18px;display:grid;gap:6px;font-size:14px}
+  .xstack{display:grid;gap:16px}
+  .xsess{border:1px solid var(--line);border-radius:14px;margin-top:10px;overflow:hidden}
+  .xsess>summary{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 14px;cursor:pointer;list-style:none;background:var(--blush)}
+  .xsess>summary::-webkit-details-marker{display:none}
+  .xsess.now{border-color:var(--pink);box-shadow:0 0 0 2px var(--pink-soft)}
+  .xsess.done{opacity:.75}
+  .xs-n{width:26px;height:26px;border-radius:50%;background:var(--pink);color:#fff;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+  .xs-tt{flex:1;font-weight:700;min-width:180px}
+  .xs-body{display:grid;grid-template-columns:1fr 240px;gap:16px;padding:14px}
+  @media(max-width:760px){.xs-body{grid-template-columns:1fr}}
+  .xsteps{margin:14px 0 10px 20px;display:grid;gap:7px;font-size:14.5px}
 </style>
 </head>
 <body>
@@ -1343,14 +1357,15 @@ async function xLoad(){
   const today = (await sb.rpc('x_today')).data;
   if (!admin) { xDay = today; xMode = 'todo'; }
   if (!xDay) xDay = today;
-  const [acc, st, plan, hr, cfg] = await Promise.all([
+  const [acc, st, plan, hr, cfg, ses] = await Promise.all([
     sb.from('x_accounts').select('*').order('sort').order('handle'),
     sb.rpc('x_day_stats', { p_day: xDay }),
     sb.from('x_plan').select('*').eq('day', xDay),
     admin ? sb.rpc('x_hourly', { p_day: xDay }) : Promise.resolve({ data: [] }),
-    admin ? sb.from('x_config').select('*') : Promise.resolve({ data: [] })
+    sb.from('x_config').select('*'),
+    sb.rpc('x_session_status', { p_from: xShift(xDay, -6), p_to: xDay })
   ]);
-  const err = acc.error || st.error || plan.error || hr.error; if (err) throw err;
+  const err = acc.error || st.error || plan.error || hr.error || ses.error; if (err) throw err;
   const planRows = plan.data || [];
   const qIds = [...new Set(planRows.map(p => p.quote_id).filter(Boolean))], pIds = [...new Set(planRows.map(p => p.photo_id).filter(Boolean))];
   const [q, ph] = await Promise.all([
@@ -1370,7 +1385,8 @@ async function xLoad(){
   const urls = Object.keys(photos).length ? await photoUrls(Object.values(photos).map(x => x.thumb || x.path)) : (() => '');
   return { admin, today, accounts: acc.data || [], stats: Object.fromEntries((st.data || []).map(r => [r.account, r])), plan: planRows,
     quotes: Object.fromEntries((q.data || []).map(x => [x.id, x])), photos, urls, hourly: hr.data || [], logs, pool,
-    tz: ((cfg.data || []).find(r => r.key === 'tz') || {}).value || '' };
+    tz: ((cfg.data || []).find(r => r.key === 'tz') || {}).value || '',
+    rules: ((cfg.data || []).find(r => r.key === 'rules') || {}).value || '', sess: ses.data || [] };
 }
 
 function xSlot(D, a, i){
@@ -1404,11 +1420,55 @@ function xCard(D, a){
   </article>`;
 }
 
+
+const xIn = (d, tz) => new Date(d).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz }).toLowerCase().replace(' ', '');
+const xBold = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+const xSDone = r => r.c_posts >= r.posts && r.c_replies >= r.replies && r.c_likes >= r.likes && r.c_follows >= r.follows;
+const xSState = r => { const n = Date.now(), a = +new Date(r.st), b = +new Date(r.en); return xSDone(r) ? 'done' : n < a ? 'soon' : n < b ? 'now' : 'missed'; };
+const X_SLBL = { done: ['yes', 'done ✅'], now: ['pending', 'do it now'], soon: ['', 'later'], missed: ['no', 'missed'] };
+
+function xRules(D){
+  if (!D.rules) return '';
+  return `<details class="card xrules" open><summary><b>📖 Rules: read before every session</b></summary><ul>${D.rules.split('\n').filter(Boolean).map(l => `<li>${xBold(l)}</li>`).join('')}</ul></details>`;
+}
+
+function xSessCard(D, a){
+  const rows = D.sess.filter(r => r.account === a.handle && r.day === xDay).sort((x, y) => x.slot - y.slot);
+  const s = D.stats[a.handle] || {}, flagged = xNum(s, 'flagged');
+  const states = rows.map(xSState), done = states.filter(x => x === 'done').length;
+  const openIdx = states.indexOf('now') >= 0 ? states.indexOf('now') : states.indexOf('soon');
+  const goal = (icon, label, have, need) => `<div class="xg${have >= need ? ' d' : ''}"><div class="xg-t"><span>${icon} ${label}</span><b>${have}/${need}${have >= need ? ' ✅' : ''}</b></div><div class="xbar"><i style="width:${need ? Math.min(100, Math.round(have / need * 100)) : 100}%"></i></div></div>`;
+  return `<article class="card xcard${rows.length && done === rows.length ? ' alldone' : ''}">
+    <div class="xc-h"><h2>@${esc(a.handle)}</h2><span class="badge">${esc(a.label ? 'AdsPower profile ' + a.label : a.model)}</span><span class="pill ${done === rows.length ? 'yes' : ''}">${done}/${rows.length} sessions done</span><span class="muted" style="font-size:13px">⏱ ${Math.round(xNum(s, 'active_min'))} active min today</span></div>
+    ${flagged ? `<div class="msg err" style="margin:0 0 10px;padding:8px 12px">⚠ ${flagged} action${flagged > 1 ? 's' : ''} today not counted: too fast, same tweet twice, copy-paste reply, or undone after. Slow down.</div>` : ''}
+    ${rows.map((r, i) => { const stt = states[i], L = X_SLBL[stt]; return `<details class="xsess ${stt}"${i === openIdx ? ' open' : ''}>
+      <summary><span class="xs-n">${r.slot}</span><span class="xs-time"><b>${xIn(r.st, 'Asia/Manila')} PH</b> <small class="muted">· ${xIn(r.st, 'Europe/Rome')} Italy</small></span><span class="xs-tt">${esc(r.title || 'Session ' + r.slot)}</span><span class="pill ${L[0]}">${L[1]}</span></summary>
+      <div class="xs-body"><div>
+        <div class="xgoals">${goal('✍', 'Post', Number(r.c_posts), r.posts)}${goal('💬', 'Replies', Number(r.c_replies), r.replies)}${goal('❤', 'Likes', Number(r.c_likes), r.likes)}${goal('➕', 'Follows', Number(r.c_follows), r.follows)}</div>
+        <ol class="xsteps">${String(r.guide || '').split('\n').filter(Boolean).map(l => `<li>${xBold(l)}</li>`).join('')}</ol>
+        <p class="muted" style="font-size:12.5px">These boxes fill in by themselves while you work. Work done from 15 min before ${xIn(r.st, 'Asia/Manila')} until the next session counts for this session.</p>
+      </div>${xSlot(D, a, r.slot)}</div></details>`; }).join('')}
+  </article>`;
+}
+
+function xHistory(D){
+  const days = [...new Set(D.sess.map(r => r.day))].sort().reverse();
+  const accs = [...new Set(D.sess.map(r => r.account))];
+  if (!days.length) return '';
+  return `<div class="card tbl" style="margin-top:16px"><h2>🗓 Last 7 days</h2><table><thead><tr><th>Day</th>${accs.map(h => `<th>@${esc(h)}</th>`).join('')}</tr></thead><tbody>
+    ${days.map(d => `<tr><td class="num">${esc(xLabel(d))}</td>${accs.map(h => `<td>${D.sess.filter(r => r.day === d && r.account === h).sort((x, y) => x.slot - y.slot).map(r => { const st = xSState(r); return `<span class="pill ${X_SLBL[st][0]}" title="${esc(r.title || '')}: post ${r.c_posts}/${r.posts} · replies ${r.c_replies}/${r.replies} · likes ${r.c_likes}/${r.likes} · follows ${r.c_follows}/${r.follows}">${r.slot} ${st === 'done' ? '✅' : st === 'missed' ? '❌' : st === 'now' ? '⏳' : '·'}</span>`; }).join(' ')}</td>`).join('')}</tr>`).join('')}
+    </tbody></table><p class="muted" style="font-size:12.5px;margin-top:8px">Hover a session to see the numbers. Every action is also saved in the Action log.</p></div>`;
+}
+
 function xTodo(D){
   const act = D.accounts.filter(a => a.active);
-  return `<p class="muted" style="margin-bottom:12px;font-size:13.5px">Do your work on each account in AdsPower — the boxes fill in by themselves while you work. A like or reply only counts on a different tweet each time, up to 10 likes a minute, replies of 8+ characters that are never copy-pasted.</p>
+  const withS = new Set(D.sess.map(r => r.account));
+  return `${xRules(D)}
     ${D.admin ? `<div style="margin-bottom:14px"><button class="btn sm" id="xFill">✨ Fill the 3 pictures for every account</button> <span class="muted" style="font-size:13px">uses the next unused quotes + Kaya photos, never the same on two accounts</span></div>` : ''}
-    <div class="xgrid">${act.map(a => xCard(D, a)).join('') || '<div class="card empty">No accounts yet.</div>'}</div>`;
+    <div class="xstack">${act.filter(a => withS.has(a.handle)).map(a => xSessCard(D, a)).join('')}</div>
+    ${act.some(a => !withS.has(a.handle)) ? `<h2 style="margin:18px 0 10px">Other accounts (no sessions yet)</h2><div class="xgrid">${act.filter(a => !withS.has(a.handle)).map(a => xCard(D, a)).join('')}</div>` : ''}
+    ${act.length ? '' : '<div class="card empty">No accounts yet.</div>'}
+    ${xHistory(D)}`;
 }
 
 function xTrack(D){

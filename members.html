@@ -1643,18 +1643,50 @@ function xSet(D){
     <div class="card" style="margin-top:14px"><h2>Rules for what counts</h2><ul style="padding-left:18px;font-size:14px"><li>A like or follow that is undone later (unlike / unfollow) does not count. Likes, follows, retweets: once per tweet / person, max 10 likes, 6 follows, 5 retweets a minute, and not faster than 1.5 s apart.</li><li>Replies: 8+ characters, never the same text twice in a day, max 3 a minute.</li><li>Posts: max 2 a minute.</li><li>Active time = the tab is open and in front, with real mouse, keyboard or scrolling in each 30-second window.</li></ul></div>`;
 }
 
+async function xScore(){
+  const el = $('#xScore'); if (!el) return;
+  const [cur, hist, lv] = await Promise.all([
+    sb.rpc('va_score_week', { p_week: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' }) }),
+    sb.from('va_weeks').select('*').eq('person', 'Gian').order('week', { ascending: false }).limit(12),
+    sb.from('va_levels').select('*').order('level')
+  ]);
+  if (cur.error) return el.innerHTML = `<div class="msg err">${esc(cur.error.message)}</div>`;
+  const c = cur.data, d = c.detail || {}, L = lv.data || [], lvName = n => (L.find(x => x.level === n) || {}).title || '';
+  const bar = (v, m, col) => `<div class="xbar"><i style="width:${Math.min(100, Math.round(v / m * 100))}%;background:${col}"></i></div>`;
+  const line = (t, v, m, note) => `<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${t} <span class="muted">${note}</span></span><b>${v}/${m}</b></div>${bar(v, m, v / m >= .8 ? 'var(--ok)' : v / m >= .5 ? '#d97706' : 'var(--bad)')}</div>`;
+  el.className = '';
+  el.innerHTML = `<div class="xgrid">
+    <article class="card" style="padding:18px;border:2px solid var(--pink)">
+      <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">🏆 Gian · this week</h2><span style="font-size:30px;font-weight:800">${c.total}<small class="muted" style="font-size:14px">/100</small></span></div>
+      <div class="stats" style="margin:10px 0"><span class="stat">Level <b style="margin:0 4px">${c.level_before}</b> ${esc(lvName(c.level_before))}</span><span class="stat">→ if week ended now: <b style="margin:0 4px">Lv ${c.level_after}</b></span><span class="stat">💵 <b style="margin:0 4px">$${c.pay}</b>/mo ($${c.base_pay} base + $${c.bonus} bonus)</span></div>
+      <h3 style="margin:14px 0 4px">Work ${c.work}/50</h3>
+      ${line('Actions', d.s_actions, 25, `${d.actions}/${d.actions_target} posts, replies, likes, follows`)}
+      ${line('Active time', d.s_minutes, 10, `${d.minutes}/${d.minutes_target} min`)}
+      ${line('Clean work', d.s_clean, 15, `${d.bursts} too-fast · ${d.undos} undo`)}
+      <h3 style="margin:14px 0 4px">Results ${c.results}/50</h3>
+      ${line('Followers', d.s_follow, 25, `+${d.followers_gained} / goal +${d.followers_goal}`)}
+      ${line('Reach', d.s_reach, 25, `${d.reach_now} views vs ${d.reach_last} last week`)}
+      ${d.results_tracked ? '' : '<p class="msg" style="font-size:13px">Results start counting once the daily follower/reach capture has run (every night 23:20).</p>'}
+    </article>
+    <article class="card" style="padding:18px"><h2 style="margin-top:0">Rules</h2>
+      <p style="font-size:14px;line-height:1.6">⬆️ <b>Level up</b>: 80+ total <b>and</b> 35+ results. Work alone can't buy a raise.<br>🔒 <b>Raise for life</b>: +$15 to his base once he holds a level <b>4 weeks</b> in a row.<br>⬇️ <b>Level down</b>: under 60 two weeks in a row, and no bonus.<br>Base today $350.</p>
+      <div class="tbl"><table><thead><tr><th>Lv</th><th>Name</th><th>Raise</th><th>Bonus /mo</th></tr></thead><tbody>${L.map(x => `<tr><td>${x.level}</td><td>${esc(x.title)}</td><td>+$${x.raise_usd}</td><td>$${x.bonus_usd}</td></tr>`).join('')}</tbody></table></div>
+      <h3>History</h3>${(hist.data || []).length ? `<div class="tbl"><table><thead><tr><th>Week</th><th>Score</th><th>Work</th><th>Results</th><th>Level</th><th>Pay</th></tr></thead><tbody>${hist.data.map(w => `<tr><td>${esc(w.week)}</td><td><b>${w.total}</b></td><td>${w.work_score}</td><td>${w.results_score}</td><td>${w.level_before}→${w.level_after}</td><td>$${w.pay}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">First week gets locked Monday.</p>'}
+    </article></div>`;
+}
 function xRender(D){
   const v = $('#view'), admin = D.admin;
-  const modes = [['todo', '✅ To-do'], ['track', '📊 Tracking'], ['log', '🧾 Action log'], ['set', '⚙ Goals']];
+  const modes = [['todo', '✅ To-do'], ['track', '📊 Tracking'], ['log', '🧾 Action log'], ['score', '🏆 Scorecard'], ['set', '⚙ Goals']];
   v.innerHTML = `<div class="smstop" style="align-items:center">${admin ? `<div class="cfilt" id="xModes" style="padding:0;border:0">${modes.map(m => `<button data-m="${m[0]}" class="${xMode === m[0] ? 'on' : ''}">${m[1]}</button>`).join('')}</div>` : '<span></span>'}
       <div class="stats">${admin ? `<button class="btn sm ghost" id="xPrev">◀</button><b>${esc(xLabel(xDay))}</b><button class="btn sm ghost" id="xNext"${xDay >= D.today ? ' disabled' : ''}>▶</button>${xDay !== D.today ? '<button class="btn sm" id="xToday">Today</button>' : ''}` : `<b>${esc(xLabel(D.today))}</b>`}<span class="muted" style="font-size:12px">● live · ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</span></div></div>
-    <div id="xBody">${xMode === 'track' && admin ? xTrack(D) : xMode === 'log' && admin ? xLog(D) : xMode === 'set' && admin ? xSet(D) : xTodo(D)}</div>`;
+    <div id="xBody">${xMode === 'track' && admin ? xTrack(D) : xMode === 'log' && admin ? xLog(D) : xMode === 'set' && admin ? xSet(D) : xMode === 'score' && admin ? '<div id="xScore" class="muted">Loading…</div>' : xTodo(D)}</div>`;
   const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));
   v.querySelectorAll('[data-cp]').forEach(b => b.onclick = () => copy(b.dataset.cp));
   v.querySelectorAll('[data-open]').forEach(i => i.onclick = () => openPhoto(i.dataset.open));
   v.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => downloadPhoto(b.dataset.dl));
   v.querySelectorAll('[data-posted]').forEach(b => b.onclick = async () => { const { error } = await sb.rpc('x_mark_posted', { p_id: b.dataset.posted, p_posted: b.dataset.v === '1' }); if (error) return toast(error.message); xRefresh(); });
   if (!admin) return;
+  if (xMode === 'score') xScore();
   const go = m => { xMode = m; xRender(D); };
   v.querySelectorAll('#xModes [data-m]').forEach(b => b.onclick = () => go(b.dataset.m));
   const day = d => { xDay = d; xRefresh(); };

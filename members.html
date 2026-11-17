@@ -399,6 +399,7 @@
         
         <button data-tab="brains" class="adm" hidden>⚡ AI brains</button>
         <button data-tab="train" class="adm" hidden>🧠 Train AI</button>
+        <button data-tab="time" class="adm" hidden>⏱ Time</button>
         <button data-tab="asklog" class="adm" hidden>💬 Ask log</button>
         <button data-tab="members" class="adm" hidden>👥 Access board<span class="nb" id="nbAcc" hidden></span></button>
         <button data-tab="topups" class="adm" hidden>🪙 Top-ups</button>
@@ -563,7 +564,7 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Who worked how long today: work, music, breaks. From ActivityWatch, synced every 10 minutes.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t); badges();
@@ -571,7 +572,7 @@ function show(t){
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ photos:photosView, quotes:quotesView, plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, dropp:droppView })[t]();
+  ({ photos:photosView, quotes:quotesView, plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
@@ -1640,6 +1641,31 @@ async function askAdminView(){
     el.querySelector('[data-del]').onclick = async () => { if (!confirm('Delete this note?')) return; const { error } = await sb.from('ask_notes').delete().eq('id', el.dataset.id); toast(error ? error.message : 'Deleted'); askAdminView(); };
   });
   $('#anAdd').onclick = async () => { const { error } = await sb.from('ask_notes').insert({ title:'New note', body:'', sort:200 }); if (error) return toast(error.message); askAdminView(); };
+}
+
+// ---------- Time (ActivityWatch) ----------
+let timeDay = null;
+async function timeView(){
+  const v = $('#view');
+  if (!timeDay) timeDay = new Date().toLocaleDateString('en-CA', { timeZone:'Asia/Bangkok' });
+  const [d, ppl] = await Promise.all([ sb.rpc('aw_day', { p_day: timeDay }), sb.from('aw_people').select('name,token,tz').order('id') ]);
+  if (d.error) return v.innerHTML = `<div class="msg err">${esc(d.error.message)}</div>`;
+  const rows = d.data || [], h = m => { m = Math.round(Number(m) || 0); return m >= 60 ? Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') : m + 'm'; };
+  const col = { work:'var(--ok)', music:'#8b5cf6', break:'var(--bad)', other:'var(--muted)' };
+  const shift = n => { const t = new Date(timeDay + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); timeDay = t.toISOString().slice(0, 10); timeView(); };
+  const people = (ppl.data || []).map(p => {
+    const r = rows.filter(x => x.person === p.name), sum = k => r.filter(x => x.kind === k).reduce((t, x) => t + Number(x.minutes), 0);
+    const work = sum('work'), music = sum('music'), brk = sum('break'), other = sum('other'), total = work + music + brk + other, max = Math.max(1, ...r.map(x => Number(x.minutes)));
+    return `<article class="card" style="padding:18px"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">${esc(p.name)}</h2><span class="muted" style="font-size:13px">${esc(p.tz)}</span></div>
+      ${r.length ? `<div class="stats" style="margin-bottom:12px"><span class="stat">💼 <b style="margin:0 4px">${h(work)}</b> work</span><span class="stat">🎵 <b style="margin:0 4px">${h(music)}</b> music</span><span class="stat" style="${brk > 60 ? 'border-color:var(--bad);color:var(--bad)' : ''}">🎮 <b style="margin:0 4px">${h(brk)}</b> break</span><span class="stat">· <b style="margin:0 4px">${h(other)}</b> other</span></div>
+      ${r.map(x => `<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${esc(x.category)}</span><b>${h(x.minutes)}</b></div><div class="xbar"><i style="width:${Math.round(Number(x.minutes) / max * 100)}%;background:${col[x.kind] || 'var(--pink)'}"></i></div></div>`).join('')}
+      <p class="muted" style="font-size:12px;margin-top:10px">Work counts only while the mouse/keyboard is active. Breaks and music count the whole time they are on screen.</p>`
+      : `<p class="muted">No data for this day.</p>`}
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer;font-size:13px">Install / token</summary><p style="font-size:13px;margin-top:8px">1. Install <a href="https://activitywatch.net/downloads/" target="_blank" rel="noopener" style="color:var(--pink)">ActivityWatch</a> and open it.<br>2. Mac (Terminal): <code style="word-break:break-all">curl -fsSL https://unrealagency.ai/tools/aw-mac.sh | bash -s ${esc(p.token)}</code><br>Windows (PowerShell): <code style="word-break:break-all">$t='${esc(p.token)}'; irm https://unrealagency.ai/tools/aw-win.ps1 | iex</code></p></details></article>`;
+  }).join('');
+  v.innerHTML = `<div class="smstop" style="align-items:center"><span></span><div class="stats"><button class="btn sm ghost" id="tPrev">◀</button><b>${esc(new Date(timeDay + 'T12:00:00Z').toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', timeZone:'UTC' }))}</b><button class="btn sm ghost" id="tNext">▶</button></div></div>
+    <div class="xgrid">${people}</div>`;
+  $('#tPrev').onclick = () => shift(-1); $('#tNext').onclick = () => shift(1);
 }
 
 async function topupsView(){

@@ -362,6 +362,41 @@
     </div>
   </section>
 
+  <section class="uos" id="autopilot-calc">
+    <div class="section" style="padding-top:48px;padding-bottom:48px">
+      <div class="eyebrow">Unreal Autopilot</div>
+      <div class="calc" style="margin-top:14px">
+        <div>
+          <label for="hrsIn">How much time a day do you want to invest in AI?</label>
+          <div class="age"><span id="hrsOut">5 min</span> <small>a day</small></div>
+          <input id="hrsIn" type="range" min="0" max="12" step="1" value="0">
+          <p class="fine">Running an AI model by hand takes about 8 h a day: posting, warm-ups, chatting, follow-ups.</p>
+        </div>
+        <div>
+          <p class="bigwin">By hand: <span>8 h</span> a day.<br>With Autopilot: <span id="youDo">5 min</span>.</p>
+          <div class="bars" style="margin-top:18px">
+            <div class="bar me"><div class="lbl"><span>Doing it yourself</span><b>8 h / day</b></div><div class="trk"><div class="fill" style="width:100%"></div></div></div>
+            <div class="bar ai"><div class="lbl"><span>With Unreal Autopilot</span><b id="youB">5 min / day</b></div><div class="trk"><div class="fill" id="youF" style="width:1%"></div></div></div>
+          </div>
+          <div class="dreams" id="dreams" aria-live="polite"></div>
+        </div>
+      </div>
+      <div class="calc" style="margin-top:16px">
+        <div>
+          <label>Your AI model, running by itself</label>
+          <label for="fansIn" class="fine" style="font-weight:600;margin-top:10px">Fans paying each month: <b id="fansOut" style="color:#fff">50</b></label>
+          <input id="fansIn" type="range" min="10" max="1000" step="10" value="50">
+          <label for="priceIn" class="fine" style="font-weight:600;margin-top:10px">Price per fan per month: <b id="priceOut" style="color:#fff">$15</b></label>
+          <input id="priceIn" type="range" min="5" max="50" step="1" value="15">
+        </div>
+        <div>
+          <p class="bigwin">= <span id="moneyM">$750</span> a month<br><span style="color:#c9a6b7;font-size:.6em">or <b id="moneyY" style="color:#fff">$9,000</b> a year, while you invest <b id="moneyT" style="color:#fff">5 min</b> a day</span></p>
+          <p class="fine">Move the sliders to your own numbers. Example math, not a promise: results depend on your model, your content and your work.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="strip">
     <div class="section stats" style="padding-top:36px;padding-bottom:36px">
       <div class="stat"><b>24/7</b><span>AI chatting on every account</span></div>
@@ -412,25 +447,6 @@
             <div class="todo" id="osTodo"></div>
           </div>
           <div class="toast" id="osToast">🧠 Watching your day…</div>
-        </div>
-      </div>
-
-      <div class="calc">
-        <div>
-          <label for="hrsIn">Keep your 9 to 5. How much time a day will you give your new business?</label>
-          <div class="age"><span id="hrsOut">5 min</span> <small>a day</small></div>
-          <input id="hrsIn" type="range" min="0" max="12" step="1" value="0" aria-describedby="calcNote">
-          <p class="fine">Starts at 5 minutes. No more "I don't have time".</p>
-        </div>
-        <div>
-          <p class="bigwin">You: <span id="youDo">5 min</span> a day.<br>Autopilot: the other <span id="aiDo">23h55</span>.</p>
-          <div class="bars" style="margin-top:18px">
-            <div class="bar me"><div class="lbl"><span>Your 9 to 5</span><b>8 h</b></div><div class="trk"><div class="fill" style="width:33%"></div></div></div>
-            <div class="bar ai"><div class="lbl"><span>You on your business</span><b id="youB">5 min</b></div><div class="trk"><div class="fill" id="youF" style="width:1%"></div></div></div>
-            <div class="bar ai"><div class="lbl"><span>Autopilot on your business</span><b>24 h / day</b></div><div class="trk"><div class="fill" style="width:100%"></div></div></div>
-          </div>
-          <div class="dreams" id="dreams" aria-live="polite"></div>
-          <p class="fine" id="calcNote">Illustration: you make the calls, the AI and your team do the rest around the clock. Results depend on your business.</p>
         </div>
       </div>
 
@@ -760,19 +776,22 @@
     setTimeout(function(){row.classList.add('gone');setTimeout(function(){tasks.push(tasks.shift());render();if(done>=6){done=0;}},500)},1300);
   }
   if(!reduce){var io=new IntersectionObserver(function(e){if(e[0].isIntersecting&&!window._osT){window._osT=setInterval(step,2600);step();}},{threshold:.3});io.observe(box);}
-  var a=document.getElementById('hrsIn');
+  var a=document.getElementById('hrsIn'), fi=document.getElementById('fansIn'), pi=document.getElementById('priceIn');
   var STEPS=[5,10,15,20,30,45,60,90,120,150,180,240,300];
   function lab(m){if(m<60)return m+' min';var H=Math.floor(m/60),M=m%60;return H+'h'+(M?String(M).padStart(2,'0'):'')}
+  function usd(n){return '$'+Math.round(n).toLocaleString('en-US')}
   function calc(){
-    var m=STEPS[+a.value]||5, ai=1440-m;
+    var m=STEPS[+a.value]||5, saved=Math.max(0,480-m);
     document.getElementById('hrsOut').textContent=lab(m);
     document.getElementById('youDo').textContent=lab(m);
-    document.getElementById('youB').textContent=lab(m);
-    document.getElementById('youF').style.width=Math.max(1,m/1440*100)+'%';
-    document.getElementById('aiDo').textContent=lab(ai);
-    var wkYou=m*7/60, wkAi=ai*7/60;
-    document.getElementById('dreams').innerHTML=['🧠 You: <b>'+(wkYou<1?Math.round(wkYou*60)+' min':wkYou.toFixed(1)+' h')+'</b> a week, the decisions only','⚡ Autopilot: <b>'+Math.round(wkAi)+' h</b> a week, posting, chatting, follow-ups','🌙 It keeps selling while you <b>sleep</b>','💼 And you keep your <b>9 to 5</b> until you don\'t need it'].map(function(x){return '<span>'+x+'</span>'}).join('');
+    document.getElementById('youB').textContent=lab(m)+' / day';
+    document.getElementById('youF').style.width=Math.max(1,m/480*100)+'%';
+    document.getElementById('dreams').innerHTML=['⏰ <b>'+lab(saved)+'</b> saved every day','📅 <b>'+Math.round(saved*7/60)+' h</b> saved every week','🗓️ <b>'+Math.round(saved*365/60/24)+' full days</b> back every year','🛥️ Every weekend on the boat. <b>And Friday.</b>'].map(function(x){return '<span>'+x+'</span>'}).join('');
+    var f=+fi.value, p=+pi.value;
+    document.getElementById('fansOut').textContent=f; document.getElementById('priceOut').textContent='$'+p;
+    document.getElementById('moneyM').textContent=usd(f*p); document.getElementById('moneyY').textContent=usd(f*p*12); document.getElementById('moneyT').textContent=lab(m);
   }
+  fi.addEventListener('input',calc); pi.addEventListener('input',calc);
   a.addEventListener('input',calc); calc();
 })();
 </script>

@@ -266,8 +266,6 @@
   <a class="logo" href="/" data-view="home"><i></i><span class="lw"><span class="l1">UN<b>REAL</b></span><span class="l2">AGEN<b>CY</b></span></span></a>
   <nav class="links" aria-label="Main">
     <a href="/" data-view="home">Home</a>
-    <a href="/coaching" data-view="formations">Coaching</a>
-    <a href="/models" data-view="models">Models</a>
     <a href="/members" class="studio">Members 🔒</a>
     <button type="button" class="mode" id="modeBtn" aria-pressed="true"><i></i><span id="modeLbl">Light</span></button>
   </nav>
@@ -372,31 +370,6 @@
   </footer>
 </main>
 
-<!-- ========== COACHING ========== -->
-<main id="v-formations" class="view">
-  <section class="section">
-    <div class="eyebrow">Coaching</div>
-    <h2>Learn the Unreal system</h2>
-    <p class="lead">The same playbook we run on our 14 models. Pick a package, or book a call and we'll show you the system live.</p>
-    <div class="grid2">
-      <div class="card pack"><span class="tag">Normal</span><h3>Unreal Starter</h3><div class="price">$2,449</div><p>Create your model, her content and accounts, with the tools and prompts we use.</p></div>
-      <div class="card pack hot"><span class="tag">Premium</span><h3>Unreal Premium</h3><div class="price">$3,949</div><p>Everything in Starter plus funnel, payments, our AI chatter and 1-on-1 calls until you're live.</p></div>
-    </div>
-    <div class="row" style="margin-top:28px"><a class="btn" href="https://wa.me/14383644558?text=Hi%20Unreal%20Agency%2C%20I%27m%20interested%20in%20the%20AI%20model%20coaching" target="_blank" rel="noopener">Text us on WhatsApp</a></div>
-  </section>
-</main>
-
-<!-- ========== MODELS ========== -->
-<main id="v-models" class="view">
-  <section class="section">
-    <div class="eyebrow">Models</div>
-    <h2>The Unreal roster</h2>
-    <div class="grid3">
-      <div class="card"><span class="tag">Live</span><h3>Kaya</h3><p>20 · platinum blonde · pink girly GFE · photographer. Italy setting.</p></div>
-    </div>
-  </section>
-</main>
-
 <!-- ========== STUDIO (back office) ========== -->
 
 
@@ -413,9 +386,9 @@
   setView(saved || (sys.matches ? 'light' : 'dark'));
   sys.addEventListener('change', function(e){ var s=null; try{ s = localStorage.getItem('unreal-mode'); }catch(x){} if (!s) setView(e.matches ? 'light' : 'dark'); });
   mb.addEventListener('click', function(){ setMode(root.getAttribute('data-mode') === 'dark' ? 'light' : 'dark'); });
-  /* ---------- Clean URL routing: /, /coaching, /models (old #links still work) ---------- */
-  var views = {home:'v-home', formations:'v-formations', models:'v-models'};
-  var PATH = {home:'/', formations:'/coaching', models:'/models'};
+  /* ---------- Routing: home only (/coaching and /models redirect to /) ---------- */
+  var views = {home:'v-home'};
+  var PATH = {home:'/'};
   function viewFromPath(){ var p = location.pathname.replace(/\/+$/, '') || '/'; for (var k in PATH){ if (PATH[k] === p) return k; } return 'home'; }
   function show(base, anchorId){
     Object.keys(views).forEach(function(k){ document.getElementById(views[k]).classList.toggle('on', k === base); });

@@ -333,6 +333,31 @@
   .askp form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
   .askp textarea{flex:1;resize:none;min-height:42px;max-height:120px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--surface);font:inherit;font-size:14px}
   .askp .hint{font-size:11.5px;color:var(--muted);padding:0 14px 8px}
+
+  .td-sec{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 6px}
+  .td-sec h3{margin:0;font-family:var(--display);font-size:15px}
+  .td-sec span{font-size:12px;color:var(--muted)}
+  .td-row{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px;background:var(--surface);transition:opacity .4s,transform .4s}
+  .td-row.bye{opacity:0;transform:translateX(24px)}
+  .td-row input[type=checkbox]{width:20px;height:20px;margin-top:2px;accent-color:var(--pink);flex:none}
+  .td-main{flex:1;min-width:0}
+  .td-t{font-weight:600}
+  .td-n{display:block;font-size:13px;color:var(--muted)}
+  .td-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .td-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--blush);color:var(--pink-deep)}
+  .td-tag.auto{background:#e6f9ee;color:#1f8a4c}
+  html[data-mode="dark"] .td-tag.auto{background:#12331f;color:#5fe39a}
+  .td-prog{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px;max-width:260px}
+  .td-prog i{display:block;height:100%;background:linear-gradient(90deg,var(--pink-deep),var(--pink))}
+  .td-act{display:flex;gap:6px;align-items:center}
+  .td-act select{width:auto;margin:0;padding:4px 8px;font-size:12px}
+  .td-done{opacity:.75}
+  .td-done .td-t{text-decoration:line-through}
+  .td-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .td-kpis div{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--surface)}
+  .td-kpis b{display:block;font-family:var(--display);font-size:22px;color:var(--pink-deep)}
+  .td-kpis span{font-size:12px;color:var(--muted)}
+  @media (max-width:700px){.td-kpis{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -384,6 +409,7 @@
     </div>
     <div class="app">
       <aside class="side" id="side">
+        <button data-tab="todo" class="adm" hidden>🎯 My to-do</button>
         <button data-tab="plan" class="adm" hidden>📋 My plan</button>
         <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
         <button data-tab="twitter" data-perm="twitter" hidden>🐦 Twitter</button>
@@ -522,7 +548,7 @@ async function boot(session){
   if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }
   badgesStart(); askInit();
   const h = location.hash.slice(1);
-  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'plan' : first.dataset.tab));
+  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'todo' : first.dataset.tab));
 }
 
 // little red numbers in the menu: unread texts, and new accounts waiting for access
@@ -564,7 +590,7 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Who worked how long today: work, music, breaks. From ActivityWatch, synced every 10 minutes.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Who worked how long today: work, music, breaks. From ActivityWatch, synced every 10 minutes.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
   tab = t; history.replaceState(null, '', '#' + t); badges();
@@ -572,9 +598,72 @@ function show(t){
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ photos:photosView, quotes:quotesView, plan:planView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ photos:photosView, quotes:quotesView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
+
+
+// ---------- My to-do (admin): personal + business, ticks itself ----------
+const TD_B = [['now','🔥 Now'],['today','☀️ Today'],['week','📅 This week'],['later','🗂 Later']];
+const TD_BY = { auto:'⚡ auto (tracked)', claude:'🤖 done by Claude', me:'✋ you' };
+async function todoView(){
+  const v = $('#view');
+  const { data, error } = await sb.from('my_todos').select('*').order('sort').order('created_at');
+  if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone:'Asia/Bangkok' });
+  const dayOf = d => d ? new Date(d).toLocaleDateString('en-CA', { timeZone:'Asia/Bangkok' }) : '';
+  const open = data.filter(x => !x.done), doneToday = data.filter(x => x.done && dayOf(x.done_at) === today);
+  const auto = doneToday.filter(x => x.done_by !== 'me').length;
+  const row = x => {
+    const a = x.auto && x.auto.type === 'aw' ? x.auto : null;
+    const pct = a ? Math.min(100, Math.round(100 * (x.progress || 0) / (a.minutes || 1))) : 0;
+    return `<div class="td-row" data-row="${x.id}"><input type="checkbox" data-done="${x.id}" aria-label="Done: ${esc(x.title)}">
+      <div class="td-main"><span class="td-t">${esc(x.title)}</span>${x.note ? `<span class="td-n">${esc(x.note)}</span>` : ''}
+        <div class="td-tags"><span class="td-tag">${esc(x.area)}</span>${x.daily ? '<span class="td-tag">every day</span>' : ''}${a ? `<span class="td-tag auto">⚡ auto · ${Math.round(x.progress||0)}/${a.minutes} min on ${esc(a.label || a.match)}</span>` : ''}</div>
+        ${a ? `<div class="td-prog"><i style="width:${pct}%"></i></div>` : ''}</div>
+      <div class="td-act"><select data-move="${x.id}" aria-label="Move">${TD_B.map(b => `<option value="${b[0]}" ${b[0]===x.bucket?'selected':''}>${b[1]}</option>`).join('')}</select><button class="btn ghost sm" data-del="${x.id}" aria-label="Delete">✕</button></div></div>`;
+  };
+  v.innerHTML = `
+    <div class="td-kpis">
+      <div><b>${open.length}</b><span>left to do</span></div>
+      <div><b>${doneToday.length}</b><span>done today</span></div>
+      <div><b>${auto}</b><span>done by AI / tracking</span></div>
+      <div><b>${open.filter(x => x.auto).length}</b><span>auto-checking now</span></div>
+    </div>
+    ${TD_B.map(b => { const it = open.filter(x => x.bucket === b[0]); return it.length ? `<div class="td-sec"><h3>${b[1]}</h3><span>${it.length}</span></div>` + it.map(row).join('') : ''; }).join('') || '<div class="card empty" style="margin-top:16px">🎉 Nothing left. Go enjoy your day.</div>'}
+    <form class="card" id="tdAdd" style="margin-top:18px"><h2>Add a task</h2>
+      <label for="tdT">Task</label><input id="tdT" required placeholder="e.g. Film 3 reels for Kaya">
+      <div class="row">
+        <div><label for="tdB">When</label><select id="tdB">${TD_B.map(b => `<option value="${b[0]}" ${b[0]==='today'?'selected':''}>${b[1]}</option>`).join('')}</select></div>
+        <div><label for="tdA">Area</label><select id="tdA">${['Business','Personal','Models','Content','Team','Website','Admin'].map(a => `<option>${a}</option>`).join('')}</select></div>
+        <div><label for="tdD">Repeat</label><select id="tdD"><option value="0">Once</option><option value="1">Every day</option></select></div>
+      </div>
+      <details style="margin:6px 0 10px"><summary class="muted" style="cursor:pointer">⚡ Tick it automatically (optional)</summary>
+        <div class="row"><div><label for="tdM">When I spend time on (site, app or word)</label><input id="tdM" placeholder="e.g. higgsfield or capcut"></div>
+        <div><label for="tdMin">Minutes needed</label><input id="tdMin" type="number" min="1" value="20"></div></div></details>
+      <button class="btn">Add</button></form>
+    <details class="card" style="margin-top:14px" ${doneToday.length ? 'open' : ''}><summary style="cursor:pointer"><b>✅ Done today (${doneToday.length})</b></summary>
+      ${doneToday.map(x => `<div class="td-row td-done"><div class="td-main"><span class="td-t">${esc(x.title)}</span>
+        <span class="td-n">${esc(TD_BY[x.done_by] || '✋ you')} · ${new Date(x.done_at).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}${x.proof ? ' · ' + esc(x.proof) : ''}</span></div>
+        <button class="btn ghost sm" data-undo="${x.id}">Undo</button></div>`).join('') || '<p class="muted">Nothing yet today.</p>'}</details>`;
+  v.querySelectorAll('[data-done]').forEach(b => b.onchange = async () => {
+    const r = b.closest('.td-row'); r.classList.add('bye');
+    const { error } = await sb.from('my_todos').update({ done:true, done_at:new Date().toISOString(), done_by:'me', proof:null }).eq('id', b.dataset.done);
+    if (error) toast(error.message); setTimeout(todoView, 350);
+  });
+  v.querySelectorAll('[data-undo]').forEach(b => b.onclick = async () => { const { error } = await sb.from('my_todos').update({ done:false, done_at:null, done_by:null, proof:null }).eq('id', b.dataset.undo); if (error) toast(error.message); todoView(); });
+  v.querySelectorAll('[data-move]').forEach(s => s.onchange = async () => { const { error } = await sb.from('my_todos').update({ bucket:s.value }).eq('id', s.dataset.move); if (error) toast(error.message); todoView(); });
+  v.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { if (!confirm('Delete this task?')) return; const { error } = await sb.from('my_todos').delete().eq('id', b.dataset.del); toast(error ? error.message : 'Deleted'); todoView(); });
+  $('#tdAdd').onsubmit = async e => {
+    e.preventDefault();
+    const m = $('#tdM').value.trim(), mins = +$('#tdMin').value || 20;
+    const esc_re = m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const { error } = await sb.from('my_todos').insert({ title:$('#tdT').value.trim(), bucket:$('#tdB').value, area:$('#tdA').value, daily:$('#tdD').value === '1',
+      auto: m ? { type:'aw', match: esc_re, minutes: mins, label: m } : null, sort: Date.now() % 100000 });
+    toast(error ? error.message : 'Added'); todoView();
+  };
+  clearTimeout(window._tdT); window._tdT = setTimeout(() => { if (tab === 'todo') todoView(); }, 60000);
+}
 
 // ---------- private plan (admin only) ----------
 let planFrame = null;

@@ -830,7 +830,7 @@
     var p = v.play(); if (p && p.catch) p.catch(function(){});
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
-      var SRC = { kiss:'live/nami_kiss.mp4?v=3', hat:'live/nami_hat.mp4?v=14' }, vids = {}, busy = false, FADE = 420;
+      var SRC = { kiss:'live/nami_kiss_fast.mp4?v=1', hat:'live/nami_hat.mp4?v=14' }, vids = {}, busy = false, FADE = 420;
       var btns = [].slice.call(document.querySelectorAll('#moves button[data-m]')); if (!btns.length) return;
       function lock(on){ btns.forEach(function(b){ b.disabled = on; }); }
       /* song for "Construction la semaine": only plays after a click, with a mute button */
@@ -855,9 +855,9 @@
         var go = function(){ act.classList.add('on'); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
         var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); }); else go(); }
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
-      /* the loop starts 5.6s in: that is the pose the kiss clip starts from, so the kiss can begin the moment the page plays.
+      /* the kiss clip had 1.2s of standing still before she blows, so it is cut to start right at the lean-in; the loop starts 5.9s in: that is the pose the cut clip starts from, so the kiss can begin the moment the page plays.
          The kiss clip is created right away so it is already loaded when the loop starts playing. */
-      v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 5.6; } catch(e){} }, { once:true });
+      v.addEventListener('loadedmetadata', function(){ try { v.currentTime = 5.9; } catch(e){} }, { once:true });
       var kissClip = mk('kiss'), fired = false;
       function fireKiss(){ if (fired) return; fired = true; if (!busy && !document.hidden) start('kiss'); }
       v.addEventListener('playing', function(){

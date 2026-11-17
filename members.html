@@ -6,6 +6,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Members · Unreal Agency</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/brand/favicon-16.png">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -311,11 +315,17 @@
   @keyframes livePulse{from{transform:scale(1)}to{transform:scale(1.12)}}
   .logo i{animation:livePulse 1.8s ease-in-out infinite alternate}
   @media (prefers-reduced-motion:reduce){.logo i{animation:none}}
+  /* stacked logo: UN(REAL) / AGEN(CY), pink dot */
+  .logo{line-height:1}
+  .logo .lw{display:flex;flex-direction:column;gap:3px}
+  .logo .l1{font-size:19px;letter-spacing:-.01em}
+  .logo .l1 b,.logo .l2 b{color:var(--pink);font-weight:inherit}
+  .logo .l2{font-size:8.6px;font-weight:700;letter-spacing:.62em;margin-right:-.62em}
 </style>
 </head>
 <body>
 <header class="nav">
-  <a class="logo" href="/"><i></i>UNREAL AGENCY</a>
+  <a class="logo" href="/"><i></i><span class="lw"><span class="l1">UN<b>REAL</b></span><span class="l2">AGEN<b>CY</b></span></span></a>
   <nav class="links" aria-label="Main">
     <a href="/#home">Home</a>
     <a href="/#formations">Coaching</a>

@@ -56,7 +56,7 @@ codesign --force --deep -s - "$APP" >/dev/null 2>&1 || true
 # ---------- 5. The button logic (Hammerspoon) ----------
 mkdir -p "$HOME/.hammerspoon"
 cat > "$HOME/.hammerspoon/claude_voice.lua" <<'LUA'
--- Claude Voice: Ctrl+Option+Cmd+D (your mouse front button) = start talking, press again = send to Claude.
+-- Claude Voice: Ctrl+Option+Cmd+D (your mouse front button) = start talking, press again = your text goes into Claude to check, Enter sends.
 -- Click the pink bubble while talking = cancel.
 local M = {}
 local HOME = os.getenv("HOME")
@@ -64,6 +64,9 @@ local DIR = HOME .. "/.claude-voice"
 local WHISPER = "__WHISPER__"
 local APP = HOME .. "/Applications/Claude Voice Mic.app"
 local CLAUDE = "com.anthropic.claudefordesktop"
+-- REVIEW = true: your text is pasted in Claude and waits for you (fix a word, then press Enter yourself).
+-- REVIEW = false: it is sent right away and you go back to the app you were in.
+local REVIEW = true
 local WORDS = "Claude, Unreal Agency, Kaya, Gian, AdsPower, Higgsfield, Supabase, Discord, Twitter, OnlyFans."
 local state, prev, bubble, tick, t0 = "idle", nil, nil, nil, 0
 
@@ -99,6 +102,11 @@ local function sendToClaude(text)
   if c then c:activate() else hs.application.launchOrFocusByBundleID(CLAUDE) end
   hs.timer.doAfter(0.45, function()
     hs.eventtap.keyStroke({ "cmd" }, "v", 0)
+    if REVIEW then
+      hs.alert.show("✏️  Check your text, then press Enter to send", 3)
+      hs.timer.doAfter(1.5, function() if old then hs.pasteboard.setContents(old) end end)
+      return
+    end
     hs.timer.doAfter(0.35, function()
       hs.eventtap.keyStroke({}, "return", 0)
       hs.timer.doAfter(0.35, function()

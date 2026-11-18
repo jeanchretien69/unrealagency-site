@@ -2,6 +2,8 @@
 <html lang="en" data-mode="dark">
 <head>
 <script>(function(){var m=null;try{m=localStorage.getItem("unreal-mode")}catch(e){}if(!m)m=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.setAttribute("data-mode",m)})();</script>
+<script>/* a refresh always opens on Nami at the top (Chrome otherwise reopens where you had scrolled); links to #packages etc. still jump there */
+if("scrollRestoration" in history)history.scrollRestoration="manual";if(!location.hash){window.scrollTo(0,0);addEventListener("load",function(){if(!location.hash)window.scrollTo(0,0)});}</script>
 <script>
 /* ---------- FR / EN: follows the visitor's browser language, remembers their click, ?lang=fr|en forces it ---------- */
 (function(){

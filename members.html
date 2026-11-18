@@ -521,7 +521,7 @@
   .ap-state{text-align:center;margin-top:6px;font-family:ui-monospace,"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.08em;color:#6f8597}
   .ap-state b{color:#9be6ff;letter-spacing:.16em}
   @media (max-width:1100px){ .ap{width:min(560px,calc(100vw - 40px));bottom:66px} .ap-out{position:static;width:auto} }
-  @media (max-width:900px){ .co-uni.fs .co-uhud.tl,.co-uni.fs .co-uhud.leg{display:none} .co-uni.fs .co-uhud.tr{position:absolute;right:14px;top:14px;padding:0;text-align:right;font-size:0} .co-uni.fs .co-uhud.tr .live{font-size:10px} .ap-tools .co-seg,.ap-state{display:none} .ap{bottom:10px} .co-fsbtns{top:14px;left:14px;right:auto;bottom:auto} .ap{width:calc(100vw - 20px);bottom:10px} .ap-tools .jv-vsel,.ap-tools #jvRep{display:none} }
+  @media (max-width:900px){ .co-uni.fs .co-uhud.tl,.co-uni.fs .co-uhud.leg{display:none} .co-uni.fs .co-uhud.tr{position:absolute;right:14px;top:14px;padding:0;text-align:right;font-size:0} .co-uni.fs .co-uhud.tr .live{font-size:10px} .ap-tools,.ap-state{display:none} .ap{bottom:10px} .co-fsbtns{top:14px;left:14px;right:auto;bottom:auto} .ap{width:calc(100vw - 20px);bottom:10px} .ap-tools .jv-vsel,.ap-tools #jvRep{display:none} }
   /* Claude-style dictation in the Autopilot bar */
   .ap .jv-f{display:flex;align-items:center;gap:6px;position:relative}
   .ap-ic{width:36px;height:36px;flex:none;border-radius:50%;border:0;background:transparent;color:#cfe9ff;display:grid;place-items:center;cursor:pointer}
@@ -533,6 +533,12 @@
   .ap-rec span{font-family:ui-monospace,"JetBrains Mono",monospace;font-size:12px;color:#ff9ccb;min-width:34px}
   .ap-rec span::before{content:"● ";color:#ff5fa2;animation:coBlink 1s infinite}
   .ap .jv-f.rec input{display:none}
+  .co-aptitle{position:absolute;left:0;right:0;top:14px;z-index:3;text-align:center;pointer-events:none}
+  .co-aptitle h1{font-family:var(--display);font-weight:800;font-size:clamp(22px,3vw,40px);letter-spacing:.14em;line-height:1;margin:0;color:#eaf7ff;text-shadow:0 0 18px rgba(94,208,255,.55),0 0 42px rgba(94,208,255,.25)}
+  .co-aptitle h1 span{color:#5ed0ff}
+  .co-aptitle p{margin:6px 0 0;font-family:ui-monospace,"JetBrains Mono",monospace;font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:#6f8597}
+  .co-aptitle p::before{content:"● ";color:#5fe39a;animation:coBlink 1.4s infinite}
+  @media (max-width:900px){ .co-aptitle{top:62px} .co-aptitle h1{font-size:20px;letter-spacing:.1em} .co-aptitle p{font-size:9.5px;letter-spacing:.2em} }
   /* version B */
   .cb-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
   .cb-head .st{display:flex;align-items:center;gap:8px;background:#0f1f16;border:1px solid #2e6b48;color:var(--k-green);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600}
@@ -2605,7 +2611,7 @@ function coreUniverse(cv, d, tok, tip){
   const P = Array.from({ length:520 }, () => { const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = Math.cbrt(Math.random()); return { x:r * Math.sqrt(1 - u * u) * Math.cos(th), y:r * u, z:r * Math.sqrt(1 - u * u) * Math.sin(th), c:['#ffffff','#9fd3ff','#ffb3d1','#ffd49a','#b9a7ff'][(Math.random() * 5) | 0], s:Math.random() * 1.5 + .4 }; });
   function layout(){
     W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr;
-    const fs = !!cv.closest('.fs'), cx = W / 2, cy = fs ? H * .45 : H / 2, small = W < 640, rx = W * (small ? .43 : .44), ry = H * (fs ? (small ? .34 : .35) : small ? .42 : .41); RX = rx; RY = ry;
+    const fs = !!cv.closest('.fs'), cx = W / 2, cy = fs ? H * (W < 640 ? .55 : .49) : H / 2, small = W < 640, rx = W * (small ? .43 : .44), ry = H * (fs ? (small ? .3 : .33) : small ? .42 : .41); RX = rx; RY = ry;
     nodes = []; links = [];
     const core = { k:'core', x:cx, y:cy, r:Math.min(W, H) * (small ? .15 : .14) }; nodes.push(core);
     SRC.forEach((s, i) => { const a = -Math.PI / 2 + (i + .5) * 2 * Math.PI / SRC.length; nodes.push({ k:'src', id:s[0], n:s[1], to:s[2], x:cx + Math.cos(a) * rx * .46, y:cy + Math.sin(a) * ry * .5, col:'#5ed0ff', r:small ? 4 : 5 }); });
@@ -2962,7 +2968,8 @@ function coreRender(){
   const d = coreD;
   v.innerHTML = `<div class="core core-fs">
     <section class="co-card co-uni fs">
-      <div class="co-uhud tl"><div class="co-eyebrow"><i></i>Unreal Autopilot · Tes données</div>
+      <div class="co-aptitle"><h1>UNREAL <span>AUTOPILOT</span></h1><p>Tes données · en direct</p></div>
+      <div class="co-uhud tl"><div class="co-eyebrow"><i></i>Tes données</div>
         <div class="co-ctl"><span>Modèles</span><div class="co-pills"><span class="co-pill gold on">☁ Cloud</span><span class="co-pill">⚙ Local</span></div>
           <span>Connecteurs</span><div class="co-pills"><span class="co-pill green on">● On</span><span class="co-pill">🔒 Locked</span></div></div></div>
       <div class="co-uhud tr"><span class="live">LIVE</span><br><b>${CORE_MODELS.length}</b> modèles<br><b>${UNI_SERV.length}</b> services<br><b>8</b> sources de données<br><b>${(8 * 2 + CORE_MODELS.length * 2 + UNI_SERV.length + UNI_X.length)}</b> liens actifs</div>

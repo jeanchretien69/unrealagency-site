@@ -522,6 +522,17 @@
   .ap-state b{color:#9be6ff;letter-spacing:.16em}
   @media (max-width:1100px){ .ap{width:min(560px,calc(100vw - 40px));bottom:66px} .ap-out{position:static;width:auto} }
   @media (max-width:900px){ .co-uni.fs .co-uhud.tl,.co-uni.fs .co-uhud.leg{display:none} .co-uni.fs .co-uhud.tr{position:absolute;right:14px;top:14px;padding:0;text-align:right;font-size:0} .co-uni.fs .co-uhud.tr .live{font-size:10px} .ap-tools .co-seg,.ap-state{display:none} .ap{bottom:10px} .co-fsbtns{top:14px;left:14px;right:auto;bottom:auto} .ap{width:calc(100vw - 20px);bottom:10px} .ap-tools .jv-vsel,.ap-tools #jvRep{display:none} }
+  /* Claude-style dictation in the Autopilot bar */
+  .ap .jv-f{display:flex;align-items:center;gap:6px;position:relative}
+  .ap-ic{width:36px;height:36px;flex:none;border-radius:50%;border:0;background:transparent;color:#cfe9ff;display:grid;place-items:center;cursor:pointer}
+  .ap-ic:hover{background:#18222b}
+  .ap-ic.ok{background:#1f3a4d;color:#fff}
+  .ap .jv-go{display:grid;place-items:center}
+  .ap-rec{flex:1;display:flex;align-items:center;gap:10px;min-width:0;height:38px;padding:0 6px}
+  .ap-rec canvas{flex:1;height:30px;min-width:0}
+  .ap-rec span{font-family:ui-monospace,"JetBrains Mono",monospace;font-size:12px;color:#ff9ccb;min-width:34px}
+  .ap-rec span::before{content:"● ";color:#ff5fa2;animation:coBlink 1s infinite}
+  .ap .jv-f.rec input{display:none}
   /* version B */
   .cb-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
   .cb-head .st{display:flex;align-items:center;gap:8px;background:#0f1f16;border:1px solid #2e6b48;color:var(--k-green);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600}
@@ -2879,16 +2890,62 @@ function jvPanel(){
     <div class="ap-out"${jvLast ? '' : ' hidden'} id="apOut"><div class="jv-you" id="jvYou"></div><div class="jv-out" id="jvOut">${esc(jvLast)}</div></div>
     <div class="ap-bar">
       <button class="jv-orb" id="jvMic" type="button" aria-label="${en ? 'Talk to Unreal Autopilot' : 'Parler à Unreal Autopilot'}"><i class="r1"></i><i class="r2"></i><i class="r3"></i><span>🎙</span></button>
-      <form class="jv-f" id="jvF"><input id="jvQ" autocomplete="off" placeholder="${en ? 'Ask Unreal Autopilot…' : 'Demande à Unreal Autopilot…'}"><button class="jv-go" type="submit">➤</button></form>
+      <form class="jv-f" id="jvF"><div class="ap-rec" id="apRec" hidden><canvas id="apWave"></canvas><span id="apTime">0:00</span></div><input id="jvQ" autocomplete="off" placeholder="${en ? 'Ask Unreal Autopilot…' : 'Demande à Unreal Autopilot…'}">
+        <button type="button" class="ap-ic" id="apMic" title="${en ? 'Dictate' : 'Dicter un vocal'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button type="button" class="ap-ic" id="apCancel" title="${en ? 'Cancel' : 'Annuler'}" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><button type="button" class="ap-ic ok" id="apDone" title="${en ? 'Done (edit before sending)' : 'Terminer (modifier avant d\'envoyer)'}" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17 19 7"/></svg></button><button class="jv-go" type="submit" title="${en ? 'Send' : 'Envoyer'}"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></form>
       <div class="ap-tools"><div class="co-seg"><button data-jl="fr" class="${en ? '' : 'on'}">FR</button><button data-jl="en" class="${en ? 'on' : ''}">EN</button></div>
         <select class="jv-vsel" id="jvVoice" title="${en ? 'Voice' : 'Voix'}"></select><button class="jv-ic" id="jvMute" type="button" title="${en ? 'Mute' : 'Couper la voix'}">${jvMute ? '🔇' : '🔊'}</button><button class="jv-ic" id="jvRep" type="button" title="${en ? 'Repeat' : 'Répéter'}">↻</button></div>
     </div>
     <div class="ap-state"><b>UNREAL AUTOPILOT</b> · <span id="jvState">${en ? 'Standing by · tap the mic' : 'En attente · touche le micro'}</span></div>
   </section>`;
 }
+let apR = null;
+function apRecStart(){
+  jvUnlock(); if (window.speechSynthesis) speechSynthesis.cancel();
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ jvState(jvLang === 'en' ? 'Dictation needs Chrome, Edge or Safari' : 'La dictée marche dans Chrome, Edge ou Safari'); return; }
+  if (apR) return;
+  const st = { fin:'', live:'', t0:Date.now(), stream:null, ac:null, raf:0, timer:0, sr:new SR(), mode:'', stopped:false };
+  apR = st; const before = $('#jvQ').value.trim();
+  st.sr.lang = jvLang === 'en' ? 'en-GB' : 'fr-CA'; st.sr.continuous = true; st.sr.interimResults = true;
+  st.sr.onresult = e => { let f = '', l = ''; for (const r of e.results){ if (r.isFinal) f += r[0].transcript + ' '; else l += r[0].transcript; } st.fin = f; st.live = l; };
+  st.sr.onerror = e => { if (e.error === 'not-allowed'){ jvState(jvLang === 'en' ? 'Microphone blocked: allow it in the browser' : 'Micro bloqué : autorise-le dans le navigateur'); apRecStop('cancel'); } };
+  st.sr.onend = () => { if (!st.stopped){ try { st.sr.start(); } catch(e){} return; } apFinish(st, before); };
+  try { st.sr.start(); } catch(e){}
+  $('#jvF').classList.add('rec'); $('#apRec').hidden = false; ['apMic'].forEach(i => $('#' + i).hidden = true); ['apCancel','apDone'].forEach(i => $('#' + i).hidden = false);
+  jvChime(true); jvState(jvLang === 'en' ? 'Recording… ✓ to edit, ↑ to send' : 'Enregistrement… ✓ pour modifier, ↑ pour envoyer');
+  st.timer = setInterval(() => { const s2 = Math.floor((Date.now() - st.t0) / 1000); $('#apTime').textContent = Math.floor(s2 / 60) + ':' + String(s2 % 60).padStart(2, '0'); }, 250);
+  /* live waveform from the microphone */
+  const cv = $('#apWave'), g = cv.getContext('2d'), bars = new Array(48).fill(.04);
+  const draw = lvl => { const w = cv.clientWidth, h = cv.clientHeight, dpr = Math.min(2, devicePixelRatio || 1); if (cv.width !== w * dpr){ cv.width = w * dpr; cv.height = h * dpr; } g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    bars.push(lvl); bars.shift(); const bw = w / bars.length; g.fillStyle = '#9be6ff';
+    bars.forEach((b, i) => { const bh = Math.max(2, Math.min(h, b * h * 2.4)); g.globalAlpha = .35 + .65 * i / bars.length; g.fillRect(i * bw + 1, (h - bh) / 2, Math.max(1.5, bw - 2), bh); }); g.globalAlpha = 1; };
+  const fake = () => { if (apR !== st) return; draw(.05 + Math.random() * (st.live ? .25 : .06)); st.raf = requestAnimationFrame(fake); };
+  if (navigator.mediaDevices?.getUserMedia) navigator.mediaDevices.getUserMedia({ audio:true }).then(stream => {
+    if (apR !== st){ stream.getTracks().forEach(t => t.stop()); return; }
+    st.stream = stream; st.ac = new (window.AudioContext || window.webkitAudioContext)(); const an = st.ac.createAnalyser(); an.fftSize = 512; st.ac.createMediaStreamSource(stream).connect(an);
+    const buf = new Uint8Array(an.fftSize);
+    const loop = () => { if (apR !== st) return; an.getByteTimeDomainData(buf); let m = 0; for (const v of buf) m = Math.max(m, Math.abs(v - 128)); draw(m / 128); window.__jvLevel = Math.max(window.__jvLevel, m / 160); st.raf = requestAnimationFrame(loop); };
+    loop();
+  }).catch(fake); else fake();
+}
+function apRecStop(mode){ const st = apR; if (!st) return; st.mode = mode; st.stopped = true; try { st.sr.stop(); } catch(e){ apFinish(st, ''); } setTimeout(() => { if (apR === st) apFinish(st, ''); }, 1500); }
+function apFinish(st, before){
+  if (apR !== st) return; apR = null;
+  clearInterval(st.timer); cancelAnimationFrame(st.raf); if (st.stream) st.stream.getTracks().forEach(t => t.stop()); if (st.ac) st.ac.close().catch(() => {});
+  $('#jvF').classList.remove('rec'); $('#apRec').hidden = true; $('#apMic').hidden = false; ['apCancel','apDone'].forEach(i => $('#' + i).hidden = true);
+  const text = (st.fin + ' ' + st.live).replace(/\s+/g, ' ').trim();
+  jvState(jvLang === 'en' ? 'Standing by · tap the mic' : 'En attente · touche le micro');
+  if (st.mode === 'cancel') return;
+  const full = ((before ? before + ' ' : '') + text).trim();
+  if (st.mode === 'send'){ if (full) jvAsk(full); else jvState(jvLang === 'en' ? 'Nothing heard' : 'Rien entendu'); return; }
+  $('#jvQ').value = full; $('#jvQ').focus();
+}
 function jvBind(){
+  $('#apMic').onclick = apRecStart;
+  $('#apCancel').onclick = () => apRecStop('cancel');
+  $('#apDone').onclick = () => apRecStop('done');
   $('#jvMic').onclick = jvListen;
-  $('#jvF').onsubmit = e => { e.preventDefault(); jvAsk($('#jvQ').value); };
+  $('#jvF').onsubmit = e => { e.preventDefault(); if (apR) return apRecStop('send'); jvAsk($('#jvQ').value); };
   $('#jvMute').onclick = () => { jvMute = !jvMute; if (jvMute && window.speechSynthesis) speechSynthesis.cancel(); $('#jvMute').textContent = jvMute ? '🔇' : '🔊'; };
   $('#jvRep').onclick = () => { jvUnlock(); jvSay($('#jvOut').textContent); };
   document.querySelectorAll('[data-jl]').forEach(b => b.onclick = () => { jvLang = b.dataset.jl; try { localStorage.setItem('jv-lang', jvLang); } catch(e){} coreRender(); });

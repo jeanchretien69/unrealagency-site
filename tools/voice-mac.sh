@@ -40,12 +40,23 @@ ln -sf "$DIR/$M" "$DIR/model.bin"
 curl -fsSL https://unrealagency.ai/tools/claude_voice_rec.sh -o "$DIR/rec.sh"
 chmod +x "$DIR/rec.sh"
 APP="$HOME/Applications/Claude Voice Mic.app"; mkdir -p "$HOME/Applications"; rm -rf "$APP"
-osacompile -o "$APP" -e 'do shell script "$HOME/.claude-voice/rec.sh >/dev/null 2>&1; true"'
-PL="$APP/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string Records your voice for Claude" "$PL" 2>/dev/null || /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription Records your voice for Claude" "$PL"
-/usr/libexec/PlistBuddy -c "Add :LSUIElement bool true" "$PL" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ai.unrealagency.claudevoice" "$PL" 2>/dev/null || true
-codesign --force --deep -s - "$APP" >/dev/null 2>&1 || true
+mkdir -p "$APP/Contents/MacOS"
+printf '#!/bin/bash\nexec "$HOME/.claude-voice/rec.sh"\n' > "$APP/Contents/MacOS/ClaudeVoiceMic"
+chmod +x "$APP/Contents/MacOS/ClaudeVoiceMic"
+cat > "$APP/Contents/Info.plist" <<'PL'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleExecutable</key><string>ClaudeVoiceMic</string>
+  <key>CFBundleIdentifier</key><string>ai.unrealagency.claudevoicemic</string>
+  <key>CFBundleName</key><string>Claude Voice Mic</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleVersion</key><string>2</string>
+  <key>LSUIElement</key><true/>
+  <key>NSMicrophoneUsageDescription</key><string>Records your voice for Claude</string>
+</dict></plist>
+PL
+codesign --force -s - "$APP" >/dev/null 2>&1 || true
 
 # ---------- 5. The button logic (Hammerspoon) ----------
 mkdir -p "$HOME/.hammerspoon"

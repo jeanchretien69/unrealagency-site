@@ -639,7 +639,10 @@
     .grid{grid-template-columns:minmax(0,1fr)}
     .askbtn{right:max(14px,env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));padding:11px 15px;font-size:12px}
     .card .card{padding:12px}
+    textarea{min-height:160px}
     .row>.stats{flex:1 1 100%}
+    .row>div[style*="flex:0 0"]{flex:1 1 140px!important}
+    label>input[type=checkbox],label>input[type=radio]{width:auto;flex:none}
     .stats>input{flex:1 1 140px;width:auto!important}
     .cfilt button{padding:7px 12px;font-size:13px}
     .smstop{gap:10px}
@@ -651,6 +654,14 @@
     .cmain{height:72dvh;scroll-margin-top:calc(118px + env(safe-area-inset-top))}
     .cinfo{flex-direction:column;border-left:0}
     .bub .mm{max-width:100%}
+    .cboard{height:auto!important}
+    .bgrid{overflow:visible;grid-template-columns:minmax(0,1fr);padding:10px}
+    .bgrid textarea{min-height:90px}
+    /* access board: keep the person column visible while scrolling sideways */
+    .acc tr>*:first-child{position:sticky;left:0;z-index:2;background:var(--card);box-shadow:1px 0 0 var(--line)}
+    .acc td.u{min-width:150px}
+    .tbl table tr>*:first-child{position:sticky;left:0;z-index:1;background:var(--card)}
+    .xhr>span{flex:0 0 108px;font-size:12px}
     /* photos */
     #pGrid{grid-template-columns:minmax(0,1fr)!important}
     #pGrid img[data-act=open]{aspect-ratio:4/5;max-height:62vh}

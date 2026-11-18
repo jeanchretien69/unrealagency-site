@@ -375,6 +375,8 @@
     -webkit-mask-composite:source-in;mask-composite:intersect}
   .head .nv{opacity:0;transition:opacity .4s ease;pointer-events:none}
   .head .nv.quick{transition:opacity .13s linear}
+  /* cut: the auto kiss starts on the exact photo pose, so it appears at once (a fade showed her arm twice); base: the breathing loop is always fully opaque under the clips, so nothing behind her ever shows through */
+  .head .nv.cut,.head .nv.base{transition:none}
   .head .nv.on{opacity:1}
   .head img[hidden]{display:none}
   :root[data-mode="dark"] .head .nvw{overflow:hidden}
@@ -841,7 +843,7 @@
     var loopLoaded = false;
     function loadLoop(play){ if (!loopLoaded){ loopLoaded = true; v.preload = 'auto'; v.src = 'live/nami_idle.mp4?v=3'; v.load(); } if (play){ var pp = v.play(); if (pp && pp.catch) pp.catch(function(){}); } }
     var wrap = document.getElementById('nvw'); wrap.insertBefore(v, wrap.firstChild); /* breathing loop sits under the kiss clip already in the page */
-    v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ face.hidden = true; }, 400); }, { once:true });
+    v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ v.classList.add('base'); face.hidden = true; }, 400); }, { once:true });
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
       var SRC = { kissauto:'live/nami_kiss_fast.mp4?v=2', kiss:'live/nami_kiss_btn.mp4?v=1', hat:'live/nami_hat.mp4?v=14' }, vids = { kissauto: document.getElementById('kissAuto') }, busy = false, curAct = null, FADE = 420;
@@ -861,12 +863,12 @@
       function start(m){ if (busy) return; var w = blinkWait(); if (w > 0){ busy = true; lock(true); setTimeout(function(){ busy = false; start(m); }, w); return; } var act = mk(m); if (!act) return; curAct = act; busy = true; lock(true); act.currentTime = 0; var over = false;
         /* hand back only on the clip's very last frame, where her pose matches the breathing loop */
         function finish(){ if (over) return; over = true; v.currentTime = 0;
-          var swap = function(){ act.classList.add('quick'); act.classList.remove('on');
+          var swap = function(){ act.classList.remove('cut'); act.classList.add('quick'); act.classList.remove('on');
             setTimeout(function(){ act.pause(); act.classList.remove('quick'); busy = false; lock(false); }, 220); };
           var p = v.play(); if (p && p.then) p.then(function(){ requestAnimationFrame(swap); }).catch(swap); else requestAnimationFrame(swap); }
         function watch(){ if (over) return; if (act.ended || (act.duration && act.currentTime >= act.duration - .10)) return finish(); requestAnimationFrame(watch); }
         act.onended = finish;
-        var go = function(){ loadLoop(false); act.classList.add('on'); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
+        var go = function(){ loadLoop(false); if (m === 'kissauto') act.classList.add('cut'); act.classList.add('on'); v.classList.add('base', 'on'); requestAnimationFrame(function(){ face.hidden = true; }); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
         var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); }); else go(); }
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
       /* the kiss clip (cut to start right at the lean-in) starts from the same pose as the still photo, so it can play as soon as it has loaded;

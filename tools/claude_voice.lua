@@ -73,14 +73,14 @@ endReview = function()
 end
 function M.review()
   state = "review"
-  show("✏️  Fix your text · mouse button = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 })
+  show("✏️  Fix your text · back button = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 })
   reviewTimer = hs.timer.doAfter(300, endReview)
   -- the green bubble follows you to whichever screen your mouse is on
   local lastScr = hs.mouse.getCurrentScreen()
   reviewFollow = hs.timer.doEvery(0.7, function()
     if state ~= "review" then return end
     local s2 = hs.mouse.getCurrentScreen()
-    if s2 and lastScr and s2:id() ~= lastScr:id() then lastScr = s2; show("✏️  Fix your text · mouse button = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 }) end
+    if s2 and lastScr and s2:id() ~= lastScr:id() then lastScr = s2; show("✏️  Fix your text · back button = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 }) end
   end)
   -- you pressed Enter yourself in Claude: done, the next button press starts a new message
   reviewTap = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(e)
@@ -151,6 +151,13 @@ end
 function M.toggle() if state == "idle" then M.start() elseif state == "rec" then M.stop() elseif state == "review" then M.send() end end
 
 M.key = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "d", M.toggle)
+-- the mouse back button (Mac Mouse Fix sends Ctrl+Option+Cmd+S) is a smart Enter:
+-- a voice message waiting in Claude -> send it from wherever you are; otherwise -> a normal Enter in the app you are in
+function M.smartEnter()
+  if state == "review" then M.send()
+  else hs.timer.doAfter(0.05, function() hs.eventtap.keyStroke({}, "return", 0) end) end
+end
+M.enterKey = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "s", M.smartEnter)
 hs.autoLaunch(true)
 hs.accessibilityState(true)
 return M

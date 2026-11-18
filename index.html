@@ -913,6 +913,29 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
       window.addEventListener('pageshow', wake);
       window.addEventListener('focus', wake);
       v.addEventListener('pause', function(){ if (!busy && !document.hidden && loopLoaded) setTimeout(wake, 120); });
+      /* watchdog: phones and Chrome can pause or freeze her while the page is in the background, and sometimes refuse the first play() on return.
+         Every 0.8 s while the page is visible: a paused loop is restarted; a loop whose time no longer moves is reloaded at the same spot;
+         a clip that was paused mid-way is resumed; an action stuck for over 20 s hands back to the loop. */
+      var lastT = -1, still = 0, busySince = 0;
+      setInterval(function(){
+        if (document.hidden) { lastT = -1; still = 0; return; }
+        if (busy){
+          if (!busySince) busySince = Date.now();
+          if (curAct && curAct.paused && !curAct.ended){ var q3 = curAct.play(); if (q3 && q3.catch) q3.catch(function(){}); }
+          if (Date.now() - busySince > 20000 && curAct){ curAct.classList.remove('on'); curAct.pause(); busy = false; lock(false); busySince = 0; }
+          return;
+        }
+        busySince = 0;
+        if (!loopLoaded){ if (fired) loadLoop(true); return; }
+        if (!v.currentSrc) return;
+        if (v.paused){ var q = v.play(); if (q && q.catch) q.catch(function(){}); lastT = -1; return; }
+        var t = v.currentTime;
+        if (t === lastT){ if (++still >= 3){ still = 0; lastT = -1; var at = t; v.load();
+            v.addEventListener('loadedmetadata', function(){ try { v.currentTime = at; } catch(e){} var q2 = v.play(); if (q2 && q2.catch) q2.catch(function(){}); }, { once:true }); return; } }
+        else still = 0;
+        lastT = t;
+      }, 800);
+      window.addEventListener('pageshow', function(e){ if (e.persisted) { lastT = -1; still = 0; wake(); } });
       setTimeout(function(){ if (!loopLoaded) loadLoop(true); }, 4000); /* safety: never leave the page without the breathing loop */
     })();
     var ring = document.getElementById('ring');

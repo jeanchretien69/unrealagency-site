@@ -1828,7 +1828,7 @@ function xSessCard(D, a){
   const openIdx = states.indexOf('now') >= 0 ? states.indexOf('now') : states.indexOf('soon');
   const goal = (icon, label, have, need) => `<div class="xg${have >= need ? ' d' : ''}"><div class="xg-t"><span>${icon} ${label}</span><b>${have}/${need}${have >= need ? ' ✅' : ''}</b></div><div class="xbar"><i style="width:${need ? Math.min(100, Math.round(have / need * 100)) : 100}%"></i></div></div>`;
   return `<article class="card xcard${rows.length && done === rows.length ? ' alldone' : ''}">
-    <div class="xc-h"><h2>@${esc(a.handle)}</h2><span class="badge">${esc(a.label ? 'AdsPower profile ' + a.label : a.model)}</span><span class="pill ${done === rows.length ? 'yes' : ''}">${done}/${rows.length} sessions done</span><span class="muted" style="font-size:13px">⏱ ${Math.round(xNum(s, 'active_min'))} active min today</span></div>
+    <div class="xc-h"><h2>@${esc(a.handle)}</h2><span class="badge">${esc(a.label ? 'AdsPower profile ' + a.label : a.model)}</span>${xNsfw(a) ? '<span class="pill no">🔞 NSFW account: sexier photos OK</span>' : ''}<span class="pill ${done === rows.length ? 'yes' : ''}">${done}/${rows.length} sessions done</span><span class="muted" style="font-size:13px">⏱ ${Math.round(xNum(s, 'active_min'))} active min today</span></div>
     ${flagged ? `<div class="msg err" style="margin:0 0 10px;padding:8px 12px">⚠ ${flagged} action${flagged > 1 ? 's' : ''} today not counted: too fast, same tweet twice, copy-paste reply, or undone after. Slow down.</div>` : ''}
     ${rows.map((r, i) => { const stt = states[i], L = X_SLBL[stt]; return `<details class="xsess ${stt}"${i === openIdx ? ' open' : ''}>
       <summary><span class="xs-n">${r.slot}</span><span class="xs-time"><b>${xIn(r.st, 'Asia/Manila')} PH</b> <small class="muted">· ${xIn(r.st, 'Europe/Rome')} Italy</small></span><span class="xs-tt">${esc(r.title || 'Session ' + r.slot)}</span><span class="pill ${L[0]}">${L[1]}</span></summary>
@@ -1942,7 +1942,9 @@ async function xScore(){
       <h3>History</h3>${(hist.data || []).length ? `<div class="tbl"><table><thead><tr><th>Week</th><th>Score</th><th>Work</th><th>Results</th><th>Level</th><th>Pay</th></tr></thead><tbody>${hist.data.map(w => `<tr><td>${esc(w.week)}</td><td><b>${w.total}</b></td><td>${w.work_score}</td><td>${w.results_score}</td><td>${w.level_before}→${w.level_after}</td><td>$${w.pay}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">First week gets locked Monday.</p>'}
     </article></div>`;
 }
-// 📅 every scheduled picture, day by day, as a clean photo board
+// 📅 every scheduled picture: one table per day, a coloured column per account, rows = Pic 1 / 2 / 3
+const X_COL = ['#ff5fa2', '#ff4d4d', '#4da3ff', '#b57bff', '#3ccf8e', '#ffb84d'];
+const xNsfw = a => /nsfw/i.test((a && a.notes) || '') || (a && a.handle === 'k_kayyyy_y');
 async function xSched(D){
   const box = $('#xSched'); if (!box) return;
   const from = D.today, to = xShift(D.today, 6);
@@ -1952,27 +1954,31 @@ async function xSched(D){
   ]);
   if (pl.error) return box.innerHTML = `<div class="msg err">${esc(pl.error.message)}</div>`;
   const rows = pl.data || [];
-  if (!rows.length) return box.innerHTML = '<div class="card"><p class="muted">Nothing scheduled yet.</p></div>';
   const pIds = [...new Set(rows.map(r => r.photo_id).filter(Boolean))], qIds = [...new Set(rows.map(r => r.quote_id).filter(Boolean))];
   const [ph, qq] = await Promise.all([
-    pIds.length ? sb.from('photos').select('id,num,path,thumb,caption').in('id', pIds) : Promise.resolve({ data: [] }),
+    pIds.length ? sb.from('photos').select('id,num,path,thumb').in('id', pIds) : Promise.resolve({ data: [] }),
     qIds.length ? sb.from('quotes').select('id,it,en').in('id', qIds) : Promise.resolve({ data: [] })
   ]);
   const P = Object.fromEntries((ph.data || []).map(x => [x.id, x])), Q = Object.fromEntries((qq.data || []).map(x => [x.id, x]));
   const url = await photoUrls(Object.values(P).map(x => x.thumb || x.path));
   const t = {}; (ss.data || []).forEach(x => t[x.account + '|' + x.slot] = String(x.start_time || '').slice(0, 5));
-  const order = D.accounts.map(a => a.handle), days = [...new Set(rows.map(r => r.day))];
-  const card = r => { const p = P[r.photo_id], q = Q[r.quote_id];
-    return `<div class="card" style="padding:8px;display:flex;flex-direction:column;gap:6px;position:relative${r.posted_at ? ';opacity:.6' : ''}">
-      ${p ? `<span style="position:absolute;top:14px;left:14px;z-index:1;background:var(--pink);color:#fff;font-weight:800;font-size:13px;padding:2px 9px;border-radius:999px">#${p.num}</span>
-      <img src="${url(p.thumb || p.path)}" alt="" data-open="${esc(p.path)}" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;cursor:zoom-in">` : '<div class="muted" style="aspect-ratio:3/4;display:grid;place-items:center;border:1px dashed var(--line);border-radius:10px">No photo</div>'}
-      <div style="display:flex;justify-content:space-between;gap:6px;align-items:center"><b style="font-size:13px">@${esc(r.account)}</b><span class="pill ${r.posted_at ? 'yes' : ''}" style="font-size:11px">${r.posted_at ? 'posted ✓' : 'Pic ' + r.slot + (t[r.account + '|' + r.slot] ? ' · ' + t[r.account + '|' + r.slot] + ' PH' : '')}</span></div>
-      ${q ? `<div style="font-size:12.5px;line-height:1.35">🇮🇹 ${esc(q.it || q.en)}</div>` : '<div class="muted" style="font-size:12px">No quote</div>'}
-    </div>`; };
+  const accs = D.accounts.filter(a => a.active), col = {}; accs.forEach((a, i) => col[a.handle] = X_COL[i % X_COL.length]);
+  const days = []; for (let i = 0; i <= 2; i++) days.push(xShift(D.today, i)); rows.forEach(r => { if (!days.includes(r.day)) days.push(r.day); });
+  // same photo used twice in this window → warn
+  const seen = {}; rows.forEach(r => { if (r.photo_id) (seen[r.photo_id] = seen[r.photo_id] || []).push(r.account); });
+  const dupes = Object.entries(seen).filter(([, l]) => l.length > 1);
+  const cell = r => { if (!r) return '<td style="padding:6px"><div class="muted" style="height:100%;min-height:120px;display:grid;place-items:center;border:1px dashed var(--line);border-radius:10px;font-size:12px">empty</div></td>';
+    const p = P[r.photo_id], q = Q[r.quote_id];
+    return `<td style="padding:6px;vertical-align:top${r.posted_at ? ';opacity:.5' : ''}"><div style="position:relative">
+      ${p ? `<span style="position:absolute;top:6px;left:6px;background:${col[r.account]};color:#fff;font-weight:800;font-size:12px;padding:1px 8px;border-radius:999px">#${p.num}</span><img src="${url(p.thumb || p.path)}" alt="" data-open="${esc(p.path)}" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;cursor:zoom-in;display:block">` : '<div class="muted">No photo</div>'}
+      ${r.posted_at ? '<span class="pill yes" style="position:absolute;bottom:6px;right:6px;font-size:11px">posted ✓</span>' : ''}</div>
+      ${q ? `<div style="font-size:12px;line-height:1.3;margin-top:5px">${esc(q.it || q.en)}</div>` : ''}</td>`; };
   box.className = '';
-  box.innerHTML = days.map(d => { const list = rows.filter(r => r.day === d).sort((a, b) => (order.indexOf(a.account) - order.indexOf(b.account)) || a.slot - b.slot);
-    return `<div style="margin:6px 0 18px"><h2 style="margin:0 0 10px">${d === D.today ? 'Today' : d === xShift(D.today, 1) ? 'Tomorrow' : esc(xLabel(d))} <small class="muted" style="font-size:13px;font-weight:500">· ${esc(xLabel(d))} · ${list.length} picture${list.length > 1 ? 's' : ''}</small></h2>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px">${list.map(card).join('')}</div></div>`; }).join('');
+  box.innerHTML = (dupes.length ? `<div class="msg err" style="margin-bottom:12px">⚠ Same photo on 2 accounts: ${dupes.map(([id, l]) => '#' + (P[id] ? P[id].num : '?') + ' (' + l.map(h => '@' + h).join(', ') + ')').join(' · ')}</div>` : '') +
+    days.map(d => { const list = rows.filter(r => r.day === d);
+    return `<div class="card" style="margin:0 0 16px;padding:14px;overflow-x:auto"><h2 style="margin:0 0 10px">${d === D.today ? 'Today' : d === xShift(D.today, 1) ? 'Tomorrow' : esc(xLabel(d))} <small class="muted" style="font-size:13px;font-weight:500">· ${esc(xLabel(d))} · ${list.length} picture${list.length === 1 ? '' : 's'}</small></h2>
+      <table style="width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:${110 + accs.length * 150}px"><thead><tr><th style="width:90px"></th>${accs.map(a => `<th style="padding:8px 6px;text-align:left;border-top:4px solid ${col[a.handle]}"><span style="color:${col[a.handle]};font-weight:800">@${esc(a.handle)}</span><br><small class="muted">AdsPower ${esc(a.label || '?')}</small>${xNsfw(a) ? ' <span class="pill no" style="font-size:10.5px">🔞 NSFW</span>' : ''}</th>`).join('')}</tr></thead>
+      <tbody>${[1, 2, 3].map(sl => `<tr><td style="padding:6px;vertical-align:top"><b>Pic ${sl}</b><br><small class="muted">${sl === 3 ? 'post now' : 'schedule'}</small></td>${accs.map(a => { const r = list.find(x => x.account === a.handle && x.slot === sl); return r ? cell(r) : cell(null); }).join('')}</tr>`).join('')}</tbody></table></div>`; }).join('');
   box.querySelectorAll('[data-open]').forEach(i => i.onclick = () => openPhoto(i.dataset.open));
 }
 
@@ -2025,7 +2031,7 @@ async function twitterView(){
   await xRefresh();
   xTimer = setInterval(() => {
     if (tab !== 'twitter') return clearInterval(xTimer);
-    if (document.hidden) return;
+    if (document.hidden || xMode === 'sched') return;
     const ae = document.activeElement; if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && $('#view').contains(ae)) return;
     xRefresh();
   }, 10000);

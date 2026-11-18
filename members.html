@@ -1767,7 +1767,11 @@ async function askAdminView(){
 }
 
 // ---------- Time: live focus (Unreal Focus beats every 30 s + ActivityWatch app names) ----------
-let timeDay = null, timePoll = null, timeTick = null, timeWhole = false, timeLast = null;
+let timeDay = null, timePoll = null, timeTick = null, timeWhole = false, timeLast = null, timeMode = 'live';
+// a work day runs 05:00 -> 04:59 Bangkok, so late nights count for the day they belong to
+const workday = (t = Date.now()) => new Date(t - 5 * 3600e3).toLocaleDateString('en-CA', { timeZone:'Asia/Bangkok' });
+const timeModes = () => `<div class="stats" style="margin-bottom:12px"><button class="btn sm ${timeMode === 'live' ? '' : 'ghost'}" data-tmode="live">⚡ Live</button><button class="btn sm ${timeMode === 'history' ? '' : 'ghost'}" data-tmode="history">📈 History, weeks & money</button></div>`;
+const bindModes = () => document.querySelectorAll('[data-tmode]').forEach(b => b.onclick = () => { timeMode = b.dataset.tmode; if (timeMode === 'live') timeDay = workday(); timeView(); });
 const TK = { work:'var(--ok)', music:'#8b5cf6', break:'var(--bad)', other:'#9b8aa0', handsoff:'#f59e0b', away:'var(--line)' };
 const hm = m => { m = Math.round(Number(m) || 0); return m >= 60 ? Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') : m + 'm'; };
 const hms = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return h ? `${h}h${String(m).padStart(2,'0')}m${String(x).padStart(2,'0')}s` : m ? `${m}m${String(x).padStart(2,'0')}s` : `${x}s`; };
@@ -1778,10 +1782,11 @@ function timeStop(){ clearInterval(timePoll); clearInterval(timeTick); timePoll 
 async function timeView(){
   timeStop();
   const v = $('#view');
-  const today = new Date().toLocaleDateString('en-CA', { timeZone:'Asia/Bangkok' });
+  const today = workday();
   if (!timeDay) timeDay = today;
+  if (timeMode === 'history') return timeHistory();
   const isToday = timeDay === today;
-  const [fl, d, ppl] = await Promise.all([ sb.rpc('focus_live', { p_day: timeDay }), sb.rpc('aw_day', { p_day: timeDay }), sb.from('aw_people').select('name,token,tz').order('id') ]);
+  const [fl, d, ppl, co] = await Promise.all([ sb.from('focus_callouts').select('ts,kind,msg').gte('ts', new Date(Date.now() - 18 * 3600e3).toISOString()).order('ts', { ascending:false }).limit(8), sb.rpc('focus_live', { p_day: timeDay }), sb.rpc('aw_day', { p_day: timeDay }), sb.from('aw_people').select('name,token,tz').order('id') ]).then(([c, ...r]) => [...r, c]);
   if (tab !== 'time') return;
   if (fl.error) return v.innerHTML = `<div class="msg err">${esc(fl.error.message)}</div>`;
   const f = fl.data || {}; timeLast = f;
@@ -1813,6 +1818,7 @@ async function timeView(){
       <div style="font-size:14px">${live ? `for <b id="tCur">${hms((now - new Date(cur.since).getTime()) / 1000)}</b> · ${esc(cur.cat || '')} · ` : ''}session started <b>${sStart ? clk(sStart) : '–'}</b>${sStart ? ` · <b id="tEl">${hms(elapsed / 1000)}</b> in` : ''}</div>
       ${isToday ? `<div class="muted" style="font-size:12px;margin-top:6px">Last signal <span id="tAgo">${lastTs ? hms((now - lastTs) / 1000) : '–'}</span> ago · refreshes every 15 s</div>` : ''}
     </div>
+    ${(co.data || []).filter(c => c.kind !== 'recap').length ? `<div style="border:1px solid var(--bad);background:var(--badbg);border-radius:12px;padding:10px 14px;margin-bottom:14px"><b style="font-size:13px">🚨 Call-outs</b>${co.data.filter(c => c.kind !== 'recap').slice(0, 4).map(c => `<div style="font-size:13.5px;margin-top:5px"><span class="muted">${clk(c.ts)}</span> · ${esc(c.msg)}</div>`).join('')}</div>` : ''}
     <div class="muted" style="font-size:12px;margin-bottom:6px">Since ${sStart ? clk(sStart) : 'start'}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
       ${stat('💼', hm(ss.work), 'Worked', TK.work)}${stat('🎵', hm(ss.music), 'Music', TK.music)}${stat('🎮', hm(ss.break), 'Breaks', TK.break)}
@@ -1854,12 +1860,13 @@ async function timeView(){
       : `<article class="card" style="padding:18px"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">${esc(p.name)}</h2><span class="muted" style="font-size:13px">${esc(p.tz)}</span></div>${body}</article>`;
   }).join('');
   const keepScroll = window.scrollY;
-  v.innerHTML = `<div class="smstop" style="align-items:center"><span></span><div class="stats"><button class="btn sm ghost" id="tPrev">◀</button><b>${esc(new Date(timeDay + 'T12:00:00Z').toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', timeZone:'UTC' }))}</b><button class="btn sm ghost" id="tNext">▶</button>${isToday ? '' : '<button class="btn sm" id="tToday">Today</button>'}</div></div>
+  v.innerHTML = `${timeModes()}<div class="smstop" style="align-items:center"><span></span><div class="stats"><button class="btn sm ghost" id="tPrev">◀</button><b>${esc(new Date(timeDay + 'T12:00:00Z').toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', timeZone:'UTC' }))}</b><button class="btn sm ghost" id="tNext">▶</button>${isToday ? '' : '<button class="btn sm" id="tToday">Today</button>'}</div></div>
     ${focus}<div class="xgrid">${people}</div>`;
   window.scrollTo(0, keepScroll);
   $('#tPrev').onclick = () => shift(-1); $('#tNext').onclick = () => shift(1);
   if ($('#tToday')) $('#tToday').onclick = () => { timeDay = today; timeView(); };
   $('#tWhole').onclick = () => { timeWhole = !timeWhole; timeView(); };
+  bindModes();
   if (isToday){
     timePoll = setInterval(() => { if (tab !== 'time' || document.hidden) return; if (!document.querySelector('#view details[open]')) timeView(); }, 15000);
     timeTick = setInterval(() => {
@@ -1870,6 +1877,102 @@ async function timeView(){
       if ($('#tAgo') && L.last) $('#tAgo').textContent = hms((n - new Date(L.last.ts).getTime()) / 1000);
     }, 1000);
   }
+}
+
+
+// ---------- Time: history, weeks, money ----------
+async function timeHistory(){
+  const v = $('#view');
+  const from = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
+  const [dd, mm, rc] = await Promise.all([ sb.from('focus_daily').select('*').eq('person', 'Gael').gte('day', from).order('day'), sb.from('money_in').select('*').gte('day', from).order('day', { ascending:false }), sb.from('focus_callouts').select('ts,msg').eq('kind', 'recap').order('ts', { ascending:false }).limit(1) ]);
+  if (tab !== 'time' || timeMode !== 'history') return;
+  if (dd.error) return v.innerHTML = timeModes() + `<div class="msg err">${esc(dd.error.message)}</div>`;
+  const days = dd.data || [], money = mm.data || [], byDay = Object.fromEntries(days.map(x => [x.day, x]));
+  const cash = {}; money.forEach(x => cash[x.day] = (cash[x.day] || 0) + Number(x.amount));
+  const N = x => Number(x) || 0, cad = n => Math.round(n).toLocaleString('en-CA') + ' $';
+  const scoreCol = sc => sc == null ? 'var(--blush)' : sc >= 75 ? '#16a34a' : sc >= 55 ? '#65a30d' : sc >= 40 ? '#d97706' : sc >= 20 ? '#dc2626' : '#7f1d1d';
+  const iso = d => { const t = new Date(d + 'T12:00:00Z'), w = (t.getUTCDay() + 6) % 7; t.setUTCDate(t.getUTCDate() - w); return t.toISOString().slice(0, 10); };
+  const dname = d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', timeZone:'UTC' });
+  // heatmap: last 12 weeks, Mon..Sun rows
+  const today = workday(), wk0 = new Date(iso(today) + 'T12:00:00Z'); wk0.setUTCDate(wk0.getUTCDate() - 7 * 11);
+  let heat = '<div style="display:flex;gap:4px">';
+  for (let w = 0; w < 12; w++){
+    heat += '<div style="display:flex;flex-direction:column;gap:4px">';
+    for (let i = 0; i < 7; i++){
+      const t = new Date(wk0); t.setUTCDate(t.getUTCDate() + w * 7 + i); const k = t.toISOString().slice(0, 10), x = byDay[k], fut = k > today;
+      heat += `<button data-hday="${k}" title="${dname(k)}${x ? ` · score ${x.score} · ${hm(x.worked)} worked · focus ${x.focus ?? '–'}%${cash[k] ? ' · ' + cad(cash[k]) : ''}` : ' · no data'}" style="width:18px;height:18px;border-radius:4px;border:${k === today ? '2px solid var(--pink)' : '0'};padding:0;cursor:${x ? 'pointer' : 'default'};opacity:${fut ? .25 : 1};background:${x ? scoreCol(x.score) : 'var(--blush)'}"></button>`;
+    }
+    heat += '</div>';
+  }
+  heat += '</div>';
+  // weeks
+  const weeks = {};
+  days.forEach(x => { const k = iso(x.day), w = weeks[k] = weeks[k] || { k, days:[], worked:0, brk:0, music:0, away:0, act:{}, hours:{} }; w.days.push(x); w.worked += N(x.worked); w.brk += N(x.brk); w.music += N(x.music); (x.top || []).forEach(a => { w.act[a.label] = (w.act[a.label] || 0) + N(a.min); }); Object.entries(x.hours || {}).forEach(([h, m]) => w.hours[h] = (w.hours[h] || 0) + N(m)); });
+  Object.keys(cash).forEach(d => { const k = iso(d); (weeks[k] = weeks[k] || { k, days:[], worked:0, brk:0, music:0, away:0, act:{}, hours:{} }).cash = (weeks[k].cash || 0) + cash[d]; });
+  const wl = Object.values(weeks).sort((a, b) => b.k.localeCompare(a.k));
+  wl.forEach(w => { w.cash = w.cash || 0; const f = w.days.filter(x => x.focus != null); w.focus = f.length ? Math.round(f.reduce((t, x) => t + x.focus, 0) / f.length) : null; w.score = w.days.length ? Math.round(w.days.reduce((t, x) => t + N(x.score), 0) / w.days.length) : null; w.best = w.days.slice().sort((a, b) => N(b.score) - N(a.score))[0]; w.rate = w.worked > 30 && w.cash ? w.cash / (w.worked / 60) : null; });
+  const maxW = Math.max(1, ...wl.map(w => w.worked));
+  const delta = (a, b, fmt) => b == null || !b ? '' : `<span style="font-size:11px;color:${a >= b ? 'var(--ok)' : 'var(--bad)'}"> ${a >= b ? '▲' : '▼'} ${fmt(Math.abs(a - b))}</span>`;
+  // best hours (last 28 days) and best weekdays
+  const hrs = {}, wd = [0,0,0,0,0,0,0], wdn = [0,0,0,0,0,0,0];
+  days.filter(x => x.day >= new Date(Date.now() - 28 * 864e5).toISOString().slice(0, 10)).forEach(x => { Object.entries(x.hours || {}).forEach(([h, m]) => hrs[h] = (hrs[h] || 0) + N(m)); const i = (new Date(x.day + 'T12:00:00Z').getUTCDay() + 6) % 7; wd[i] += N(x.worked); wdn[i]++; });
+  const hmax = Math.max(1, ...Object.values(hrs)), wdAvg = wd.map((t, i) => wdn[i] ? t / wdn[i] : 0), wdMax = Math.max(1, ...wdAvg);
+  // lessons: this week vs last week
+  const tw = wl.find(w => w.k === iso(today)), lw = wl.find(w => w.k < iso(today));
+  const L = [];
+  if (tw && lw){
+    const pace = tw.worked / Math.max(1, tw.days.length), lpace = lw.worked / Math.max(1, lw.days.length);
+    L.push(pace >= lpace ? `✅ You're working ${hm(pace)}/day this week vs ${hm(lpace)} last week.` : `⚠️ Only ${hm(pace)}/day this week vs ${hm(lpace)} last week. Push the first 2 hours of the day.`);
+    if (tw.brk / Math.max(1, tw.days.length) > 45) L.push(`🎮 ${hm(tw.brk / tw.days.length)} of breaks per day. Cap YouTube at 30 min.`);
+    if (tw.focus != null && lw.focus != null) L.push(tw.focus >= lw.focus ? `🎯 Focus up: ${tw.focus}% vs ${lw.focus}%.` : `🎯 Focus down: ${tw.focus}% vs ${lw.focus}%. Fewer tabs, one task at a time.`);
+  }
+  const topH = Object.entries(hrs).sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0] + 'h');
+  if (topH.length) L.push(`⏰ Your best hours: ${topH.join(', ')}. Put the hardest task there.`);
+  const bestWd = wdAvg.indexOf(Math.max(...wdAvg)); if (wdAvg[bestWd] > 0) L.push(`📅 Best day of the week: ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][bestWd]} (${hm(wdAvg[bestWd])} on average).`);
+  const lowDays = days.filter(x => N(x.score) < 30 && x.day !== today).length; if (lowDays) L.push(`🔴 ${lowDays} weak day(s) (score under 30) in this history. Click them in the calendar to see why.`);
+  if (!money.length) L.push('💰 Add your money in below so I can show which weeks paid the most per hour.');
+  if (days.length < 7) L.push(`📈 Only ${days.length} day(s) of history so far. The comparisons get sharp after 2 weeks.`);
+  const kpi = (lab, val, sub) => `<div class="card" style="padding:12px 14px;flex:1;min-width:140px"><div class="muted" style="font-size:12px">${lab}</div><div style="font-size:22px;font-weight:800">${val}</div>${sub ? `<div class="muted" style="font-size:11px">${sub}</div>` : ''}</div>`;
+  const tdy = byDay[today];
+  v.innerHTML = `${timeModes()}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+    ${kpi('Today score', tdy ? tdy.score + '/100' : '–', tdy ? hm(tdy.worked) + ' worked' : '')}
+    ${kpi('This week worked', tw ? hm(tw.worked) : '–', tw && lw ? delta(tw.worked, lw.worked, hm) + ' vs last week' : '')}
+    ${kpi('This week focus', tw && tw.focus != null ? tw.focus + '%' : '–', '')}
+    ${kpi('This week money', tw ? cad(tw.cash) : '–', tw && tw.rate ? cad(tw.rate) + '/hour' : '')}
+  </div>
+  <article class="card" style="padding:18px;margin-bottom:14px"><h2 style="margin:0 0 4px">📅 Every day, scored</h2><p class="muted" style="font-size:12px;margin:0 0 12px">Score /100 = hours worked (6h = full) + focus + longest block − too many breaks. Click a day to open it.</p>
+    <div style="display:flex;gap:10px;align-items:flex-start;overflow-x:auto"><div class="muted" style="display:flex;flex-direction:column;gap:4px;font-size:10px;line-height:18px">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x => `<span>${x}</span>`).join('')}</div>${heat}</div>
+    <div class="muted" style="display:flex;gap:10px;font-size:11px;margin-top:8px;flex-wrap:wrap">${[[0,'0–19'],[20,'20–39'],[40,'40–54'],[55,'55–74'],[75,'75+']].map(([n, l]) => `<span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${scoreCol(n)};vertical-align:middle;margin-right:4px"></i>${l}</span>`).join('')}</div>
+  </article>
+  ${L.length ? `<article class="card" style="padding:18px;margin-bottom:14px"><h2 style="margin:0 0 8px">🧠 What the data says</h2>${L.map(x => `<div style="font-size:14px;margin:6px 0">${esc(x)}</div>`).join('')}</article>` : ''}
+  <article class="card" style="padding:18px;margin-bottom:14px"><h2 style="margin:0 0 10px">📆 Week by week</h2>
+    <div class="tbl" style="overflow-x:auto"><table style="font-size:13px"><thead><tr><th>Week of</th><th>Worked</th><th style="text-align:right">Days</th><th style="text-align:right">Focus</th><th style="text-align:right">Breaks</th><th style="text-align:right">Score</th><th style="text-align:right">Money</th><th style="text-align:right">$/hour</th><th>Best day</th><th>Most time on</th></tr></thead><tbody>
+    ${wl.map((w, i) => { const p = wl[i + 1]; const top = Object.entries(w.act).sort((a, b) => b[1] - a[1]).slice(0, 2); return `<tr><td style="white-space:nowrap"><b>${dname(w.k)}</b></td><td style="min-width:150px"><b>${hm(w.worked)}</b>${p ? delta(w.worked, p.worked, hm) : ''}<div class="xbar" style="height:5px;margin-top:4px"><i style="width:${Math.round(w.worked / maxW * 100)}%;background:var(--ok)"></i></div></td><td style="text-align:right">${w.days.length}</td><td style="text-align:right">${w.focus ?? '–'}%</td><td style="text-align:right">${hm(w.brk)}</td><td style="text-align:right"><b style="color:${scoreCol(w.score)}">${w.score ?? '–'}</b></td><td style="text-align:right">${w.cash ? cad(w.cash) : '–'}</td><td style="text-align:right">${w.rate ? cad(w.rate) : '–'}</td><td class="muted" style="white-space:nowrap">${w.best ? dname(w.best.day) + ' · ' + w.best.score : '–'}</td><td class="muted">${top.map(([l, m]) => esc(l) + ' ' + hm(m)).join(' · ') || '–'}</td></tr>`; }).join('') || '<tr><td colspan="10" class="muted">No history yet.</td></tr>'}
+    </tbody></table></div>
+  </article>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">
+    <article class="card" style="padding:18px;flex:1.4;min-width:300px"><h2 style="margin:0 0 4px">⏰ Your best hours</h2><p class="muted" style="font-size:12px;margin:0 0 10px">Real work per hour of the day, last 4 weeks</p>
+      <div style="display:flex;gap:2px;align-items:flex-end;height:90px">${Array.from({ length: 24 }, (_, h) => `<div title="${h}h · ${hm(hrs[h] || 0)}" style="flex:1;background:var(--ok);opacity:${hrs[h] ? .35 + .65 * hrs[h] / hmax : .1};height:${Math.max(3, (hrs[h] || 0) / hmax * 100)}%;border-radius:3px 3px 0 0"></div>`).join('')}</div>
+      <div class="muted" style="display:flex;justify-content:space-between;font-size:11px;margin-top:3px"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span></div></article>
+    <article class="card" style="padding:18px;flex:1;min-width:240px"><h2 style="margin:0 0 4px">📅 Best days</h2><p class="muted" style="font-size:12px;margin:0 0 10px">Average worked per weekday</p>
+      ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((n, i) => `<div style="display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px"><span style="width:32px">${n}</span><div class="xbar" style="flex:1"><i style="width:${Math.round(wdAvg[i] / wdMax * 100)}%;background:var(--ok)"></i></div><b style="width:48px;text-align:right">${wdn[i] ? hm(wdAvg[i]) : '–'}</b></div>`).join('')}</article>
+  </div>
+  <article class="card" style="padding:18px;margin-bottom:14px"><h2 style="margin:0 0 4px">💰 Money in</h2><p class="muted" style="font-size:12px;margin:0 0 10px">In CAD. Site sales fees come in automatically; add the rest here (salary, closing deals, Dropp, OF…) so you can see which weeks paid the most per hour.</p>
+    <form id="mForm" class="row" style="align-items:flex-end">
+      <div style="max-width:150px"><label for="mDay">Day</label><input id="mDay" type="date" value="${today}" required></div>
+      <div><label for="mSrc">Source</label><input id="mSrc" list="mSrcs" placeholder="Salary, Closing, Dropp…" required><datalist id="mSrcs">${[...new Set(['Chatting manager salary','High-ticket closing','Dropp / Telegram VIP','Coaching','Merch', ...money.map(x => x.source)])].map(x => `<option value="${esc(x)}">`).join('')}</datalist></div>
+      <div style="max-width:140px"><label for="mAmt">Amount (CAD)</label><input id="mAmt" type="number" step="0.01" required></div>
+      <div><label for="mNote">Note</label><input id="mNote" placeholder="optional"></div>
+      <div style="flex:0"><button class="btn">Add</button></div>
+    </form>
+    <div class="tbl" style="margin-top:12px;max-height:260px;overflow:auto"><table style="font-size:13px"><tbody>${money.slice(0, 40).map(x => `<tr><td class="muted" style="white-space:nowrap">${dname(x.day)}</td><td>${esc(x.source)}${x.auto ? ' <span class="muted" style="font-size:11px">auto</span>' : ''}</td><td class="muted">${esc(x.note || '')}</td><td style="text-align:right"><b>${cad(x.amount)}</b></td><td>${x.auto ? '' : `<button class="btn sm ghost" data-mdel="${x.id}" aria-label="Delete">✕</button>`}</td></tr>`).join('') || '<tr><td class="muted">Nothing yet.</td></tr>'}</tbody></table></div>
+  </article>
+  ${(rc.data || [])[0] ? `<article class="card" style="padding:18px"><h2 style="margin:0 0 8px">📊 Last day recap</h2><div style="white-space:pre-wrap;font-size:14px">${esc(rc.data[0].msg.replace(/\*\*/g, ''))}</div></article>` : ''}`;
+  bindModes();
+  v.querySelectorAll('[data-hday]').forEach(b => b.onclick = () => { if (!byDay[b.dataset.hday]) return; timeDay = b.dataset.hday; timeMode = 'live'; timeView(); });
+  $('#mForm').onsubmit = async e => { e.preventDefault(); const { error } = await sb.from('money_in').insert({ day: $('#mDay').value, source: $('#mSrc').value.trim(), amount: Number($('#mAmt').value), note: $('#mNote').value || null }); toast(error ? error.message : 'Added'); if (!error) timeHistory(); };
+  v.querySelectorAll('[data-mdel]').forEach(b => b.onclick = async () => { if (!confirm('Delete this entry?')) return; const { error } = await sb.from('money_in').delete().eq('id', b.dataset.mdel); toast(error ? error.message : 'Deleted'); timeHistory(); });
 }
 
 async function topupsView(){

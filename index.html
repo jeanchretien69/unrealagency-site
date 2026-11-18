@@ -474,6 +474,15 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
   .uos .cta-row .note{color:#8f6e7f;font-size:13px}
   @media (max-width:860px){.chip-grid,.calc{grid-template-columns:1fr}.proof{grid-template-columns:1fr 1fr}.os-row{grid-template-columns:1fr}.uring{margin:0 auto}}
   @media (prefers-reduced-motion:reduce){.live::before{animation:none}}
+  @media (max-width:600px){
+    html,body{overflow-x:clip}
+    .nav{padding:10px 12px;gap:8px}
+    .links{flex-wrap:nowrap;gap:4px;overflow-x:auto;scrollbar-width:none}
+    .links::-webkit-scrollbar{display:none}
+    .links a,.links button{font-size:12.5px;padding:7px 10px;white-space:nowrap}
+    .moves{gap:6px;bottom:3%}
+    .moves button{font-size:11px;padding:9px 12px}
+  }
 </style>
 <link rel="preload" as="image" href="live/nami_start.jpg?v=1">
 </head>

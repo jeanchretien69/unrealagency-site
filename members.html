@@ -1873,7 +1873,7 @@ async function twitterView(){
     if (document.hidden) return;
     const ae = document.activeElement; if (ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && $('#view').contains(ae)) return;
     xRefresh();
-  }, 20000);
+  }, 10000);
 }
 
 // ---------- Ask Unreal (floating helper, sees only what this person can already see) ----------

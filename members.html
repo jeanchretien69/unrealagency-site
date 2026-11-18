@@ -576,11 +576,50 @@ function ding(force){
   } catch(e){}
 }
 function badgesStart(){
+  focusStart();
   badges(); clearInterval(nbTimer); nbTimer = setInterval(badges, 30000);
   if (nbChan) sb.removeChannel(nbChan);
   if (can('sms')) nbChan = sb.channel('nb-live').on('postgres_changes', { event:'*', schema:'public', table:'sms_messages' }, p => { setTimeout(badges, 400); if (p.eventType === 'INSERT' && p.new.direction === 'in' && !p.new.is_test) ding(); }).subscribe();
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) badges(); });
+
+
+// ---------- Focus call-outs: bell sound + popup + system notification on any tab of the members area ----------
+let focusSeen = null, focusTimer = null;
+function bell(){
+  if (!dingCtx) return;
+  try {
+    if (dingCtx.state === 'suspended') dingCtx.resume();
+    const t = dingCtx.currentTime;
+    [0, .32].forEach(d => [[1046.5, .5], [2093, .18], [3136, .08]].forEach(([f, v]) => { const o = dingCtx.createOscillator(), g = dingCtx.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(v, t + d + .01); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 1.4); o.connect(g).connect(dingCtx.destination); o.start(t + d); o.stop(t + d + 1.5); }));
+  } catch(e){}
+}
+function focusPopup(msg){
+  document.querySelectorAll('.fpop').forEach(x => x.remove());
+  const el = document.createElement('div'); el.className = 'fpop'; el.setAttribute('role', 'alert');
+  el.style.cssText = 'position:fixed;top:18px;right:18px;z-index:9999;max-width:380px;background:var(--card);border:2px solid var(--bad);border-radius:14px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35);font-size:14.5px;line-height:1.45';
+  el.innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px"><b>🔔 Focus check</b><button aria-label="Close" style="border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer">✕</button></div><div style="margin-top:6px">${esc(msg)}</div>`;
+  el.querySelector('button').onclick = () => el.remove();
+  document.body.appendChild(el); setTimeout(() => el.remove(), 60000);
+}
+async function focusCheck(){
+  if (!me || me.role !== 'admin') return;
+  const { data } = await sb.from('focus_callouts').select('id,msg,kind,ts').order('id', { ascending:false }).limit(3);
+  if (!data || !data.length) return;
+  if (focusSeen === null){ focusSeen = data[0].id; return; }
+  const fresh = data.filter(x => x.id > focusSeen && Date.now() - new Date(x.ts).getTime() < 10 * 60e3).reverse();
+  focusSeen = data[0].id;
+  fresh.forEach(x => {
+    bell(); focusPopup(x.msg);
+    try { if ('Notification' in window && Notification.permission === 'granted') new Notification('🔔 Unreal Focus', { body: x.msg, tag: 'focus-' + x.id }); } catch(e){}
+  });
+  if (fresh.length && tab === 'time' && timeMode === 'live') timeView();
+}
+function focusStart(){
+  if (!me || me.role !== 'admin') return;
+  try { if ('Notification' in window && Notification.permission === 'default') document.addEventListener('pointerdown', () => Notification.requestPermission(), { once:true }); } catch(e){}
+  focusCheck(); clearInterval(focusTimer); focusTimer = setInterval(focusCheck, 30000);
+}
 
 let lastSession;
 sb.auth.onAuthStateChange((ev, session) => {
@@ -1789,6 +1828,8 @@ async function timeView(){
   const [fl, d, ppl, co] = await Promise.all([ sb.from('focus_callouts').select('ts,kind,msg').gte('ts', new Date(Date.now() - 18 * 3600e3).toISOString()).order('ts', { ascending:false }).limit(8), sb.rpc('focus_live', { p_day: timeDay }), sb.rpc('aw_day', { p_day: timeDay }), sb.from('aw_people').select('name,token,tz').order('id') ]).then(([c, ...r]) => [...r, c]);
   if (tab !== 'time') return;
   if (fl.error) return v.innerHTML = `<div class="msg err">${esc(fl.error.message)}</div>`;
+  const td = isToday ? await sb.from('my_todos').select('title,bucket,done,done_at,done_by').order('sort') : { data:[] };
+  if (tab !== 'time') return;
   const f = fl.data || {}; timeLast = f;
   const shift = n => { const t = new Date(timeDay + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); timeDay = t.toISOString().slice(0, 10); timeView(); };
   const now = Date.now(), lastTs = f.last ? new Date(f.last.ts).getTime() : 0, live = isToday && lastTs && now - lastTs < 95000;
@@ -1806,47 +1847,47 @@ async function timeView(){
   const pct = totalOn ? Math.round(100 * (Number(ss.work) || 0) / totalOn) : null;
   const elapsed = sStart ? (isToday ? now : t1) - new Date(sStart).getTime() : 0;
   const recent = (f.blocks || []).slice(-25).reverse();
+  const worked = (Number(ss.work) || 0) + (Number(ss.music) || 0);
+  const notWork = (Number(ss.break) || 0) + (Number(ss.other) || 0) + (Number(ss.handsoff) || 0) + (Number(ss.away) || 0);
+  const focusPct = worked + notWork > 0 ? Math.round(100 * worked / (worked + notWork)) : null;
+  const big = (lab, val, col) => `<div class="card" style="padding:14px 16px;flex:1;min-width:150px;border-top:4px solid ${col}"><div class="muted" style="font-size:13px">${lab}</div><div style="font-size:30px;font-weight:800;margin-top:2px;color:${col}">${val}</div></div>`;
+  const tdo = td.data || [], dOf = x => x ? workday(new Date(x).getTime()) : '';
+  const doneT = tdo.filter(x => x.done && dOf(x.done_at) === timeDay), nextT = tdo.filter(x => !x.done && (x.bucket === 'now' || x.bucket === 'today')).sort((a, b) => (a.bucket === 'now' ? 0 : 1) - (b.bucket === 'now' ? 0 : 1)).slice(0, 3);
+  const workActs = acts.filter(a => a.kind === 'work' || a.kind === 'music').slice(0, 3).map(a => esc(a.label.replace(/^Unreal site · /, 'Site: ').replace(/^Claude · /, 'Claude: ')));
+  const offActs = acts.filter(a => a.kind === 'break' || a.kind === 'other').slice(0, 2).map(a => esc(a.label.replace(/^YouTube · .*/, 'YouTube')) + ' ' + hm(a.min));
+  const summary = [];
+  summary.push(`${sStart ? `Since ${clk(sStart)} ` : ''}you worked <b>${hm(worked)}</b> and lost <b>${hm(notWork)}</b>${offActs.length ? ` (${offActs.join(', ')})` : ''}.`);
+  summary.push(focusPct == null ? 'Not enough data yet.' : focusPct >= 70 ? `🟢 <b>Focused.</b> Keep this pace.` : focusPct >= 45 ? `🟠 <b>OK but scattered.</b> ${(ss.switches || 0) > 40 ? `${ss.switches} tab switches, too much hopping.` : 'Stay on one task longer.'}` : `🔴 <b>Not focused.</b> More time off than on. Close the distractions and pick one task.`);
+  if (workActs.length) summary.push(`💼 Mostly on: ${workActs.join(' · ')}`);
+  if (isToday) summary.push(doneT.length ? `✅ Done today (${doneT.length}): ${doneT.slice(0, 4).map(x => esc(x.title)).join(' · ')}` : '✅ Nothing ticked on your to-do yet today.');
+  if (isToday && nextT.length) summary.push(`➡️ Next: ${nextT.map(x => esc(x.title)).join(' · ')}`);
   const stat = (ico, val, lab, color) => `<div class="card" style="padding:12px 14px;flex:1;min-width:120px;border-left:4px solid ${color}"><div class="muted" style="font-size:12px">${ico} ${lab}</div><div style="font-size:22px;font-weight:800;margin-top:2px">${val}</div></div>`;
   const focus = `<article class="card" style="padding:18px;margin-bottom:14px;border:2px solid var(--pink)">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
       <h2 style="margin:0">⚡ Gael · ${isToday ? 'Live' : 'Day'} ${isToday ? `<span id="tLive" style="font-size:12px;vertical-align:middle;margin-left:6px;padding:3px 9px;border-radius:99px;background:${live ? 'var(--okbg)' : 'var(--blush)'};color:${live ? 'var(--ok)' : 'var(--muted)'}">${live ? '● LIVE' : '○ offline'}</span>` : ''}</h2>
-      <div style="text-align:right"><span style="font-size:30px;font-weight:800;color:${pct == null ? 'var(--muted)' : pct >= 70 ? 'var(--ok)' : pct >= 45 ? '#d97706' : 'var(--bad)'}">${pct ?? '–'}%</span><div class="muted" style="font-size:11px">focus this session</div></div>
+      <span class="muted" style="font-size:13px">since <b>${sStart ? clk(sStart) : '–'}</b>${sStart ? ` · <span id="tEl">${hms(elapsed / 1000)}</span>` : ''}</span>
     </div>
-    <div style="border-radius:14px;padding:16px;background:var(--blush);margin-bottom:14px">
-      <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.06em">${isToday ? 'Right now' : 'Last activity'}</div>
-      <div style="font-size:21px;font-weight:800;margin:4px 0">${nowIcon} ${esc(nowVerb)} ${live || !isToday ? `<span style="color:var(--pink)">${esc(cur.label || '–')}</span>` : ''}</div>
-      <div style="font-size:14px">${live ? `for <b id="tCur">${hms((now - new Date(cur.since).getTime()) / 1000)}</b> · ${esc(cur.cat || '')} · ` : ''}session started <b>${sStart ? clk(sStart) : '–'}</b>${sStart ? ` · <b id="tEl">${hms(elapsed / 1000)}</b> in` : ''}</div>
-      ${isToday ? `<div class="muted" style="font-size:12px;margin-top:6px">Last signal <span id="tAgo">${lastTs ? hms((now - lastTs) / 1000) : '–'}</span> ago · refreshes every 15 s</div>` : ''}
+    <div style="font-size:15px;margin-bottom:14px">${nowIcon} <b>${esc(nowVerb)}</b> ${live || !isToday ? `<span style="color:var(--pink);font-weight:700">${esc(cur.label || '–')}</span>` : ''}${live ? ` · <span id="tCur">${hms((now - new Date(cur.since).getTime()) / 1000)}</span>` : ''}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      ${big('⏱ Worked', hm(worked), 'var(--ok)')}${big('💤 Not working', hm(notWork), 'var(--bad)')}${big('🎯 Focus', focusPct == null ? '–' : focusPct + '%', focusPct == null ? 'var(--muted)' : focusPct >= 70 ? 'var(--ok)' : focusPct >= 45 ? '#d97706' : 'var(--bad)')}
     </div>
-    ${(co.data || []).filter(c => c.kind !== 'recap').length ? `<div style="border:1px solid var(--bad);background:var(--badbg);border-radius:12px;padding:10px 14px;margin-bottom:14px"><b style="font-size:13px">🚨 Call-outs</b>${co.data.filter(c => c.kind !== 'recap').slice(0, 4).map(c => `<div style="font-size:13.5px;margin-top:5px"><span class="muted">${clk(c.ts)}</span> · ${esc(c.msg)}</div>`).join('')}</div>` : ''}
-    <div class="muted" style="font-size:12px;margin-bottom:6px">Since ${sStart ? clk(sStart) : 'start'}</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      ${stat('💼', hm(ss.work), 'Worked', TK.work)}${stat('🎵', hm(ss.music), 'Music', TK.music)}${stat('🎮', hm(ss.break), 'Breaks', TK.break)}
-      ${stat('💬', hm(ss.other), 'Not work', TK.other)}${stat('🤚', hm(ss.handsoff), 'Hands-off', TK.handsoff)}${stat('🚶', hm(ss.away), 'Away', 'var(--muted)')}
+    <div style="border-radius:14px;padding:14px 16px;background:var(--blush);margin-bottom:14px">
+      <b style="font-size:14px">📝 Summary</b>
+      ${summary.map(x => `<div style="font-size:14.5px;margin-top:7px;line-height:1.45">${x}</div>`).join('')}
     </div>
-    <div class="row" style="justify-content:space-between;align-items:center"><b style="font-size:14px">Timeline ${timeWhole ? '(whole day)' : '(this session)'}</b><button class="btn sm ghost" id="tWhole">${timeWhole ? 'This session' : 'Whole day'}</button></div>
-    <div style="position:relative;height:34px;margin:8px 0 2px;border-radius:8px;overflow:hidden;background:var(--blush)">
-      ${blocks.map(b => { const s = new Date(b.s).getTime(), e = new Date(b.e).getTime(); return `<i title="${clk(b.s)}–${clk(b.e)} · ${esc(b.label)} · ${kindName(b)} · ${hm(b.min)}" style="position:absolute;top:0;bottom:0;left:${(s - t0) / span * 100}%;width:${Math.max(.25, (e - s) / span * 100)}%;background:${segCol(b)}"></i>`; }).join('')}
-      ${isToday ? `<i style="position:absolute;top:0;bottom:0;right:0;width:2px;background:var(--pink)"></i>` : ''}
+    ${(co.data || []).filter(c => c.kind !== 'recap').length ? `<div style="border:1px solid var(--bad);background:var(--badbg);border-radius:12px;padding:10px 14px;margin-bottom:14px"><b style="font-size:13px">🔔 Call-outs</b>${co.data.filter(c => c.kind !== 'recap').slice(0, 3).map(c => `<div style="font-size:13.5px;margin-top:5px"><span class="muted">${clk(c.ts)}</span> · ${esc(c.msg)}</div>`).join('')}</div>` : ''}
+    <div style="position:relative;height:22px;margin:4px 0 2px;border-radius:7px;overflow:hidden;background:var(--blush)">
+      ${blocks.map(b => { const s = new Date(b.s).getTime(), e = new Date(b.e).getTime(); return `<i title="${clk(b.s)}–${clk(b.e)} · ${esc(b.label)} · ${kindName(b)} · ${hm(b.min)}" style="position:absolute;top:0;bottom:0;left:${(s - t0) / span * 100}%;width:${Math.max(.25, (e - s) / span * 100)}%;background:${b.cls === 'away' ? TK.away : (b.kind === 'work' || b.kind === 'music') && b.cls === 'active' ? TK.work : TK.break}"></i>`; }).join('')}
     </div>
     <div style="position:relative;height:16px;font-size:11px" class="muted">${ticks.map(t => `<span style="position:absolute;left:${(t - t0) / span * 100}%;transform:translateX(-50%)">${clk(t)}</span>`).join('')}</div>
-    <div class="muted" style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;margin:4px 0 14px">${[['work','Working'],['music','Music'],['break','Break'],['other','Not work'],['handsoff','Hands-off'],['away','Away']].map(([k, l]) => `<span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${TK[k]};vertical-align:middle;margin-right:4px"></i>${l}</span>`).join('')}</div>
-    ${(f.tips || []).map(t => `<div style="background:rgba(255,95,162,.12);border:1px solid rgba(255,95,162,.35);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px">💡 ${esc(t)}</div>`).join('')}
-    <h3 style="margin:18px 0 8px;font-size:15px">What you worked on today</h3>
-    <div class="tbl" style="overflow-x:auto"><table style="font-size:13px"><thead><tr><th>Activity</th><th>Type</th><th style="text-align:right">Time</th><th style="text-align:right">Active</th><th style="text-align:right">Clicks</th><th style="text-align:right">Keys</th><th>When</th></tr></thead><tbody>
-      ${acts.map(a => `<tr><td style="min-width:200px"><div>${esc(a.label)}</div><div class="xbar" style="height:5px;margin-top:4px"><i style="width:${Math.round(Number(a.min) / amax * 100)}%;background:${TK[a.kind] || TK.other}"></i></div></td><td class="muted">${esc(a.cat)}</td><td style="text-align:right"><b>${hm(a.min)}</b></td><td style="text-align:right">${hm(a.act)}</td><td style="text-align:right">${a.clicks}</td><td style="text-align:right">${a.keys}</td><td class="muted" style="white-space:nowrap">${clk(a.first)}–${clk(a.last)}${a.n > 1 ? ` · ${a.n}×` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Nothing yet.</td></tr>'}
+    <details style="margin-top:12px"><summary class="muted" style="cursor:pointer;font-size:13px">Details</summary>
+    <div class="row" style="justify-content:flex-end;margin:8px 0"><button class="btn sm ghost" id="tWhole">${timeWhole ? 'This session' : 'Whole day'}</button></div>
+    <div class="tbl" style="overflow-x:auto"><table style="font-size:13px"><thead><tr><th>Activity</th><th>Type</th><th style="text-align:right">Time</th><th>When</th></tr></thead><tbody>
+      ${acts.map(a => `<tr><td style="min-width:200px">${esc(a.label)}</td><td class="muted">${esc(a.cat)}</td><td style="text-align:right"><b>${hm(a.min)}</b></td><td class="muted" style="white-space:nowrap">${clk(a.first)}–${clk(a.last)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Nothing yet.</td></tr>'}
     </tbody></table></div>
-    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:16px">
-      <div style="flex:1;min-width:260px"><h3 style="margin:0 0 8px;font-size:15px">By category (this session)</h3>
-        ${cats.map(c => `<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${esc(c.cat)}</span><b>${hm(c.min)}</b></div><div class="xbar"><i style="width:${Math.round(Number(c.min) / cmax * 100)}%;background:${TK[c.kind] || TK.other}"></i></div></div>`).join('') || '<p class="muted">–</p>'}
-        <p class="muted" style="font-size:12px;margin-top:10px">${ss.clicks || 0} clicks · ${ss.keys || 0} keys · ${ss.switches || 0} tab switches this session</p>
-        ${(f.away_log || []).length ? `<h3 style="margin:14px 0 6px;font-size:15px">Away (with reason)</h3>${f.away_log.map(a => `<div style="font-size:13px">🚶 ${clk(a.s)}–${a.e ? clk(a.e) : 'now'} · ${esc(a.reason || '')}</div>`).join('')}` : ''}
-      </div>
-      <div style="flex:1.3;min-width:300px"><h3 style="margin:0 0 8px;font-size:15px">Live log</h3>
-        <div style="max-height:340px;overflow:auto;font-size:13px">${recent.map(b => `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)"><span class="muted" style="white-space:nowrap;font-variant-numeric:tabular-nums">${clk(b.s)}–${clk(b.e)}</span><i style="flex:none;width:8px;height:8px;border-radius:50%;margin-top:6px;background:${segCol(b)}"></i><span style="flex:1">${esc(b.label)}</span><b style="white-space:nowrap">${hm(b.min)}</b></div>`).join('') || '<p class="muted">–</p>'}</div>
-      </div>
-    </div>
-    <p class="muted" style="font-size:11px;margin-top:12px">Chrome tabs: live from Unreal Focus (every 30 s). Mac apps (Claude app, Discord, YouTube in Brave…): from ActivityWatch${f.aw_last_sync ? `, last synced ${clk(f.aw_last_sync)}` : ''}. Work counts only with mouse/keyboard activity; music and breaks count while on screen.</p>
+    <h3 style="margin:14px 0 6px;font-size:14px">Live log</h3>
+    <div style="max-height:300px;overflow:auto;font-size:13px">${recent.map(b => `<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--line)"><span class="muted" style="white-space:nowrap;font-variant-numeric:tabular-nums">${clk(b.s)}–${clk(b.e)}</span><span style="flex:1">${esc(b.label)}</span><b style="white-space:nowrap">${hm(b.min)}</b></div>`).join('') || '<p class="muted">–</p>'}</div>
+    <p class="muted" style="font-size:11px;margin-top:10px">Updates every 15 s. Music counts as work, YouTube videos and messages don't.</p></details>
   </article>`;
   // other people (ActivityWatch); Gael's raw ActivityWatch card is folded away
   const rows = d.data || [];
@@ -1865,7 +1906,7 @@ async function timeView(){
   window.scrollTo(0, keepScroll);
   $('#tPrev').onclick = () => shift(-1); $('#tNext').onclick = () => shift(1);
   if ($('#tToday')) $('#tToday').onclick = () => { timeDay = today; timeView(); };
-  $('#tWhole').onclick = () => { timeWhole = !timeWhole; timeView(); };
+  if ($('#tWhole')) $('#tWhole').onclick = () => { timeWhole = !timeWhole; timeView(); };
   bindModes();
   if (isToday){
     timePoll = setInterval(() => { if (tab !== 'time' || document.hidden) return; if (!document.querySelector('#view details[open]')) timeView(); }, 15000);

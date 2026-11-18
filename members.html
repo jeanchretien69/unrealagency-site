@@ -428,6 +428,7 @@
         <button data-tab="docs" data-perm="docs" hidden>📚 Docs & scripts</button>
         <button data-tab="bot" data-perm="bot" hidden>🤖 AI chatbot</button>
         <button data-tab="wallet" data-perm="wallet" hidden>💳 Wallet</button>
+        <button data-href="/earnings" data-perm="earnings" hidden>📈 Statements</button>
         <div class="sep adm" hidden>Admin</div>
         
         <button data-tab="brains" class="adm" hidden>⚡ AI brains</button>
@@ -537,6 +538,7 @@ const PERMS = [
   { k:'bot', l:'🤖 AI chatbot', sub:[['bot.sms','SMS'],['bot.of','OnlyFans'],['bot.telegram','Telegram'],['bot.billing','Billing']] },
   { k:'wallet', l:'💳 Wallet', sub:[['wallet.topup','Top up'],['wallet.history','History']] },
   { k:'ask', l:'💬 Ask', sub:[] },
+  { k:'earnings', l:'📈 Statements (simulation)', sub:[] },
 ];
 const can = p => me && (me.role === 'admin' || (me.perms || []).includes(p));
 
@@ -554,7 +556,8 @@ async function boot(session){
   $('#whoRole').textContent = me.role; $('#whoRole').classList.toggle('admin', me.role==='admin');
   document.querySelectorAll('.adm').forEach(el => el.hidden = me.role !== 'admin');
   document.querySelectorAll('[data-perm]').forEach(el => el.hidden = !can(el.dataset.perm));
-  const first = document.querySelector('#side button:not([hidden])');
+  const first = document.querySelector('#side button:not([hidden]):not([data-href])');
+  if (!first && can('earnings')) { location.href = '/earnings'; return; }
   if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }
   badgesStart(); if (can('ask')) askInit();
   const h = location.hash.slice(1);
@@ -638,7 +641,7 @@ sb.auth.onAuthStateChange((ev, session) => {
   lastSession = id; boot(session);
 });
 
-document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
+document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.dataset.href ? (location.href = b.dataset.href) : show(b.dataset.tab));
 const titles = { todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){

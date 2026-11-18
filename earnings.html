@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Statements · Unreal Agency</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="/favicon.ico">
+<style>
+  :root{
+    --bg:#151517; --line:#2c2c30; --line2:#232327; --card:#151517; --head:#1b2733;
+    --ink:#ececee; --ink2:#c9c9cd; --muted:#8b8b91; --dim:#5f5f66;
+    --pink:#ff5fa2; --pink2:#e2367f; --blue:#4aa3e6; --violet:#5d4f96;
+    --c-sub:#4aa3e6; --c-tip:#3f8a8c; --c-post:#c2456b; --c-msg:#b5603a; --c-ref:#6f5aa8;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none!important}
+  html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  body{min-height:100vh}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  svg{display:block}
+
+  .shell{display:grid;grid-template-columns:254px 1fr;min-height:100vh;max-width:1180px;margin:0 auto}
+  /* sidebar */
+  .sb{position:sticky;top:0;height:100vh;padding:14px 18px 20px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+  .sb .av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#ff8fc0,#e2367f);display:grid;place-items:center;font-weight:700;font-size:16px;color:#fff;margin:4px 0 14px 6px;overflow:hidden}
+  .sb .av img{width:100%;height:100%;object-fit:cover}
+  .sb a.it{display:flex;align-items:center;gap:20px;padding:12px 8px;border-radius:999px;font-size:19px;color:var(--ink2);font-weight:400}
+  .sb a.it svg{width:28px;height:28px;stroke:currentColor;fill:none;stroke-width:1.6;color:#9a9aa0}
+  .sb a.it:hover{background:#1d1d21}
+  .sb a.it.on{color:#fff;font-weight:600}
+  .sb a.it.on svg{color:#fff}
+  .sb .np{margin-top:24px;display:flex;align-items:center;justify-content:center;gap:10px;height:50px;border-radius:999px;background:var(--pink);color:#fff;font-weight:600;font-size:14px;letter-spacing:.04em}
+  .sb .np svg{width:20px;height:20px;stroke:#fff;stroke-width:2}
+  .sb .brand{margin-top:auto;padding:12px 8px 0;font-weight:800;font-size:13px;letter-spacing:.02em;color:var(--muted)}
+  .sb .brand b{color:var(--pink)}
+
+  /* main */
+  .main{min-width:0}
+  .hdr{height:56px;display:flex;align-items:center;gap:18px;padding:0 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+  .hdr h1{font-size:19px;font-weight:600;letter-spacing:.03em;text-transform:uppercase}
+  .hdr .back svg{width:24px;height:24px;stroke:var(--ink);fill:none;stroke-width:2}
+  .hdr .help{margin-left:auto}
+  .hdr .help svg{width:24px;height:24px;stroke:var(--ink);fill:none;stroke-width:1.7}
+  .simtag{display:flex;align-items:center;gap:8px;padding:7px 18px;border-bottom:1px solid var(--line2);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:#d98cb0}
+  .simtag i{width:6px;height:6px;border-radius:50%;background:var(--pink)}
+  .simtag span{color:var(--muted);text-transform:none;letter-spacing:0;font-size:12px}
+
+  .cols{display:grid;grid-template-columns:300px 1fr;gap:34px;padding:18px 16px 40px 16px}
+  /* balance card */
+  .bal{border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .bal .bh{background:var(--head);display:flex;align-items:center;justify-content:space-between;padding:20px 16px 18px;font-size:15px;font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+  .bal .bh .v{display:flex;align-items:center;gap:14px;font-size:20px;font-weight:500;letter-spacing:0}
+  .bal .bh svg{width:18px;height:18px;stroke:var(--ink2);fill:none;stroke-width:2}
+  .bal .pend{display:flex;align-items:center;justify-content:space-between;margin:0 12px;padding:22px 4px;border-bottom:1px solid var(--line);color:var(--muted);font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.01em}
+  .bal .pend .v{font-size:18px;font-weight:400;color:var(--ink2);letter-spacing:0}
+  .bal .pend .info{display:inline-grid;place-items:center;width:15px;height:15px;border:1.5px solid var(--muted);border-radius:50%;font-size:9px;font-weight:700;margin-left:8px;vertical-align:1px}
+  .bal .sel{margin:16px 16px 0;height:50px;border:1px solid #4a4a50;border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:16px;color:var(--ink)}
+  .bal .sel svg{width:18px;height:18px;stroke:var(--ink2);fill:none;stroke-width:2}
+  .bal .min{margin:8px 32px 0;font-size:12px;color:var(--muted)}
+  .bal .wd{display:flex;justify-content:flex-end;padding:22px 16px 26px}
+  .bal .wd button{height:38px;padding:0 20px;border-radius:999px;background:#3a3a3f;color:#88888e;font-size:13.5px;font-weight:600;letter-spacing:.04em;cursor:default}
+  .menu{margin-top:12px}
+  .menu a{display:flex;align-items:center;gap:12px;height:64px;border-bottom:1px solid var(--line);font-size:16px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);position:relative}
+  .menu a svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;margin-left:4px}
+  .menu a.on{color:var(--ink)}
+  .menu a.on::after{content:"";position:absolute;left:0;bottom:-1px;width:62%;height:2px;background:var(--ink)}
+
+  /* statistics */
+  .sth{display:flex;justify-content:space-between;align-items:baseline;padding:6px 4px 16px}
+  .sth h2{font-size:15.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ink2)}
+  .sth small{font-size:12px;color:var(--muted)}
+  .box{border:1px solid var(--line);border-radius:4px;margin-bottom:12px}
+  .box .bt{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:56px;font-size:17px;cursor:pointer;user-select:none}
+  .box .bt .r{display:flex;align-items:center;gap:16px;color:var(--ink2);font-size:17px}
+  .box .bt svg{width:20px;height:20px;stroke:var(--ink2);fill:none;stroke-width:2;transition:transform .2s}
+  .box.open .bt svg{transform:rotate(180deg)}
+  .box .bb{display:none;padding:0 12px 10px}
+  .box.open .bb{display:block}
+  .all .bt{height:60px}
+  .all .bt .r{color:var(--ink2)}
+  .chart{margin:0 6px;border-top:1px solid var(--line2)}
+  .chart svg{width:100%;height:auto}
+  .range{display:flex;align-items:center;gap:10px;margin:8px 0 14px;border:1px solid var(--line);border-radius:999px;height:46px;padding:0 14px 0 18px}
+  .range svg{width:22px;height:22px;stroke:var(--blue);fill:none;stroke-width:1.7;flex:none}
+  .range .t{flex:1;display:flex;justify-content:center;align-items:center;gap:8px;font-size:14px;color:var(--muted);flex-wrap:wrap}
+  .range select{background:transparent;color:var(--ink);border:0;font:600 14px var(--sans);cursor:pointer;-webkit-appearance:none;appearance:none;padding:2px 2px}
+  .range select option{background:#1d1d21}
+  .rows .rw{display:grid;grid-template-columns:1fr 130px 150px;align-items:center;height:42px;border-bottom:1px solid var(--line2);font-size:14.5px;color:var(--ink2)}
+  .rows .rw.hi{color:var(--ink)}
+  .rows .rw .n{display:flex;align-items:center;gap:10px}
+  .rows .rw .n i{width:6px;height:6px;border-radius:50%}
+  .rows .rw .g,.rows .rw .nt{text-align:right;font-variant-numeric:tabular-nums}
+  .rows .rw:last-of-type{border-bottom:1px solid var(--blue)}
+  .rows .tot{display:grid;grid-template-columns:1fr auto auto;gap:40px;align-items:center;height:48px;font-size:14.5px;font-weight:600}
+  .rows .tot .g,.rows .tot .nt{text-align:right;font-variant-numeric:tabular-nums}
+  .rows .tot small{font-weight:400;color:var(--muted);margin-right:8px;font-size:13.5px}
+  .other{padding:40px 10px;text-align:center;color:var(--muted);font-size:14px;border:1px solid var(--line);border-radius:4px}
+
+  /* simulator */
+  .sim{margin:26px 16px 60px;border:1px solid var(--line);border-radius:6px;padding:20px 20px 16px}
+  .sim h3{font-size:15px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ink2);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .sim .adminbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 4px;padding:12px;border-radius:6px;background:#1c1c20;font-size:13px;color:var(--ink2)}
+  .sim .adminbar select,.sim .adminbar input{background:#121214;color:var(--ink);border:1px solid #3a3a40;border-radius:6px;height:34px;padding:0 10px;font:14px var(--sans)}
+  .sim .adminbar input{width:110px}
+  .sim .saved{margin-left:auto;font-size:12px;color:var(--muted)}
+  .pres{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 8px}
+  .pres button{height:32px;padding:0 14px;border-radius:999px;border:1px solid #3a3a40;font-size:13px;color:var(--ink2)}
+  .pres button:hover{border-color:var(--pink);color:#fff}
+  .sl{display:grid;grid-template-columns:1fr 1fr;gap:6px 34px;margin-top:10px}
+  .sl label{display:block;padding:10px 0}
+  .sl .top{display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink2);margin-bottom:8px}
+  .sl .top b{color:#fff;font-weight:600;font-variant-numeric:tabular-nums}
+  .sl input[type=range]{width:100%;accent-color:var(--pink);height:20px}
+  .funnel{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:16px 0 4px}
+  .funnel div{background:#1c1c20;border-radius:6px;padding:10px;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  .funnel b{display:block;font-size:17px;color:#fff;letter-spacing:0;text-transform:none;margin-top:4px;font-variant-numeric:tabular-nums}
+  .goal{margin-top:12px;font-size:13px;color:var(--ink2)}
+  .goal .bar{height:6px;border-radius:999px;background:#2a2a2f;margin-top:6px;overflow:hidden}
+  .goal .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--pink2),var(--pink));width:0}
+  .disc{margin-top:16px;padding:12px 14px;border-radius:6px;background:rgba(255,95,162,.08);border:1px solid rgba(255,95,162,.35);font-size:13.5px;color:#f2c6d9;line-height:1.45}
+  .disc b{color:#fff}
+  .reset{font-size:12.5px;color:var(--pink);text-decoration:underline;cursor:pointer}
+
+  .gate{max-width:420px;margin:18vh auto;padding:28px;border:1px solid var(--line);border-radius:8px;text-align:center;color:var(--ink2);line-height:1.5}
+  .gate a{display:inline-block;margin-top:16px;padding:10px 20px;border-radius:999px;background:var(--pink);color:#fff;font-weight:600}
+
+  /* responsive */
+  @media (max-width:1100px){ .shell{grid-template-columns:84px 1fr} .sb a.it span,.sb .np span,.sb .brand{display:none} .sb{padding:14px 10px;align-items:center} .sb a.it{padding:12px} .sb .np{width:50px} .sb .av{margin:4px 0 14px} }
+  @media (max-width:900px){ .cols{grid-template-columns:1fr;gap:18px} }
+  @media (max-width:700px){
+    .shell{grid-template-columns:1fr}
+    .sb{position:fixed;bottom:0;top:auto;left:0;right:0;height:auto;flex-direction:row;justify-content:space-around;padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-right:0;border-top:1px solid var(--line);background:var(--bg);z-index:20}
+    .sb .av,.sb .np,.sb .brand,.sb a.it.x{display:none}
+    .sb a.it{padding:8px}
+    .main{padding-bottom:70px}
+    .cols{padding:12px 10px 24px}
+    .rows .rw{grid-template-columns:1fr 90px 100px;font-size:13.5px}
+    .rows .tot{gap:14px;font-size:13.5px}
+    .sl{grid-template-columns:1fr}
+    .funnel{grid-template-columns:repeat(2,1fr)}
+    .sim{margin:18px 10px 40px;padding:16px 14px}
+  }
+</style>
+</head>
+<body>
+<div id="gate" class="gate" hidden></div>
+
+<div class="shell" id="app" hidden>
+  <nav class="sb" aria-label="Main">
+    <div class="av" id="av">N</div>
+    <a class="it" href="/"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg><span>Home</span></a>
+    <a class="it x" href="/members"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.7-3.2 3-5 5.5-5s4.8 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.3-.3 4.4 1.2 5 4.3"/></svg><span>Members</span></a>
+    <a class="it on" href="#stats"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M8 16v-4M12 16V8M16 16v-6"/></svg><span>Statements</span></a>
+    <a class="it" href="#chart"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="m6.5 15 4-4 3 3 4.5-5"/></svg><span>Statistics</span></a>
+    <a class="it" href="#sim"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span>Simulation</span></a>
+    <a class="it x" href="#" id="signout"><svg viewBox="0 0 24 24"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 16l-4-4 4-4M6 12h10"/></svg><span>Sign out</span></a>
+    <a class="np" href="#sim"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>MORE REELS</span></a>
+    <div class="brand">UN<b>REAL</b> AGEN<b>CY</b></div>
+  </nav>
+
+  <main class="main">
+    <div class="hdr">
+      <a class="back" href="/members" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></a>
+      <h1>Statements</h1>
+      <a class="help" href="#sim" aria-label="Help"><svg viewBox="0 0 24 24"><path d="M12 21.5c-2-2.4-4.5-3-6.4-4.7A8.5 8.5 0 1 1 18.4 16.8C16.5 18.5 14 19.1 12 21.5z"/><path d="M9.8 9.3a2.3 2.3 0 1 1 3.2 2.1c-.6.3-1 .8-1 1.5v.4"/><circle cx="12" cy="15.6" r=".4"/></svg></a>
+    </div>
+    <div class="simtag"><i></i>Simulation <span id="simWho">· potential earnings, not real account figures</span></div>
+
+    <div class="cols" id="stats">
+      <div>
+        <div class="bal">
+          <div class="bh">Current balance <span class="v"><span id="curBal">$0.00</span><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></span></div>
+          <div class="pend"><span>Pending balance<span class="info">i</span></span><span class="v" id="pendBal">$0.00</span></div>
+          <div class="sel">Manual payouts<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="min">Minimum withdrawal amount is $20</div>
+          <div class="wd"><button type="button" disabled>REQUEST WITHDRAWAL</button></div>
+        </div>
+        <nav class="menu" id="menu">
+          <a href="#" data-p="earn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c-.5-1-1.5-1.5-2.8-1.5-1.6 0-2.7.8-2.7 2s1 1.7 2.7 2.1c1.8.4 2.9 1 2.9 2.3s-1.2 2.1-2.9 2.1c-1.4 0-2.5-.6-3-1.6M12 6v1.7M12 16.2V18"/></svg>Earnings</a>
+          <a href="#" data-p="pay"><svg viewBox="0 0 24 24"><path d="M3 9.5 12 4l9 5.5M4.5 10v8M9 10v8M15 10v8M19.5 10v8M3 20h18"/></svg>Payout requests</a>
+          <a href="#" data-p="stat" class="on"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="m6.5 15 4-4 3 3 4.5-5"/></svg>Earning statistics</a>
+          <a href="#" data-p="cb"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Chargebacks</a>
+          <a href="#" data-p="ref"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="2"/><circle cx="10" cy="11" r="2.4"/><path d="M6 17c.6-2 2.1-3 4-3s3.4 1 4 3M16 9h2.5M17.2 7.8v2.5"/></svg>Referrals</a>
+        </nav>
+      </div>
+
+      <div id="right">
+        <div class="sth"><h2 id="secTitle">Earning statistics</h2><small>Date/Time shown in UTC time zone</small></div>
+        <div id="pStat">
+          <div class="box all open" id="chart">
+            <div class="bt"><span>All time</span><span class="r"><span id="allNet">$0.00</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></div>
+            <div class="bb">
+              <div class="chart"><svg id="chartSvg" viewBox="0 0 640 210" preserveAspectRatio="none"></svg></div>
+              <div class="range"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M7.5 13h1M11.5 13h1M15.5 13h1M7.5 16.5h1M11.5 16.5h1"/></svg>
+                <div class="t">From <select id="from"></select> To <select id="to"></select></div></div>
+              <div class="rows" id="allRows"></div>
+            </div>
+          </div>
+          <div id="months"></div>
+        </div>
+        <div id="pOther" hidden></div>
+      </div>
+    </div>
+
+    <section class="sim" id="sim">
+      <h3><span>Simulation · ton potentiel</span><span class="reset" id="reset" hidden>Revenir au scénario de l'agence</span></h3>
+      <div class="adminbar" id="adminbar" hidden>
+        Modèle <select id="modelSel"></select>
+        Objectif / mois $<input id="goalIn" type="number" min="0" step="500">
+        <span class="saved" id="saved">—</span>
+      </div>
+      <div class="pres" id="pres"></div>
+      <div class="sl" id="sliders"></div>
+      <div class="funnel" id="funnel"></div>
+      <div class="goal" id="goal"></div>
+      <div class="disc"><b>Ceci est une simulation.</b> Les chiffres ne sont pas réels : ils montrent ce que tes revenus pourraient devenir selon ton nombre de Reels, tes heures de travail et combien chaque fan paie en moyenne. Ce ne sont pas des revenus passés ni une garantie.</div>
+    </section>
+  </main>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const sb = createClient('https://ljhpdqttcxwgufcejfor.supabase.co', 'sb_publishable_Nu7S4SnvuTFRg1ODn4VVrA_hCH5X1wY');
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money = n => '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+/* ---------- the model (one formula for everything) ----------
+   reels this month   = reels/day × working days
+   views              = reels × average views per reel
+   profile visitors   = views × % who visit the profile
+   new paying fans    = visitors × % who become paying
+   paying fans        = last month's fans × retention + new paying fans   (starts from her current fans)
+   captured spending  = average spend × (0.35 + 0.65 × min(hours, 8) / 8)  — more hours chatting = more of each fan's budget captured
+   gross              = paying fans × captured spending, split 22 % subscriptions · 48 % messages · 20 % tips · 10 % posts
+   net                = gross × 80 %  */
+const SL = [
+  { k:'hours',  l:'Heures de travail / jour', min:0, max:12, step:0.5, f:v => v + ' h' },
+  { k:'reels',  l:'Reels publiés / jour',     min:0, max:20, step:1,   f:v => v },
+  { k:'spend',  l:'Dépense moyenne par fan',  min:1, max:100, step:1,  f:v => '$' + v },
+  { k:'views',  l:'Vues moyennes par Reel',   min:100, max:50000, step:100, f:v => Number(v).toLocaleString('fr-CA') },
+  { k:'visit',  l:'% des vues qui visitent le profil', min:0.1, max:10, step:0.1, f:v => v + ' %' },
+  { k:'conv',   l:'% des visiteurs qui deviennent fans payants', min:0.1, max:10, step:0.1, f:v => v + ' %' },
+  { k:'days',   l:'Jours de travail / mois',  min:0, max:31, step:1,   f:v => v },
+  { k:'ret',    l:'Rétention mensuelle des fans', min:0, max:95, step:1, f:v => v + ' %' },
+  { k:'start',  l:'Fans payants actuels (point de départ)', min:0, max:2000, step:5, f:v => v, admin:true },
+];
+const BASE = { hours:2, reels:1, spend:20, views:3000, visit:1.5, conv:2, days:20, ret:65, start:45, goal:5000 };
+const PRESETS = [
+  ['Faible activité',   { hours:1, reels:1, spend:15, views:2000, visit:1.5, conv:2,   days:15, ret:55 }],
+  ['Activité modérée',  { hours:4, reels:3, spend:15, views:3000, visit:2,   conv:2.5, days:22, ret:65 }],
+  ['Haute activité',    { hours:8, reels:5, spend:20, views:5000, visit:2,   conv:2.5, days:26, ret:70 }],
+  ['Fan à 5 $',         { hours:8, reels:5, spend:5,  views:5000, visit:2,   conv:2.5, days:26, ret:70 }],
+  ['Objectif 25 000 $', { hours:8, reels:5, spend:25, views:5000, visit:2,   conv:2.5, days:26, ret:70 }],
+  ['Fan à 50 $ · 30–40 k', { hours:6, reels:5, spend:50, views:4000, visit:2, conv:2.5, days:24, ret:70 }],
+];
+const MIX = { sub:.22, msg:.48, tip:.20, post:.10 };
+
+function project(p){
+  const now = new Date(), y0 = now.getUTCFullYear(), m0 = now.getUTCMonth();
+  const cap = 0.35 + 0.65 * Math.min(p.hours, 8) / 8;
+  let fans = +p.start; const out = [];
+  for (let i = 0; i < 12; i++){
+    const reels = p.reels * p.days, views = reels * p.views, visitors = views * p.visit / 100, fresh = visitors * p.conv / 100;
+    fans = fans * p.ret / 100 + fresh;
+    const gross = fans * p.spend * cap;
+    const d = new Date(Date.UTC(y0, m0 + i, 1));
+    out.push({ y:d.getUTCFullYear(), m:d.getUTCMonth(), reels, views, visitors, fresh, fans, gross,
+      sub:gross*MIX.sub, msg:gross*MIX.msg, tip:gross*MIX.tip, post:gross*MIX.post, ref:0, net:gross*.8 });
+  }
+  return out;
+}
+
+/* ---------- state ---------- */
+let me = null, admin = false, modelId = null, saved = { ...BASE }, P = { ...BASE }, local = false, chan = null, saveT = null;
+let range = [0, 11], openMonths = new Set();
+
+function rowsHtml(t){
+  const R = [['Subscriptions','sub','var(--c-sub)'],['Tips','tip','var(--c-tip)'],['Posts','post','var(--c-post)'],['Messages','msg','var(--c-msg)'],['Referrals','ref','var(--c-ref)']];
+  return R.map(r => `<div class="rw${t[r[1]] > 0 ? ' hi' : ''}"><span class="n"><i style="background:${r[2]}"></i>${r[0]}</span><span class="g">${money(t[r[1]])}</span><span class="nt">${money(t[r[1]] * .8)}</span></div>`).join('')
+    + `<div class="tot"><span>TOTAL</span><span class="g"><small>GROSS</small>${money(t.gross)}</span><span class="nt"><small>NET</small>${money(t.net)}</span></div>`;
+}
+function sum(list){ const t = { sub:0, msg:0, tip:0, post:0, ref:0, gross:0, net:0 }; list.forEach(x => { for (const k in t) t[k] += x[k]; }); return t; }
+
+function chart(list){
+  const W = 640, H = 210, L = 12, Rr = 628, T = 22, B = 170;
+  let cum = 0, cs = 0; const pts = list.map(x => { cum += x.net; cs += x.sub * .8; return [cum, cs]; });
+  const max = Math.max(1, cum) * 1.12, n = Math.max(1, list.length - 1);
+  const X = i => L + (Rr - L) * (list.length === 1 ? 1 : i / n), Y = v => B - (B - T) * v / max;
+  const path = idx => { let d = `M ${L} ${B} `; pts.forEach((p, i) => { const x = X(i), yv = Y(p[idx]);
+      if (i === 0) d += `L ${x} ${yv} `; else { const px = X(i - 1), py = Y(pts[i - 1][idx]), mx = (px + x) / 2; d += `C ${mx} ${py} ${mx} ${yv} ${x} ${yv} `; } }); return d; };
+  const grid = [0, 1, 2, 3].map(g => `<line x1="${L}" x2="${Rr}" y1="${T + (B - T) * g / 3}" y2="${T + (B - T) * g / 3}" stroke="#2a2a2e" stroke-width="1"/>`).join('');
+  const stp = Math.max(1, Math.round(list.length / 5)), ticks = list.map((x, i) => (i % stp === 0 && list.length - 1 - i >= stp / 2 + .5) || i === list.length - 1 ? i : -1).filter(i => i >= 0);
+  const lab = ticks.map(i => { const d = list[i]; return `<line x1="${X(i)}" x2="${X(i)}" y1="${B}" y2="${B + 6}" stroke="#55555b"/><text x="${X(i)}" y="${B + 26}" fill="#c9c9cd" font-size="11.5" text-anchor="${i === list.length - 1 ? 'end' : i === 0 ? 'start' : 'middle'}" font-family="inherit">01 ${MONTHS[d.m].slice(0, 3)} ${String(d.y).slice(2)}</text>`; }).join('');
+  $('#chartSvg').innerHTML = grid + `<path d="${path(0)}" fill="none" stroke="var(--violet)" stroke-width="2"/><path d="${path(1)}" fill="none" stroke="var(--blue)" stroke-width="3"/><line x1="${L}" x2="${Rr}" y1="${B}" y2="${B}" stroke="#3a3a40"/>` + lab;
+}
+
+function render(){
+  const all = project(P), list = all.slice(range[0], range[1] + 1), t = sum(list);
+  $('#allNet').textContent = money(t.net);
+  $('#allRows').innerHTML = rowsHtml(t);
+  chart(list);
+  const last = list[list.length - 1] || all[0];
+  $('#curBal').textContent = money(last.net * .75); $('#pendBal').textContent = money(last.net * .25);
+  $('#months').innerHTML = list.slice().reverse().map(x => { const key = x.y + '-' + x.m;
+    return `<div class="box${openMonths.has(key) ? ' open' : ''}" data-k="${key}"><div class="bt"><span>${MONTHS[x.m]}, ${x.y}</span><span class="r">${money(x.net)}<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></div><div class="bb"><div class="rows">${rowsHtml(x)}</div></div></div>`; }).join('');
+  $('#months').querySelectorAll('.box').forEach(b => b.querySelector('.bt').onclick = () => { b.classList.toggle('open'); b.classList.contains('open') ? openMonths.add(b.dataset.k) : openMonths.delete(b.dataset.k); });
+  const f = all[0], e = all[11];
+  $('#funnel').innerHTML = [['Reels / mois', Math.round(f.reels)], ['Vues / mois', Math.round(f.views)], ['Visiteurs du profil', Math.round(f.visitors)], ['Nouveaux fans / mois', Math.round(f.fresh)], ['Fans payants (mois 12)', Math.round(e.fans)]]
+    .map(c => `<div>${c[0]}<b>${c[1].toLocaleString('fr-CA')}</b></div>`).join('');
+  const goal = +P.goal || 0, best = Math.max(...all.map(x => x.gross));
+  $('#goal').innerHTML = goal ? `Objectif : <b>${money(goal)}</b> / mois brut · cette simulation atteint <b>${money(best)}</b>${best >= goal ? ' ✓' : ''}<div class="bar"><i style="width:${Math.min(100, best / goal * 100)}%"></i></div>` : '';
+  $('#reset').hidden = admin || !local;
+}
+
+function buildRange(){
+  const all = project(P), opt = all.map((x, i) => `<option value="${i}">${MONTHS[x.m].slice(0, 3)} 1, ${x.y}</option>`).join('');
+  $('#from').innerHTML = opt; $('#to').innerHTML = opt.replace(/1, (\d{4})/g, (m, y) => '1, ' + y);
+  $('#from').value = range[0]; $('#to').value = range[1];
+  $('#from').onchange = () => { range[0] = Math.min(+$('#from').value, range[1]); $('#from').value = range[0]; render(); };
+  $('#to').onchange = () => { range[1] = Math.max(+$('#to').value, range[0]); $('#to').value = range[1]; render(); };
+}
+
+function buildSliders(){
+  $('#sliders').innerHTML = SL.filter(s => admin || !s.admin).map(s => `<label><div class="top"><span>${s.l}</span><b id="v_${s.k}"></b></div><input type="range" min="${s.min}" max="${s.max}" step="${s.step}" data-k="${s.k}"></label>`).join('');
+  $('#sliders').querySelectorAll('input').forEach(inp => inp.oninput = () => { P[inp.dataset.k] = +inp.value; syncSliders(); render(); changed(); });
+  $('#pres').innerHTML = PRESETS.map((p, i) => `<button type="button" data-i="${i}">${esc(p[0])}</button>`).join('');
+  $('#pres').querySelectorAll('button').forEach(b => b.onclick = () => { Object.assign(P, PRESETS[+b.dataset.i][1]); syncSliders(); render(); changed(); });
+  syncSliders();
+}
+function syncSliders(){ SL.forEach(s => { const i = $(`#sliders input[data-k="${s.k}"]`); if (i){ i.value = P[s.k]; $('#v_' + s.k).textContent = s.f(P[s.k]); } }); }
+
+/* admin: every change is saved (debounced) and pushed live to the model's open dashboard; model: changes stay on her screen only */
+function changed(){
+  if (!admin){ local = true; render(); return; }
+  $('#saved').textContent = 'Enregistrement…';
+  clearTimeout(saveT); saveT = setTimeout(save, 350);
+}
+async function save(){
+  const { error } = await sb.from('sim_scenarios').upsert({ model_id: modelId, params: P, updated_at: new Date().toISOString(), updated_by: me.id });
+  $('#saved').textContent = error ? 'Erreur : ' + error.message : 'Enregistré · en direct sur son tableau ' + new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+async function loadModel(id){
+  modelId = id; local = false; openMonths.clear();
+  const { data } = await sb.from('sim_scenarios').select('params').eq('model_id', id).maybeSingle();
+  saved = { ...BASE, ...(data?.params || {}) }; P = { ...saved };
+  $('#goalIn').value = P.goal; range = [0, 11];
+  buildRange(); syncSliders(); render();
+  if (chan) sb.removeChannel(chan);
+  chan = sb.channel('sim-' + id).on('postgres_changes', { event:'*', schema:'public', table:'sim_scenarios', filter:'model_id=eq.' + id }, pl => {
+    if (admin) return; saved = { ...BASE, ...(pl.new?.params || {}) }; P = { ...saved }; local = false; syncSliders(); render();
+  }).subscribe();
+}
+
+function gate(html){ $('#gate').innerHTML = html; $('#gate').hidden = false; $('#app').hidden = true; }
+
+async function boot(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return gate(`Connecte-toi pour voir ton tableau.<br><a href="/members">Se connecter</a>`);
+  const { data: prof } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
+  me = prof || { id: session.user.id };
+  admin = me.role === 'admin';
+  if (!admin && !(me.approved && (me.perms || []).includes('earnings'))) return gate(`Ton accès à ce tableau n'est pas encore ouvert.<br><a href="/members">Retour</a>`);
+  $('#app').hidden = false;
+  const nm = me.full_name || me.email || '';
+  $('#av').textContent = (nm[0] || 'U').toUpperCase();
+  $('#adminbar').hidden = !admin;
+  buildSliders();
+  if (admin){
+    const { data: people } = await sb.from('profiles').select('id,full_name,email,perms,role,approved').order('full_name');
+    const models = (people || []).filter(u => u.id === me.id || (u.perms || []).includes('earnings'));
+    $('#modelSel').innerHTML = models.map(u => `<option value="${u.id}">${esc(u.full_name || u.email)}${u.id === me.id ? ' (moi · aperçu)' : ''}</option>`).join('');
+    const want = new URLSearchParams(location.search).get('model');
+    if (want && models.some(u => u.id === want)) $('#modelSel').value = want;
+    $('#modelSel').onchange = () => { history.replaceState(null, '', '?model=' + $('#modelSel').value); loadModel($('#modelSel').value); };
+    $('#goalIn').oninput = () => { P.goal = +$('#goalIn').value || 0; render(); changed(); };
+    $('#simWho').textContent = '· potential earnings, not real account figures · admin view';
+    await loadModel($('#modelSel').value);
+  } else {
+    await loadModel(me.id);
+  }
+}
+$('#reset').onclick = () => { P = { ...saved }; local = false; syncSliders(); render(); };
+$('#signout').onclick = async e => { e.preventDefault(); await sb.auth.signOut(); location.href = '/members'; };
+$('#menu').querySelectorAll('a').forEach(a => a.onclick = e => { e.preventDefault();
+  $('#menu').querySelectorAll('a').forEach(x => x.classList.toggle('on', x === a));
+  const p = a.dataset.p, titles = { earn:'Earnings', pay:'Payout requests', stat:'Earning statistics', cb:'Chargebacks', ref:'Referrals' };
+  $('#secTitle').textContent = titles[p];
+  if (p === 'stat' || p === 'earn'){ $('#pStat').hidden = false; $('#pOther').hidden = true; if (p === 'earn') $('#months').scrollIntoView({ behavior:'smooth' }); }
+  else { $('#pStat').hidden = true; $('#pOther').hidden = false; $('#pOther').innerHTML = `<div class="other">No ${titles[p].toLowerCase()} in this simulation.</div>`; } });
+document.querySelector('.all .bt').onclick = () => $('#chart').classList.toggle('open');
+boot();
+</script>
+</body>
+</html>

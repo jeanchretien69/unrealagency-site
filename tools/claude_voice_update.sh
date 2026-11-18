@@ -27,6 +27,9 @@ cat > "$PL" <<EOF
 EOF
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null; launchctl bootstrap "gui/$(id -u)" "$PL"
 curl -fsSL https://unrealagency.ai/tools/claude_voice.lua -o "$HOME/.hammerspoon/claude_voice.lua"
+# click-through: one click on Claude/Discord/Notion in another screen = in front AND clicked
+curl -fsSL https://unrealagency.ai/tools/claude_click.lua -o "$HOME/.hammerspoon/claude_click.lua"
+grep -q 'require("claude_click")' "$HOME/.hammerspoon/init.lua" 2>/dev/null || echo 'claudeClick = require("claude_click")' >> "$HOME/.hammerspoon/init.lua"
 echo "▶ Test: say a few words now (4 seconds). If macOS asks for the microphone, click ALLOW."
 rm -f "$DIR/in.wav"; launchctl kickstart -k "gui/$(id -u)/$LABEL"; sleep 4; launchctl kill SIGINT "gui/$(id -u)/$LABEL" 2>/dev/null; sleep 1
 if [ -s "$DIR/in.wav" ]; then

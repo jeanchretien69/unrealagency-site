@@ -77,12 +77,16 @@
   .badge.admin{background:var(--pink);color:#fff}
   .nb{float:right;min-width:19px;height:19px;line-height:19px;border-radius:999px;background:#e11d48;color:#fff;font-size:11px;font-weight:800;text-align:center;padding:0 5px;margin-left:6px}
   .app{display:grid;grid-template-columns:210px 1fr;gap:24px}
-  .side{display:flex;flex-direction:column;gap:4px;position:sticky;top:84px;align-self:start}
+  .side{display:flex;flex-direction:column;gap:4px;position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-right:4px}
+  .side .grp{display:flex;flex-direction:column;gap:2px}
+  .side .gb{display:flex;flex-direction:column;gap:2px}
+  .side .gh{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:14px 14px 4px;cursor:default}
+  .side .grp:first-child .gh{padding-top:2px}
   .side button{text-align:left;border:0;background:transparent;padding:10px 14px;border-radius:12px;font-weight:600;color:var(--muted)}
   .side button:hover{background:var(--blush);color:var(--ink)}
   .side button.on{background:var(--blush);color:var(--ink);box-shadow:inset 3px 0 0 var(--pink)}
   .side .sep{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:14px 14px 4px}
-  @media (max-width:820px){.app{grid-template-columns:1fr}.side{position:static;flex-direction:row;flex-wrap:wrap}.side .sep{display:none}}
+  @media (max-width:820px){.app{grid-template-columns:1fr}.side{position:static;flex-direction:row;flex-wrap:wrap;max-height:none;overflow:visible}.side .grp,.side .gb{flex-direction:row;flex-wrap:wrap}.side .sep,.side .gh{display:none}}
 
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
   .item{cursor:pointer;text-align:left;width:100%}
@@ -607,29 +611,29 @@
     </div>
     <div class="app">
       <aside class="side" id="side">
-        <div class="grp" data-g="me"><div class="gh" role="button" tabindex="0" aria-expanded="true">Me<i>▾</i></div><div class="gb">
+        <div class="grp" data-g="me"><div class="gh">Me</div><div class="gb">
           <button data-tab="core" class="adm" hidden>🚀 Unreal Autopilot</button>
           <button data-tab="todo" class="adm" hidden>🎯 My to-do</button>
           <button data-tab="plan" class="adm" hidden>📋 My plan</button>
         </div></div>
-        <div class="grp" data-g="team"><div class="gh" role="button" tabindex="0" aria-expanded="true">Team & accounts<i>▾</i></div><div class="gb">
+        <div class="grp" data-g="team"><div class="gh">Team & accounts</div><div class="gb">
           <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
           <button data-tab="twitter" data-perm="twitter" hidden>🐦 Twitter</button>
           <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone<span class="nb" id="nbSms" hidden></span></button>
           <button data-tab="dropp" data-perm="dropp" hidden>💸 Dropp</button>
         </div></div>
-        <div class="grp" data-g="content"><div class="gh" role="button" tabindex="0" aria-expanded="true">Content<i>▾</i></div><div class="gb">
+        <div class="grp" data-g="content"><div class="gh">Content</div><div class="gb">
           <button data-tab="quotes" data-perm="quotes" hidden>💬 Quotes</button>
           <button data-tab="photos" data-perm="photos" hidden>📸 Photos</button>
           <button data-tab="personas" data-perm="personas" hidden>🎀 Personas</button>
           <button data-tab="docs" data-perm="docs" hidden>📚 Docs & scripts</button>
         </div></div>
-        <div class="grp" data-g="money"><div class="gh" role="button" tabindex="0" aria-expanded="true">AI & sales<i>▾</i></div><div class="gb">
+        <div class="grp" data-g="money"><div class="gh">AI & sales</div><div class="gb">
           <button data-tab="bot" data-perm="bot" hidden>🤖 AI chatbot</button>
           <button data-tab="wallet" data-perm="wallet" hidden>💳 Wallet</button>
           <button data-href="/earnings" data-perm="earnings" hidden>📈 Statements</button>
         </div></div>
-        <div class="grp" data-g="admin"><div class="gh" role="button" tabindex="0" aria-expanded="true">Admin<i>▾</i></div><div class="gb">
+        <div class="grp" data-g="admin"><div class="gh">Admin</div><div class="gb">
           <button data-tab="brains" class="adm" hidden>⚡ AI brains</button>
           <button data-tab="train" class="adm" hidden>🧠 Train AI</button>
           <button data-tab="time" class="adm" hidden>⏱ Time</button>
@@ -756,6 +760,7 @@ async function boot(session){
   $('#whoRole').textContent = me.role; $('#whoRole').classList.toggle('admin', me.role==='admin');
   document.querySelectorAll('.adm').forEach(el => el.hidden = me.role !== 'admin');
   document.querySelectorAll('[data-perm]').forEach(el => el.hidden = !can(el.dataset.perm));
+  document.querySelectorAll('#side .grp').forEach(g => g.hidden = !g.querySelector('button:not([hidden])'));
   const first = document.querySelector('#side button:not([hidden]):not([data-href])');
   if (!first && can('earnings')) { location.href = '/earnings'; return; }
   if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }

@@ -806,6 +806,23 @@ function badgesStart(){
 document.addEventListener('visibilitychange', () => { if (!document.hidden) badges(); });
 
 
+// ---------- Kaya rule: every quote for Kaya is about her being trans ----------
+const KAYA_RULE = { id: 'kaya-trans-1', text: '🏳️‍⚧️ New rule: every quote for Kaya must be about her being trans. No exception. Make it clear in the words (\u201ctrans girl\u201d), not only with the flag.' };
+const isKaya = m => /^kaya/i.test((m || 'Kaya').trim());
+const isTransQuote = t => /trans|t-?girl/i.test(t || '');
+function kayaRuleBanner(){ return `<div class="card" style="border:2px solid var(--pink);padding:12px 16px;margin-bottom:14px;font-size:14.5px"><b>${esc(KAYA_RULE.text)}</b></div>`; }
+function kayaRulePopup(){
+  if (!me || me.role === 'admin') return;
+  try { if (localStorage.getItem('rule-' + KAYA_RULE.id)) return; } catch(e){}
+  document.querySelectorAll('.fpop').forEach(x => x.remove());
+  const el = document.createElement('div'); el.className = 'fpop'; el.setAttribute('role', 'alert');
+  el.style.cssText = 'position:fixed;top:18px;right:18px;z-index:9999;max-width:400px;background:var(--card);border:2px solid var(--pink);border-radius:14px;padding:14px 16px;box-shadow:0 12px 40px rgba(0,0,0,.35);font-size:14.5px;line-height:1.45';
+  el.innerHTML = `<b>🔔 New rule from Gael</b><div style="margin:6px 0 10px">${esc(KAYA_RULE.text)}</div><button class="btn sm">Got it</button>`;
+  el.querySelector('button').onclick = () => { try { localStorage.setItem('rule-' + KAYA_RULE.id, '1'); } catch(e){} el.remove(); };
+  document.body.appendChild(el); bell();
+  try { if ('Notification' in window && Notification.permission === 'granted') new Notification('🔔 New rule', { body: KAYA_RULE.text, tag: KAYA_RULE.id }); } catch(e){}
+}
+
 // ---------- Focus call-outs: bell sound + popup + system notification on any tab of the members area ----------
 let focusSeen = null, focusTimer = null;
 function bell(){
@@ -1853,6 +1870,7 @@ function xTodo(D){
   const act = D.accounts.filter(a => a.active);
   const withS = new Set(D.sess.map(r => r.account));
   return `${xRules(D)}
+    ${kayaRuleBanner()}
     ${D.admin ? `<div style="margin-bottom:14px"><button class="btn sm" id="xFill">✨ Fill the 3 pictures for every account</button> <span class="muted" style="font-size:13px">uses the next unused quotes + Kaya photos, never the same on two accounts</span></div>` : ''}
     <div class="xstack">${act.filter(a => withS.has(a.handle)).map(a => xSessCard(D, a)).join('')}</div>
     ${act.some(a => !withS.has(a.handle)) ? `<h2 style="margin:18px 0 10px">Other accounts (no sessions yet)</h2><div class="xgrid">${act.filter(a => !withS.has(a.handle)).map(a => xCard(D, a)).join('')}</div>` : ''}
@@ -2029,6 +2047,7 @@ async function xRefresh(){
 async function twitterView(){
   clearInterval(xTimer);
   await xRefresh();
+  kayaRulePopup();
   xTimer = setInterval(() => {
     if (tab !== 'twitter') return clearInterval(xTimer);
     if (document.hidden || xMode === 'sched') return;
@@ -2404,10 +2423,10 @@ async function quotesView(){
   const sugg = {}; all.forEach(x => { [x.en, x.it].forEach(t => { if (t) sugg[t.trim().toLowerCase()] = true; }); });
   const postedHtml = posted.length ? `<details class="card" style="margin-bottom:14px" open><summary style="cursor:pointer"><b>📤 Posted on X (${posted.length})</b> <span class="muted" style="font-size:12.5px">what was really written, from the X tracker</span></summary>
     <div class="tbl" style="margin-top:10px;max-height:360px;overflow:auto"><table style="font-size:13.5px"><thead><tr><th>When</th><th>Account</th><th>Text posted</th><th></th></tr></thead><tbody>
-    ${posted.map(x => { const t = (x.body || '').trim(), same = t && sugg[t.toLowerCase()]; return `<tr><td class="muted" style="white-space:nowrap">${new Date(x.ts).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' })}</td><td>@${esc(x.account)}</td><td>${esc(t || '(picture only)')}${x.has_media ? ' 🖼' : ''}</td><td style="white-space:nowrap"><span class="pill ${same ? '' : 'yes'}">${!t ? 'no text' : same ? 'as suggested' : '✏️ his own edit'}</span></td></tr>`; }).join('')}
+    ${posted.map(x => { const t = (x.body || '').trim(), same = t && sugg[t.toLowerCase()]; return `<tr><td class="muted" style="white-space:nowrap">${new Date(x.ts).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' })}</td><td>@${esc(x.account)}</td><td>${esc(t || '(picture only)')}${x.has_media ? ' 🖼' : ''}</td><td style="white-space:nowrap"><span class="pill ${same ? '' : 'yes'}">${!t ? 'no text' : same ? 'as suggested' : '✏️ his own edit'}</span>${t && !isTransQuote(t) ? ' <span class="pill" style="background:var(--bad);color:#fff">⚠️ not trans</span>' : ''}</td></tr>`; }).join('')}
     </tbody></table></div></details>` : '';
   const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));
-  v.innerHTML = `${postedHtml}<div class="card"><h2>Add a quote</h2>
+  v.innerHTML = `${kayaRuleBanner()}${postedHtml}<div class="card"><h2>Add a quote</h2>
       <div class="two"><div><label for="qEn">English</label><textarea id="qEn" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="the quote in English"></textarea></div>
       <div><label for="qIt">Italian <button type="button" class="btn sm ghost" id="qTr" style="margin-left:6px">✨ Translate</button></label><textarea id="qIt" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="auto-translated if you leave it empty"></textarea></div></div>
       <div class="row" style="align-items:flex-end;margin-top:8px"><div><label for="qPhoto">Photo it goes with (optional)</label><input id="qPhoto" placeholder="e.g. Florence balcony, white sundress"></div><div style="flex:0 0 150px"><label for="qModel">Model</label><input id="qModel" value="Kaya"></div><button class="btn" id="qAdd">Add</button></div>
@@ -2438,6 +2457,7 @@ async function quotesView(){
   $('#qSearch').oninput = e => { quoteQ = e.target.value; draw(); };
   $('#qAdd').onclick = async () => {
     const en = $('#qEn').value.trim(); let it = $('#qIt').value.trim(); if (!en && !it) return toast('Write the quote first');
+    if (isKaya($('#qModel').value) && !isTransQuote(en + ' ' + it)) return toast('Kaya rule: the quote must be about her being trans (say \u201ctrans girl\u201d in it)');
     const ab = $('#qAdd'); ab.disabled = true;
     if (en && !it) { ab.textContent = 'Translating…'; it = await translateIt(en); if (!it) toast('Could not translate, saved without Italian'); }
     const { error } = await sb.from('quotes').insert({ en: en || it, it: it || null, photo: $('#qPhoto').value.trim() || null, photo_id: ($('#qPhotoId') || {}).value || null, model: $('#qModel').value.trim() || 'Kaya' });
@@ -2487,7 +2507,7 @@ async function photosView(){
   const v = $('#view'), admin = me.role === 'admin';
   const [{ data, error }, qr, pr] = await Promise.all([
     sb.from('photos').select('*').order('created_at', { ascending:false }),
-    can('quotes') ? sb.from('quotes').select('id,en,it,photo_id,created_at') : Promise.resolve({ data: [] }),
+    can('quotes') ? sb.from('quotes').select('id,en,it,photo_id,created_at,used_at') : Promise.resolve({ data: [] }),
     can('quotes') ? sb.from('x_plan').select('photo_id,quote_id') : Promise.resolve({ data: [] })
   ]);
   if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
@@ -2497,9 +2517,9 @@ async function photosView(){
   const pair = (ph, q) => { if (!ph || !q) return; const l = qFor[ph] = qFor[ph] || []; if (!l.includes(q)) l.push(q); };
   (qr.data || []).forEach(q => pair(q.photo_id, q));
   (pr.data || []).forEach(r => pair(r.photo_id, qById[r.quote_id]));
-  const qBlock = x => (qFor[x.id] || []).map(q => `<div style="border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px">
+  const qBlock = x => { const l = (qFor[x.id] || []).slice().sort((a, b) => (!!a.used_at - !!b.used_at)); const more = l.length - 1; return l.slice(0, 1).map(q => `<div style="border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px">
       ${q.it ? `<div style="display:flex;gap:6px;align-items:flex-start"><span style="flex:1;font-size:13px">🇮🇹 ${esc(q.it)}</span><button class="btn sm" data-cp="${esc(q.it)}">Copy</button></div>` : ''}
-      ${q.en ? `<div style="display:flex;gap:6px;align-items:flex-start"><span style="flex:1;font-size:13px" class="muted">🇬🇧 ${esc(q.en)}</span><button class="btn sm ghost" data-cp="${esc(q.en)}">Copy</button></div>` : ''}</div>`).join('');
+      ${q.en ? `<div style="display:flex;gap:6px;align-items:flex-start"><span style="flex:1;font-size:13px" class="muted">🇬🇧 ${esc(q.en)}</span><button class="btn sm ghost" data-cp="${esc(q.en)}">Copy</button></div>` : ''}${more > 0 ? `<small class="muted">+${more} other quote${more > 1 ? 's' : ''} in 💬 Quotes</small>` : ''}</div>`).join(''); };
   const models = [...new Set([...all.map(x => x.model), 'Kaya', 'Nami', 'Hakura', 'Jade'])].sort((a, b) => a === 'Unassigned' ? -1 : b === 'Unassigned' ? 1 : a.localeCompare(b));
   const url = await photoUrls(all.map(x => x.thumb || x.path));
   const count = m => all.filter(x => m === 'all' || x.model === m).length;

@@ -1561,7 +1561,7 @@ function xSlot(D, a, i){
           : `<div class="xs-none">${q ? 'No picture yet' : 'Not ready yet'}</div>`;
   if (q) {
     // Kaya posts in Italian: the Italian quote is the one to copy; English is only there to understand it
-    if (q.it) h += `<div class="xq"><small class="muted">🇮🇹 Quote to post (Italian)</small><p>${esc(q.it)}</p><button class="btn sm" data-cp="${esc(q.it)}">Copy</button></div>`;
+    if (q.it) h += `<div class="xq"><small class="muted">🇮🇹 Suggested quote, please modify if needed to make it better</small><p>${esc(q.it)}</p><button class="btn sm" data-cp="${esc(q.it)}">Copy</button></div>`;
     h += `<div class="xq" style="opacity:.7"><small class="muted">🇬🇧 Meaning (don't post this)</small><p style="font-size:13px">${esc(q.en)}</p></div>`;
   }
   if (p) h += `<button class="btn sm ${p.posted_at ? 'ghost' : ''}" data-posted="${p.id}" data-v="${p.posted_at ? 0 : 1}">${p.posted_at ? 'Undo posted' : '✓ I posted it'}</button>`;
@@ -2134,8 +2134,15 @@ async function quotesView(){
   const purl = ph.length ? await photoUrls(ph.map(p => p.thumb || p.path)) : (() => '');
   const phById = Object.fromEntries(ph.map(p => [p.id, p]));
   const pick = quotePhotoPick; quotePhotoPick = null;
+  let posted = [];
+  if (can('twitter')) { const r = await sb.from('x_events').select('account,action,body,has_media,ts').in('action', ['post','quote']).order('ts', { ascending:false }).limit(200); posted = (r.data || []).filter(x => (x.body || '').trim() || x.has_media); }
+  const sugg = {}; all.forEach(x => { [x.en, x.it].forEach(t => { if (t) sugg[t.trim().toLowerCase()] = true; }); });
+  const postedHtml = posted.length ? `<details class="card" style="margin-bottom:14px" open><summary style="cursor:pointer"><b>📤 Posted on X (${posted.length})</b> <span class="muted" style="font-size:12.5px">what was really written, from the X tracker</span></summary>
+    <div class="tbl" style="margin-top:10px;max-height:360px;overflow:auto"><table style="font-size:13.5px"><thead><tr><th>When</th><th>Account</th><th>Text posted</th><th></th></tr></thead><tbody>
+    ${posted.map(x => { const t = (x.body || '').trim(), same = t && sugg[t.toLowerCase()]; return `<tr><td class="muted" style="white-space:nowrap">${new Date(x.ts).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' })}</td><td>@${esc(x.account)}</td><td>${esc(t || '(picture only)')}${x.has_media ? ' 🖼' : ''}</td><td style="white-space:nowrap"><span class="pill ${same ? '' : 'yes'}">${!t ? 'no text' : same ? 'as suggested' : '✏️ his own edit'}</span></td></tr>`; }).join('')}
+    </tbody></table></div></details>` : '';
   const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));
-  v.innerHTML = `<div class="card"><h2>Add a quote</h2>
+  v.innerHTML = `${postedHtml}<div class="card"><h2>Add a quote</h2>
       <div class="two"><div><label for="qEn">English</label><textarea id="qEn" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="the quote in English"></textarea></div>
       <div><label for="qIt">Italian <button type="button" class="btn sm ghost" id="qTr" style="margin-left:6px">✨ Translate</button></label><textarea id="qIt" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="auto-translated if you leave it empty"></textarea></div></div>
       <div class="row" style="align-items:flex-end;margin-top:8px"><div><label for="qPhoto">Photo it goes with (optional)</label><input id="qPhoto" placeholder="e.g. Florence balcony, white sundress"></div><div style="flex:0 0 150px"><label for="qModel">Model</label><input id="qModel" value="Kaya"></div><button class="btn" id="qAdd">Add</button></div>

@@ -1560,12 +1560,13 @@ function xSlot(D, a, i){
   h += ph ? `<img src="${esc(D.urls(ph.thumb || ph.path))}" alt="" data-open="${esc(ph.path)}"><div class="xs-b"><button class="btn sm ghost" data-dl="${esc(ph.path)}">⬇ Download</button></div>`
           : `<div class="xs-none">${q ? 'No picture yet' : 'Not ready yet'}</div>`;
   if (q) {
-    h += `<div class="xq"><small class="muted">🇬🇧 English</small><p>${esc(q.en)}</p><button class="btn sm" data-cp="${esc(q.en)}">Copy</button></div>`;
-    if (q.it) h += `<div class="xq"><small class="muted">🇮🇹 Italian</small><p>${esc(q.it)}</p><button class="btn sm" data-cp="${esc(q.it)}">Copy</button></div>`;
+    // Kaya posts in Italian: the Italian quote is the one to copy; English is only there to understand it
+    if (q.it) h += `<div class="xq"><small class="muted">🇮🇹 Quote to post (Italian)</small><p>${esc(q.it)}</p><button class="btn sm" data-cp="${esc(q.it)}">Copy</button></div>`;
+    h += `<div class="xq" style="opacity:.7"><small class="muted">🇬🇧 Meaning (don't post this)</small><p style="font-size:13px">${esc(q.en)}</p></div>`;
   }
   if (p) h += `<button class="btn sm ${p.posted_at ? 'ghost' : ''}" data-posted="${p.id}" data-v="${p.posted_at ? 0 : 1}">${p.posted_at ? 'Undo posted' : '✓ I posted it'}</button>`;
   if (D.admin) {
-    h += `<div class="xs-adm"><select data-sq><option value="">— quote —</option>${D.pool.quotes.filter(x => !x.used_at || (p && p.quote_id === x.id)).map(x => `<option value="${x.id}"${p && p.quote_id === x.id ? ' selected' : ''}>${esc((x.en || '').slice(0, 44))}</option>`).join('')}</select>
+    h += `<div class="xs-adm"><select data-sq><option value="">— quote —</option>${D.pool.quotes.filter(x => !x.used_at || (p && p.quote_id === x.id)).map(x => `<option value="${x.id}"${p && p.quote_id === x.id ? ' selected' : ''}>🇮🇹 ${esc((x.it || x.en || '').slice(0, 48))}</option>`).join('')}</select>
       <select data-sp><option value="">— photo —</option>${D.pool.photos.map(x => `<option value="${x.id}"${p && p.photo_id === x.id ? ' selected' : ''}>${esc(x.model)} · ${esc((x.caption || x.path.split('/').pop()).slice(0, 36))}</option>`).join('')}</select></div>`;
   }
   return h + '</div>';

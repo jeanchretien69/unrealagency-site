@@ -21,7 +21,9 @@ end
 
 local function show(text, color)
   if bubble then bubble:delete() end
-  local f = hs.screen.mainScreen():frame()
+  -- the bubble shows on the screen where your mouse is, so you always see it
+  local scr = hs.mouse.getCurrentScreen() or hs.screen.mainScreen()
+  local f = scr:frame()
   local w, h = 380, 40
   bubble = hs.canvas.new({ x = f.x + (f.w - w) / 2, y = f.y + 10, w = w, h = h })
   bubble:level(hs.canvas.windowLevels.overlay)
@@ -62,16 +64,24 @@ local function sendToClaude(text)
 end
 
 -- review: the text waits in Claude; the mouse button (or Enter in Claude) sends it, even if you clicked elsewhere meanwhile
-local reviewTimer, reviewTap
+local reviewTimer, reviewTap, reviewFollow
 endReview = function()
   if reviewTimer then reviewTimer:stop(); reviewTimer = nil end
   if reviewTap then reviewTap:stop(); reviewTap = nil end
+  if reviewFollow then reviewFollow:stop(); reviewFollow = nil end
   if state == "review" then state = "idle"; hide() end
 end
 function M.review()
   state = "review"
   show("✏️  Fix your text · mouse button = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 })
   reviewTimer = hs.timer.doAfter(300, endReview)
+  -- the green bubble follows you to whichever screen your mouse is on
+  local lastScr = hs.mouse.getCurrentScreen()
+  reviewFollow = hs.timer.doEvery(0.7, function()
+    if state ~= "review" then return end
+    local s2 = hs.mouse.getCurrentScreen()
+    if s2 and lastScr and s2:id() ~= lastScr:id() then lastScr = s2; show("✏️  Fix your text · mouse button = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 }) end
+  end)
   -- you pressed Enter yourself in Claude: done, the next button press starts a new message
   reviewTap = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(e)
     if e:getKeyCode() == 36 then local f = hs.application.frontmostApplication(); if f and f:bundleID() == CLAUDE then hs.timer.doAfter(0, endReview) end end

@@ -5,7 +5,8 @@ local HOME = os.getenv("HOME")
 local DIR = HOME .. "/.claude-voice"
 local WHISPER = "/opt/homebrew/bin/whisper-cli"
 for _, w in ipairs({ "/opt/homebrew/bin/whisper-cli", "/usr/local/bin/whisper-cli", "/opt/homebrew/bin/whisper-cpp", "/usr/local/bin/whisper-cpp" }) do if hs.fs.attributes(w) then WHISPER = w; break end end
-local APP = HOME .. "/Applications/Claude Voice Mic.app"
+-- the recorder is a small background job (launchd) that runs sox on the MacBook mic; macOS lists it as "sox" under Microphone
+local JOB = "gui/" .. (hs.execute("id -u") or ""):gsub("%s", "") .. "/ai.unrealagency.claudevoice.rec"
 local CLAUDE = "com.anthropic.claudefordesktop"
 -- REVIEW = true: your text is pasted in Claude and waits for you (fix a word, then press Enter yourself).
 -- REVIEW = false: it is sent right away and you go back to the app you were in.
@@ -38,8 +39,7 @@ local function show(text, color)
   bubble:show()
 end
 
-local function recPid() return (hs.execute("cat '" .. DIR .. "/rec.pid' 2>/dev/null") or ""):gsub("%s", "") end
-local function stopRec() local p = recPid(); if p ~= "" then hs.execute("kill -INT " .. p .. " 2>/dev/null") end end
+local function stopRec() hs.execute("/bin/launchctl kill SIGINT " .. JOB .. " 2>/dev/null") end
 
 local function sendToClaude(text)
   local old = hs.pasteboard.getContents()
@@ -109,15 +109,8 @@ end
 function M.start()
   if state ~= "idle" then return end
   prev = hs.application.frontmostApplication()
-  os.remove(DIR .. "/rec.pid"); os.remove(DIR .. "/in.wav")
-  -- launch the mic app only once Ctrl/Option/Cmd are released: macOS shows a "Press Run to run this script"
-  -- window when an applet opens while Control is held (the shortcut is Ctrl+Option+Cmd+D)
-  local tries = 0
-  hs.timer.waitUntil(function()
-    tries = tries + 1
-    local m = hs.eventtap.checkKeyboardModifiers()
-    return tries > 40 or not (m.ctrl or m.alt or m.cmd)
-  end, function() hs.execute("open -g '" .. APP .. "'") end, 0.03)
+  os.remove(DIR .. "/in.wav")
+  hs.execute("/bin/launchctl kickstart -k " .. JOB .. " 2>/dev/null")
   state, t0 = "rec", os.time()
   hs.sound.getByName("Tink"):play()
   local function upd()
@@ -146,7 +139,7 @@ function M.stop()
       text = text:gsub("%[BLANK_AUDIO%]", ""):gsub("%s+", " "):gsub("^ ", ""):gsub(" $", "")
       hide(); state = "idle"
       if text == "" then
-        hs.alert.show("🎙 Nothing heard. If this keeps happening: System Settings → Privacy & Security → Microphone → turn on “Claude Voice Mic”", 6)
+        hs.alert.show("🎙 Nothing heard. If this keeps happening: System Settings → Privacy & Security → Microphone → turn on “sox”", 6)
         return
       end
       sendToClaude(text)

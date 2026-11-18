@@ -561,7 +561,7 @@ async function badges(){
     can('sms') ? sb.from('sms_messages').select('id', { count:'exact', head:true }).eq('direction', 'in').eq('is_read', false).eq('is_test', false) : { count:0 },
     me.role === 'admin' ? sb.from('profiles').select('id', { count:'exact', head:true }).eq('approved', false) : { count:0 } ]);
   const n = set('#nbSms', s.count) + set('#nbAcc', a.count);
-  document.title = (n ? '(' + n + ') ' : '') + 'Members · Unreal Agency';
+  document.title = (n ? '(' + n + ') ' : '') + (() => { try { return tab && titles[tab] ? titles[tab][0] + ' · ' : ''; } catch(e){ return ''; } })() + 'Members · Unreal Agency';
 }
 // sound for a new client text. Browsers only allow sound after one click on the page, so the first click unlocks it.
 let dingCtx = null;
@@ -591,9 +591,10 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => show(b.dataset.tab));
-const titles = { todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Who worked how long today: work, music, breaks. From ActivityWatch, synced every 10 minutes.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
+  if (t !== 'time') timeStop();
   tab = t; history.replaceState(null, '', '#' + t); badges();
   document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'dropp' || t === 'brains' || t === 'twitter');
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
@@ -1765,41 +1766,110 @@ async function askAdminView(){
   $('#anAdd').onclick = async () => { const { error } = await sb.from('ask_notes').insert({ title:'New note', body:'', sort:200 }); if (error) return toast(error.message); askAdminView(); };
 }
 
-// ---------- Time (ActivityWatch) ----------
-let timeDay = null;
+// ---------- Time: live focus (Unreal Focus beats every 30 s + ActivityWatch app names) ----------
+let timeDay = null, timePoll = null, timeTick = null, timeWhole = false, timeLast = null;
+const TK = { work:'var(--ok)', music:'#8b5cf6', break:'var(--bad)', other:'#9b8aa0', handsoff:'#f59e0b', away:'var(--line)' };
+const hm = m => { m = Math.round(Number(m) || 0); return m >= 60 ? Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') : m + 'm'; };
+const hms = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return h ? `${h}h${String(m).padStart(2,'0')}m${String(x).padStart(2,'0')}s` : m ? `${m}m${String(x).padStart(2,'0')}s` : `${x}s`; };
+const clk = d => new Date(d).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' });
+const segCol = b => b.cls === 'away' ? TK.away : b.cls === 'handsoff' ? TK.handsoff : (TK[b.kind] || TK.other);
+const kindName = b => b.cls === 'away' ? 'Away' : b.cls === 'handsoff' ? 'Hands-off' : ({ work:'Working', music:'Music (working)', break:'Break', other:'Not work' })[b.kind] || 'Other';
+function timeStop(){ clearInterval(timePoll); clearInterval(timeTick); timePoll = timeTick = null; }
 async function timeView(){
+  timeStop();
   const v = $('#view');
-  if (!timeDay) timeDay = new Date().toLocaleDateString('en-CA', { timeZone:'Asia/Bangkok' });
-  const [d, ppl] = await Promise.all([ sb.rpc('aw_day', { p_day: timeDay }), sb.from('aw_people').select('name,token,tz').order('id') ]);
-  if (d.error) return v.innerHTML = `<div class="msg err">${esc(d.error.message)}</div>`;
-  const rows = d.data || [], h = m => { m = Math.round(Number(m) || 0); return m >= 60 ? Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') : m + 'm'; };
-  const col = { work:'var(--ok)', music:'#8b5cf6', break:'var(--bad)', other:'var(--muted)' };
+  const today = new Date().toLocaleDateString('en-CA', { timeZone:'Asia/Bangkok' });
+  if (!timeDay) timeDay = today;
+  const isToday = timeDay === today;
+  const [fl, d, ppl] = await Promise.all([ sb.rpc('focus_live', { p_day: timeDay }), sb.rpc('aw_day', { p_day: timeDay }), sb.from('aw_people').select('name,token,tz').order('id') ]);
+  if (tab !== 'time') return;
+  if (fl.error) return v.innerHTML = `<div class="msg err">${esc(fl.error.message)}</div>`;
+  const f = fl.data || {}; timeLast = f;
   const shift = n => { const t = new Date(timeDay + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); timeDay = t.toISOString().slice(0, 10); timeView(); };
+  const now = Date.now(), lastTs = f.last ? new Date(f.last.ts).getTime() : 0, live = isToday && lastTs && now - lastTs < 95000;
+  const ss = f.since_start || {}, cur = f.current || {}, sStart = f.session_start || f.day_start;
+  const blocks = (f.blocks || []).filter(b => timeWhole || !sStart || new Date(b.e) > new Date(sStart));
+  const t0 = blocks.length ? new Date(blocks[0].s).getTime() : now, t1 = isToday ? Math.max(now, blocks.length ? new Date(blocks[blocks.length-1].e).getTime() : now) : (blocks.length ? new Date(blocks[blocks.length-1].e).getTime() : now), span = Math.max(60000, t1 - t0);
+  // ticks every 15/30/60 min depending on span
+  const step = span <= 2*3600e3 ? 15*60e3 : span <= 6*3600e3 ? 30*60e3 : 3600e3, ticks = [];
+  for (let t = Math.ceil(t0 / step) * step; t <= t1; t += step) ticks.push(t);
+  const nowIcon = !isToday ? '📅' : !live ? '⚫' : cur.cls === 'handsoff' ? '🟠' : cur.kind === 'break' ? '🔴' : cur.kind === 'music' ? '🟣' : cur.kind === 'work' ? '🟢' : '⚪';
+  const nowVerb = !isToday ? 'Day view' : !live ? `Offline · last seen ${lastTs ? clk(lastTs) : '–'}` : cur.cls === 'handsoff' ? 'Hands-off on' : cur.kind === 'break' ? 'On a break' : cur.kind === 'music' ? 'Working (music on)' : cur.kind === 'work' ? 'Working on' : 'On';
+  const acts = f.activities || [], amax = Math.max(1, ...acts.map(a => Number(a.min)));
+  const cats = f.cats || [], cmax = Math.max(1, ...cats.map(c => Number(c.min)));
+  const totalOn = (Number(ss.active) || 0) + (Number(ss.handsoff) || 0);
+  const pct = totalOn ? Math.round(100 * (Number(ss.work) || 0) / totalOn) : null;
+  const elapsed = sStart ? (isToday ? now : t1) - new Date(sStart).getTime() : 0;
+  const recent = (f.blocks || []).slice(-25).reverse();
+  const stat = (ico, val, lab, color) => `<div class="card" style="padding:12px 14px;flex:1;min-width:120px;border-left:4px solid ${color}"><div class="muted" style="font-size:12px">${ico} ${lab}</div><div style="font-size:22px;font-weight:800;margin-top:2px">${val}</div></div>`;
+  const focus = `<article class="card" style="padding:18px;margin-bottom:14px;border:2px solid var(--pink)">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h2 style="margin:0">⚡ Gael · ${isToday ? 'Live' : 'Day'} ${isToday ? `<span id="tLive" style="font-size:12px;vertical-align:middle;margin-left:6px;padding:3px 9px;border-radius:99px;background:${live ? 'var(--okbg)' : 'var(--blush)'};color:${live ? 'var(--ok)' : 'var(--muted)'}">${live ? '● LIVE' : '○ offline'}</span>` : ''}</h2>
+      <div style="text-align:right"><span style="font-size:30px;font-weight:800;color:${pct == null ? 'var(--muted)' : pct >= 70 ? 'var(--ok)' : pct >= 45 ? '#d97706' : 'var(--bad)'}">${pct ?? '–'}%</span><div class="muted" style="font-size:11px">focus this session</div></div>
+    </div>
+    <div style="border-radius:14px;padding:16px;background:var(--blush);margin-bottom:14px">
+      <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.06em">${isToday ? 'Right now' : 'Last activity'}</div>
+      <div style="font-size:21px;font-weight:800;margin:4px 0">${nowIcon} ${esc(nowVerb)} ${live || !isToday ? `<span style="color:var(--pink)">${esc(cur.label || '–')}</span>` : ''}</div>
+      <div style="font-size:14px">${live ? `for <b id="tCur">${hms((now - new Date(cur.since).getTime()) / 1000)}</b> · ${esc(cur.cat || '')} · ` : ''}session started <b>${sStart ? clk(sStart) : '–'}</b>${sStart ? ` · <b id="tEl">${hms(elapsed / 1000)}</b> in` : ''}</div>
+      ${isToday ? `<div class="muted" style="font-size:12px;margin-top:6px">Last signal <span id="tAgo">${lastTs ? hms((now - lastTs) / 1000) : '–'}</span> ago · refreshes every 15 s</div>` : ''}
+    </div>
+    <div class="muted" style="font-size:12px;margin-bottom:6px">Since ${sStart ? clk(sStart) : 'start'}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      ${stat('💼', hm(ss.work), 'Worked', TK.work)}${stat('🎵', hm(ss.music), 'Music', TK.music)}${stat('🎮', hm(ss.break), 'Breaks', TK.break)}
+      ${stat('💬', hm(ss.other), 'Not work', TK.other)}${stat('🤚', hm(ss.handsoff), 'Hands-off', TK.handsoff)}${stat('🚶', hm(ss.away), 'Away', 'var(--muted)')}
+    </div>
+    <div class="row" style="justify-content:space-between;align-items:center"><b style="font-size:14px">Timeline ${timeWhole ? '(whole day)' : '(this session)'}</b><button class="btn sm ghost" id="tWhole">${timeWhole ? 'This session' : 'Whole day'}</button></div>
+    <div style="position:relative;height:34px;margin:8px 0 2px;border-radius:8px;overflow:hidden;background:var(--blush)">
+      ${blocks.map(b => { const s = new Date(b.s).getTime(), e = new Date(b.e).getTime(); return `<i title="${clk(b.s)}–${clk(b.e)} · ${esc(b.label)} · ${kindName(b)} · ${hm(b.min)}" style="position:absolute;top:0;bottom:0;left:${(s - t0) / span * 100}%;width:${Math.max(.25, (e - s) / span * 100)}%;background:${segCol(b)}"></i>`; }).join('')}
+      ${isToday ? `<i style="position:absolute;top:0;bottom:0;right:0;width:2px;background:var(--pink)"></i>` : ''}
+    </div>
+    <div style="position:relative;height:16px;font-size:11px" class="muted">${ticks.map(t => `<span style="position:absolute;left:${(t - t0) / span * 100}%;transform:translateX(-50%)">${clk(t)}</span>`).join('')}</div>
+    <div class="muted" style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;margin:4px 0 14px">${[['work','Working'],['music','Music'],['break','Break'],['other','Not work'],['handsoff','Hands-off'],['away','Away']].map(([k, l]) => `<span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${TK[k]};vertical-align:middle;margin-right:4px"></i>${l}</span>`).join('')}</div>
+    ${(f.tips || []).map(t => `<div style="background:rgba(255,95,162,.12);border:1px solid rgba(255,95,162,.35);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px">💡 ${esc(t)}</div>`).join('')}
+    <h3 style="margin:18px 0 8px;font-size:15px">What you worked on today</h3>
+    <div class="tbl" style="overflow-x:auto"><table style="font-size:13px"><thead><tr><th>Activity</th><th>Type</th><th style="text-align:right">Time</th><th style="text-align:right">Active</th><th style="text-align:right">Clicks</th><th style="text-align:right">Keys</th><th>When</th></tr></thead><tbody>
+      ${acts.map(a => `<tr><td style="min-width:200px"><div>${esc(a.label)}</div><div class="xbar" style="height:5px;margin-top:4px"><i style="width:${Math.round(Number(a.min) / amax * 100)}%;background:${TK[a.kind] || TK.other}"></i></div></td><td class="muted">${esc(a.cat)}</td><td style="text-align:right"><b>${hm(a.min)}</b></td><td style="text-align:right">${hm(a.act)}</td><td style="text-align:right">${a.clicks}</td><td style="text-align:right">${a.keys}</td><td class="muted" style="white-space:nowrap">${clk(a.first)}–${clk(a.last)}${a.n > 1 ? ` · ${a.n}×` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Nothing yet.</td></tr>'}
+    </tbody></table></div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:16px">
+      <div style="flex:1;min-width:260px"><h3 style="margin:0 0 8px;font-size:15px">By category (this session)</h3>
+        ${cats.map(c => `<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${esc(c.cat)}</span><b>${hm(c.min)}</b></div><div class="xbar"><i style="width:${Math.round(Number(c.min) / cmax * 100)}%;background:${TK[c.kind] || TK.other}"></i></div></div>`).join('') || '<p class="muted">–</p>'}
+        <p class="muted" style="font-size:12px;margin-top:10px">${ss.clicks || 0} clicks · ${ss.keys || 0} keys · ${ss.switches || 0} tab switches this session</p>
+        ${(f.away_log || []).length ? `<h3 style="margin:14px 0 6px;font-size:15px">Away (with reason)</h3>${f.away_log.map(a => `<div style="font-size:13px">🚶 ${clk(a.s)}–${a.e ? clk(a.e) : 'now'} · ${esc(a.reason || '')}</div>`).join('')}` : ''}
+      </div>
+      <div style="flex:1.3;min-width:300px"><h3 style="margin:0 0 8px;font-size:15px">Live log</h3>
+        <div style="max-height:340px;overflow:auto;font-size:13px">${recent.map(b => `<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)"><span class="muted" style="white-space:nowrap;font-variant-numeric:tabular-nums">${clk(b.s)}–${clk(b.e)}</span><i style="flex:none;width:8px;height:8px;border-radius:50%;margin-top:6px;background:${segCol(b)}"></i><span style="flex:1">${esc(b.label)}</span><b style="white-space:nowrap">${hm(b.min)}</b></div>`).join('') || '<p class="muted">–</p>'}</div>
+      </div>
+    </div>
+    <p class="muted" style="font-size:11px;margin-top:12px">Chrome tabs: live from Unreal Focus (every 30 s). Mac apps (Claude app, Discord, YouTube in Brave…): from ActivityWatch${f.aw_last_sync ? `, last synced ${clk(f.aw_last_sync)}` : ''}. Work counts only with mouse/keyboard activity; music and breaks count while on screen.</p>
+  </article>`;
+  // other people (ActivityWatch); Gael's raw ActivityWatch card is folded away
+  const rows = d.data || [];
   const people = (ppl.data || []).map(p => {
-    const r = rows.filter(x => x.person === p.name), sum = k => r.filter(x => x.kind === k).reduce((t, x) => t + Number(x.minutes), 0);
-    const work = sum('work'), music = sum('music'), brk = sum('break'), other = sum('other'), total = work + music + brk + other, max = Math.max(1, ...r.map(x => Number(x.minutes)));
-    return `<article class="card" style="padding:18px"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">${esc(p.name)}</h2><span class="muted" style="font-size:13px">${esc(p.tz)}</span></div>
-      ${r.length ? `<div class="stats" style="margin-bottom:12px"><span class="stat">💼 <b style="margin:0 4px">${h(work)}</b> work</span><span class="stat">🎵 <b style="margin:0 4px">${h(music)}</b> music</span><span class="stat" style="${brk > 60 ? 'border-color:var(--bad);color:var(--bad)' : ''}">🎮 <b style="margin:0 4px">${h(brk)}</b> break</span><span class="stat">· <b style="margin:0 4px">${h(other)}</b> other</span></div>
-      ${r.map(x => `<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${esc(x.category)}</span><b>${h(x.minutes)}</b></div><div class="xbar"><i style="width:${Math.round(Number(x.minutes) / max * 100)}%;background:${col[x.kind] || 'var(--pink)'}"></i></div></div>`).join('')}
-      <p class="muted" style="font-size:12px;margin-top:10px">Work counts only while the mouse/keyboard is active. Breaks and music count the whole time they are on screen.</p>`
-      : `<p class="muted">No data for this day.</p>`}
-      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer;font-size:13px">Install / token</summary><p style="font-size:13px;margin-top:8px">1. Install <a href="https://activitywatch.net/downloads/" target="_blank" rel="noopener" style="color:var(--pink)">ActivityWatch</a> and open it.<br>2. Mac (Terminal): <code style="word-break:break-all">curl -fsSL https://unrealagency.ai/tools/aw-mac.sh | bash -s ${esc(p.token)}</code><br>Windows (PowerShell): <code style="word-break:break-all">$t='${esc(p.token)}'; irm https://unrealagency.ai/tools/aw-win.ps1 | iex</code></p></details></article>`;
+    const r = rows.filter(x => x.person === p.name), sum = k => r.filter(x => x.kind === k).reduce((t, x) => t + Number(x.minutes), 0), max = Math.max(1, ...r.map(x => Number(x.minutes)));
+    const body = `${r.length ? `<div class="stats" style="margin-bottom:12px"><span class="stat">💼 <b style="margin:0 4px">${hm(sum('work'))}</b> work</span><span class="stat">🎵 <b style="margin:0 4px">${hm(sum('music'))}</b> music</span><span class="stat">🎮 <b style="margin:0 4px">${hm(sum('break'))}</b> break</span><span class="stat">· <b style="margin:0 4px">${hm(sum('other'))}</b> other</span></div>
+      ${r.map(x => `<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${esc(x.category)}</span><b>${hm(x.minutes)}</b></div><div class="xbar"><i style="width:${Math.round(Number(x.minutes) / max * 100)}%;background:${TK[x.kind] || 'var(--pink)'}"></i></div></div>`).join('')}` : `<p class="muted">No data for this day.</p>`}
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer;font-size:13px">Install / token</summary><p style="font-size:13px;margin-top:8px">1. Install <a href="https://activitywatch.net/downloads/" target="_blank" rel="noopener" style="color:var(--pink)">ActivityWatch</a> and open it.<br>2. Mac (Terminal): <code style="word-break:break-all">curl -fsSL https://unrealagency.ai/tools/aw-mac.sh | bash -s ${esc(p.token)}</code><br>Windows (PowerShell): <code style="word-break:break-all">$t='${esc(p.token)}'; irm https://unrealagency.ai/tools/aw-win.ps1 | iex</code></p></details>`;
+    return p.name === 'Gael'
+      ? `<details class="card" style="padding:14px 18px"><summary style="cursor:pointer"><b>Gael · raw ActivityWatch</b> <span class="muted" style="font-size:12px">(all apps, whole day)</span></summary><div style="margin-top:12px">${body}</div></details>`
+      : `<article class="card" style="padding:18px"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">${esc(p.name)}</h2><span class="muted" style="font-size:13px">${esc(p.tz)}</span></div>${body}</article>`;
   }).join('');
-  const fd = await sb.rpc('focus_day', { p_day: timeDay });
-  const f = fd.data, focus = f && f.total ? `<article class="card" style="padding:18px;margin-bottom:14px;border:2px solid var(--pink)">
-      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0">⚡ Gael · Focus</h2><span style="font-size:28px;font-weight:800;color:${f.focus_score >= 70 ? 'var(--ok)' : f.focus_score >= 45 ? '#d97706' : 'var(--bad)'}">${f.focus_score ?? '–'}%</span></div>
-      <div class="stats" style="margin-bottom:12px"><span class="stat">💼 <b style="margin:0 4px">${h(f.work)}</b> working</span><span class="stat">🤖 <b style="margin:0 4px">${h(f.claude_handsoff)}</b> hands-off on Claude</span><span class="stat">🚶 <b style="margin:0 4px">${h(f.away)}</b> away</span><span class="stat">🎮 <b style="margin:0 4px">${h(f.break)}</b> breaks</span><span class="stat">🔥 <b style="margin:0 4px">${h(f.streak)}</b> best block</span><span class="stat" style="border-color:var(--pink)">⚡ AI did <b style="margin:0 4px">${f.delegated_n}</b> tasks · ${h(f.delegated_min)} saved</span></div>
-      ${(f.tips || []).map(t => `<div style="background:var(--soft,#fff0f6);border-radius:10px;padding:8px 12px;margin:6px 0;font-size:14px">💡 ${esc(t)}</div>`).join('')}
-      <div style="display:flex;gap:3px;align-items:flex-end;height:70px;margin:14px 0 4px">${Array.from({ length: 24 }, (_, i) => { const x = (f.hours || []).find(y => y.h === i) || { active: 0, handsoff: 0, away: 0 }; return `<div title="${i}h · ${x.active}m working · ${x.handsoff}m hands-off · ${x.away}m away" style="flex:1;display:flex;flex-direction:column-reverse;height:100%"><i style="display:block;height:${x.active / 60 * 100}%;background:var(--ok)"></i><i style="display:block;height:${x.handsoff / 60 * 100}%;background:#d97706"></i><i style="display:block;height:${x.away / 60 * 100}%;background:var(--line)"></i></div>`; }).join('')}</div>
-      <div class="muted" style="display:flex;justify-content:space-between;font-size:11px"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span></div>
-      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer;font-size:13px">Apps, sites and most-clicked buttons</summary>
-        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:8px;font-size:13.5px"><div>${(f.apps || []).map(a => `<div>${esc(a.app)} · <b>${h(a.min)}</b></div>`).join('')}</div>
-        <div>${(f.labels || []).map(l => `<div>“${esc(l.label)}” · <b>${l.n}×</b></div>`).join('')}</div>
-        <div class="muted">${f.clicks} clicks · ${f.keys} keys · ${f.switches} tab switches</div></div></details>
-    </article>` : '';
-  v.innerHTML = `<div class="smstop" style="align-items:center"><span></span><div class="stats"><button class="btn sm ghost" id="tPrev">◀</button><b>${esc(new Date(timeDay + 'T12:00:00Z').toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', timeZone:'UTC' }))}</b><button class="btn sm ghost" id="tNext">▶</button></div></div>
+  const keepScroll = window.scrollY;
+  v.innerHTML = `<div class="smstop" style="align-items:center"><span></span><div class="stats"><button class="btn sm ghost" id="tPrev">◀</button><b>${esc(new Date(timeDay + 'T12:00:00Z').toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', timeZone:'UTC' }))}</b><button class="btn sm ghost" id="tNext">▶</button>${isToday ? '' : '<button class="btn sm" id="tToday">Today</button>'}</div></div>
     ${focus}<div class="xgrid">${people}</div>`;
+  window.scrollTo(0, keepScroll);
   $('#tPrev').onclick = () => shift(-1); $('#tNext').onclick = () => shift(1);
+  if ($('#tToday')) $('#tToday').onclick = () => { timeDay = today; timeView(); };
+  $('#tWhole').onclick = () => { timeWhole = !timeWhole; timeView(); };
+  if (isToday){
+    timePoll = setInterval(() => { if (tab !== 'time' || document.hidden) return; if (!document.querySelector('#view details[open]')) timeView(); }, 15000);
+    timeTick = setInterval(() => {
+      if (tab !== 'time') return timeStop();
+      const n = Date.now(), L = timeLast || {};
+      if ($('#tCur') && L.current) $('#tCur').textContent = hms((n - new Date(L.current.since).getTime()) / 1000);
+      if ($('#tEl') && (L.session_start || L.day_start)) $('#tEl').textContent = hms((n - new Date(L.session_start || L.day_start).getTime()) / 1000);
+      if ($('#tAgo') && L.last) $('#tAgo').textContent = hms((n - new Date(L.last.ts).getTime()) / 1000);
+    }, 1000);
+  }
 }
 
 async function topupsView(){

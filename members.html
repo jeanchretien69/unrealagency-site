@@ -573,6 +573,20 @@
 
   /* ===== Phone / mobile layout (≤820px) ===== */
   .mnav,.mback{display:none}
+  .xsacc{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 12px;padding-bottom:2px}
+  .xsacc::-webkit-scrollbar{display:none}
+  .xsacc button{flex:none;display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 12px;font-weight:700;font-size:13px;color:var(--muted)}
+  .xsacc button i{width:9px;height:9px;border-radius:50%;background:var(--c)}
+  .xsacc button.on{border-color:var(--c);color:var(--ink);box-shadow:inset 0 0 0 1px var(--c)}
+  .xsm{border-top:1px solid var(--line);padding:12px 0}
+  .xsm.done{opacity:.55}
+  .xsm-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px}
+  .xsm-h .muted{font-size:12.5px;flex:1}
+  .xsm img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;display:block;cursor:zoom-in}
+  .xsm-n{position:absolute;top:8px;left:8px;color:#fff;font-weight:800;font-size:13px;padding:2px 9px;border-radius:999px}
+  .xsm-empty{border:1px dashed var(--line);border-radius:12px;padding:30px;text-align:center;color:var(--muted);font-size:13px}
+  .xsm p{font-size:13.5px;line-height:1.4;margin-top:8px}
+  .xsm p b{opacity:.7}
   @media (max-width:820px){
     html,body{overflow-x:clip}
     body{-webkit-text-size-adjust:100%}
@@ -608,7 +622,11 @@
     /* general content */
     .card{padding:14px;border-radius:16px}
     h2{font-size:16px}
-    input,select,textarea{font-size:16px}
+    input,select,textarea{font-size:16px!important}
+    table.stack,table.stack tbody,table.stack tr,table.stack td{display:block;width:100%}
+    table.stack thead{display:none}
+    table.stack tr{border-bottom:1px solid var(--line);padding:8px 0}
+    table.stack td{border:0;padding:2px 0;white-space:normal!important}
     img,video,canvas,svg{max-width:100%}
     table{font-size:13px}
     th,td{padding:8px 6px}
@@ -620,6 +638,29 @@
     .tile b{font-size:21px}
     .grid{grid-template-columns:minmax(0,1fr)}
     .askbtn{right:max(14px,env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));padding:11px 15px;font-size:12px}
+    .card .card{padding:12px}
+    .row>.stats{flex:1 1 100%}
+    .stats>input{flex:1 1 140px;width:auto!important}
+    .cfilt button{padding:7px 12px;font-size:13px}
+    .smstop{gap:10px}
+    .ap{bottom:calc(10px + env(safe-area-inset-bottom))}
+    /* SMS phone */
+    .chat{grid-template-columns:minmax(0,1fr);height:auto;border-radius:14px}
+    .clist,.cmain,.cinfo,.cboard{min-width:0}
+    .clist{max-height:300px;border-right:0;border-bottom:1px solid var(--line)}
+    .cmain{height:72dvh;scroll-margin-top:calc(118px + env(safe-area-inset-top))}
+    .cinfo{flex-direction:column;border-left:0}
+    .bub .mm{max-width:100%}
+    /* photos */
+    #pGrid{grid-template-columns:minmax(0,1fr)!important}
+    #pGrid img[data-act=open]{aspect-ratio:4/5;max-height:62vh}
+    /* my to-do */
+    .td-dtoday{max-height:300px;overflow-y:auto}
+    .td-row{flex-wrap:wrap;padding:12px;gap:10px}
+    .td-main{flex:1 1 calc(100% - 40px)}
+    .td-act{flex:1 1 100%;padding-left:32px}
+    .td-act select{width:auto;flex:0 1 190px;padding:7px 10px}
+    .td-kpis{gap:8px}
     .askp{right:8px;left:8px;width:auto;bottom:calc(66px + env(safe-area-inset-bottom));height:min(560px,calc(100dvh - 140px))}
   }
 </style>
@@ -985,7 +1026,7 @@ async function todoView(){
       <button class="btn sm ${tdOpen('today') ? '' : 'ghost'}" id="tdTgToday">✅ Done today (${doneToday.length})</button>
       <button class="btn sm ghost" id="tdTgAll">📚 Everything done (${allDone.length})</button>
     </div>
-    ${tdOpen('today') ? `<div class="card" style="margin-bottom:14px;padding:12px 16px">${doneToday.map(x => `<div class="td-row td-done"><div class="td-main"><span class="td-t">${esc(x.title)}</span>
+    ${tdOpen('today') ? `<div class="card td-dtoday" style="margin-bottom:14px;padding:12px 16px">${doneToday.map(x => `<div class="td-row td-done"><div class="td-main"><span class="td-t">${esc(x.title)}</span>
         <span class="td-n">${esc(TD_BY[x.done_by] || '✋ you')} · ${new Date(x.done_at).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}${x.proof ? ' · ' + esc(x.proof) : ''}</span></div>
         <button class="btn ghost sm" data-undo="${x.id}">Undo</button></div>`).join('') || '<p class="muted" style="margin:0">Nothing yet today.</p>'}</div>` : ''}
     <div class="td-kpis">
@@ -1347,7 +1388,7 @@ function smsRows(){
   if (smsFilter === 'waiting') rows = rows.filter(r => r.last.direction === 'in');
   if (smsQ) rows = rows.filter(r => (smsName(r.p) + ' ' + r.p).toLowerCase().includes(smsQ) || r.a.some(x => x.body.toLowerCase().includes(smsQ)));
   box.innerHTML = rows.length ? rows.map(r => `<button class="crow ${r.p===smsOpen?'on':''}" data-p="${esc(r.p)}"><span class="pav">${esc(smsName(r.p).replace(/^Test · /,'').replace(/^\+/,'').slice(0,1).toUpperCase())}</span><span class="pmeta"><b>${esc(smsName(r.p))}<span>${smsDay(r.last.created_at)==='Today'?smsTime(r.last.created_at):smsDay(r.last.created_at)}</span></b><p>${r.last.direction==='out'?'You: ':''}${esc(r.last.body || (r.last.media ? '📷 Photo' : ''))}</p></span>${r.unread?`<i class="cbadge">${r.unread}</i>`:''}</button>`).join('') : '<p class="pempty">No conversations here.</p>';
-  box.querySelectorAll('.crow').forEach(b => b.onclick = () => { smsOpen = b.dataset.p; smsDraw(true); });
+  box.querySelectorAll('.crow').forEach(b => b.onclick = () => { smsOpen = b.dataset.p; smsDraw(true); if (matchMedia('(max-width:820px)').matches) setTimeout(() => { const m = document.querySelector('.cmain'); if (m) m.scrollIntoView({ behavior:'smooth', block:'start' }); }, 120); });
 }
 // pictures: private files, shown through short-lived links kept in memory
 let smsPend = null; const smsUrls = {};
@@ -2029,6 +2070,7 @@ async function xScore(){
 // 📅 every scheduled picture: one table per day, a coloured column per account, rows = Pic 1 / 2 / 3
 const X_COL = ['#ff5fa2', '#ff4d4d', '#4da3ff', '#b57bff', '#3ccf8e', '#ffb84d'];
 const xNsfw = a => /nsfw/i.test((a && a.notes) || '') || (a && a.handle === 'k_kayyyy_y');
+let xSchedAcc = (() => { try { return localStorage.getItem('unreal-xsacc') || ''; } catch(e){ return ''; } })();
 async function xSched(D){
   const box = $('#xSched'); if (!box) return;
   const from = D.today, to = xShift(D.today, 6);
@@ -2058,6 +2100,23 @@ async function xSched(D){
       ${r.posted_at ? '<span class="pill yes" style="position:absolute;bottom:6px;right:6px;font-size:11px">posted ✓</span>' : ''}</div>
       ${q ? `${q.en ? `<div style="font-size:12px;line-height:1.3;margin-top:5px"><b style="opacity:.6">🇬🇧</b> ${esc(q.en)}</div>` : ''}${q.it ? `<div style="font-size:12px;line-height:1.3;margin-top:4px"><b style="opacity:.6">🇮🇹</b> ${esc(q.it)}</div>` : ''}` : ''}</td>`; };
   box.className = '';
+  if (matchMedia('(max-width:820px)').matches){
+    // phone: pick one account, see its 3 pictures stacked
+    if (!accs.some(a => a.handle === xSchedAcc)) xSchedAcc = accs[0] ? accs[0].handle : '';
+    const a = accs.find(x => x.handle === xSchedAcc);
+    box.innerHTML = (dupes.length ? `<div class="msg err" style="margin-bottom:12px">⚠ Same photo on 2 accounts: ${dupes.map(([id, l]) => '#' + (P[id] ? P[id].num : '?') + ' (' + l.map(h => '@' + h).join(', ') + ')').join(' · ')}</div>` : '') +
+      `<div class="xsacc">${accs.map(x => `<button data-acc="${esc(x.handle)}" class="${x.handle === xSchedAcc ? 'on' : ''}" style="--c:${col[x.handle]}"><i></i>@${esc(x.handle)}${xNsfw(x) ? ' 🔞' : ''}</button>`).join('')}</div>` +
+      (a ? days.map(d => { const list = rows.filter(r => r.day === d && r.account === a.handle);
+        return `<div class="card" style="margin:0 0 14px;padding:12px;border-top:4px solid ${col[a.handle]}"><h2 style="margin:0 0 4px">${d === D.today ? 'Today' : d === xShift(D.today, 1) ? 'Tomorrow' : esc(xLabel(d))} <small class="muted" style="font-size:12.5px;font-weight:500">· ${esc(xLabel(d))}</small></h2>
+          <div class="muted" style="font-size:12.5px;margin-bottom:10px">AdsPower ${esc(a.label || '?')} · ${list.length}/3 pictures${xNsfw(a) ? ' · <span class="pill no" style="font-size:10.5px">🔞 NSFW</span>' : ''}</div>
+          ${[1, 2, 3].map(sl => { const r = list.find(x => x.slot === sl), p = r && P[r.photo_id], q = r && Q[r.quote_id];
+            return `<div class="xsm${r && r.posted_at ? ' done' : ''}"><div class="xsm-h"><b>Pic ${sl}</b><span class="muted">${sl === 3 ? 'post now' : 'schedule'}${t[a.handle + '|' + sl] ? ' · ' + t[a.handle + '|' + sl] + ' PH' : ''}</span>${r && r.posted_at ? '<span class="pill yes" style="font-size:11px">posted ✓</span>' : ''}</div>
+              ${p ? `<div style="position:relative"><span class="xsm-n" style="background:${col[a.handle]}">#${p.num}</span><img src="${url(p.thumb || p.path)}" alt="" data-open="${esc(p.path)}"></div>` : '<div class="xsm-empty">empty</div>'}
+              ${q && q.en ? `<p><b>🇬🇧</b> ${esc(q.en)}</p>` : ''}${q && q.it ? `<p><b>🇮🇹</b> ${esc(q.it)}</p>` : ''}</div>`; }).join('')}</div>`; }).join('') : '<div class="card empty">No active account.</div>');
+    box.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { xSchedAcc = b.dataset.acc; try { localStorage.setItem('unreal-xsacc', xSchedAcc); } catch(e){} xSched(D); });
+    box.querySelectorAll('[data-open]').forEach(i => i.onclick = () => openPhoto(i.dataset.open));
+    return;
+  }
   box.innerHTML = (dupes.length ? `<div class="msg err" style="margin-bottom:12px">⚠ Same photo on 2 accounts: ${dupes.map(([id, l]) => '#' + (P[id] ? P[id].num : '?') + ' (' + l.map(h => '@' + h).join(', ') + ')').join(' · ')}</div>` : '') +
     days.map(d => { const list = rows.filter(r => r.day === d);
     return `<div class="card" style="margin:0 0 16px;padding:14px;overflow-x:auto"><h2 style="margin:0 0 10px">${d === D.today ? 'Today' : d === xShift(D.today, 1) ? 'Tomorrow' : esc(xLabel(d))} <small class="muted" style="font-size:13px;font-weight:500">· ${esc(xLabel(d))} · ${list.length} picture${list.length === 1 ? '' : 's'}</small></h2>
@@ -2107,8 +2166,8 @@ function xRender(D){
 }
 
 async function xRefresh(){
-  try { xRender(await xLoad()); }
-  catch (e) { $('#view').innerHTML = `<div class="msg err">${esc((e && e.message) || String(e))}</div>`; }
+  try { const D = await xLoad(); if (tab !== 'twitter') return; xRender(D); }
+  catch (e) { if (tab !== 'twitter') return; $('#view').innerHTML = `<div class="msg err">${esc((e && e.message) || String(e))}</div>`; }
 }
 async function twitterView(){
   clearInterval(xTimer);
@@ -2488,7 +2547,7 @@ async function quotesView(){
   if (can('twitter')) { const r = await sb.from('x_events').select('account,action,body,has_media,ts').in('action', ['post','quote']).order('ts', { ascending:false }).limit(200); posted = (r.data || []).filter(x => (x.body || '').trim() || x.has_media); }
   const sugg = {}; all.forEach(x => { [x.en, x.it].forEach(t => { if (t) sugg[t.trim().toLowerCase()] = true; }); });
   const postedHtml = posted.length ? `<details class="card" style="margin-bottom:14px" open><summary style="cursor:pointer"><b>📤 Posted on X (${posted.length})</b> <span class="muted" style="font-size:12.5px">what was really written, from the X tracker</span></summary>
-    <div class="tbl" style="margin-top:10px;max-height:360px;overflow:auto"><table style="font-size:13.5px"><thead><tr><th>When</th><th>Account</th><th>Text posted</th><th></th></tr></thead><tbody>
+    <div class="tbl" style="margin-top:10px;max-height:360px;overflow:auto"><table class="stack" style="font-size:13.5px"><thead><tr><th>When</th><th>Account</th><th>Text posted</th><th></th></tr></thead><tbody>
     ${posted.map(x => { const t = (x.body || '').trim(), same = t && sugg[t.toLowerCase()]; return `<tr><td class="muted" style="white-space:nowrap">${new Date(x.ts).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' })}</td><td>@${esc(x.account)}</td><td>${esc(t || '(picture only)')}${x.has_media ? ' 🖼' : ''}</td><td style="white-space:nowrap"><span class="pill ${same ? '' : 'yes'}">${!t ? 'no text' : same ? 'as suggested' : '✏️ his own edit'}</span></td></tr>`; }).join('')}
     </tbody></table></div></details>` : '';
   const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));

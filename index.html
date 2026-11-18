@@ -876,8 +876,11 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
       /* the kiss clip (cut to start right at the lean-in) starts from the same pose as the still photo, so it can play as soon as it has loaded;
          its last frame is the pose the breathing loop starts from, and the loop downloads while the kiss plays */
       var kissClip = mk('kissauto'), fired = false;
-      function fireKiss(){ if (fired) return; fired = true; if (!busy && !document.hidden) start('kissauto'); else loadLoop(true); }
-      if (kissClip.readyState >= 3) fireKiss(); else { kissClip.addEventListener('canplay', fireKiss, { once:true }); kissClip.addEventListener('canplaythrough', fireKiss, { once:true }); setTimeout(fireKiss, 2500); }
+      /* she first stays still on screen for a moment (KISS_DELAY after the page opens), then kisses; it waits until the whole clip can play without stopping */
+      var KISS_DELAY = 1600;
+      function fireKiss(){ if (fired) return; fired = true; var wait = Math.max(0, KISS_DELAY - performance.now());
+        setTimeout(function(){ if (!busy && !document.hidden) start('kissauto'); else loadLoop(true); }, wait); }
+      if (kissClip.readyState >= 4) fireKiss(); else { kissClip.addEventListener('canplaythrough', fireKiss, { once:true }); setTimeout(fireKiss, 4500); }
       setTimeout(function(){ mk('kiss'); mk('hat'); }, 9000);
       /* Safari pauses videos when you leave the tab or lock the phone: when you come back (or if the system pauses her), she starts breathing again by herself */
       function wake(){ if (document.hidden) return;

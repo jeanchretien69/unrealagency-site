@@ -1942,12 +1942,46 @@ async function xScore(){
       <h3>History</h3>${(hist.data || []).length ? `<div class="tbl"><table><thead><tr><th>Week</th><th>Score</th><th>Work</th><th>Results</th><th>Level</th><th>Pay</th></tr></thead><tbody>${hist.data.map(w => `<tr><td>${esc(w.week)}</td><td><b>${w.total}</b></td><td>${w.work_score}</td><td>${w.results_score}</td><td>${w.level_before}→${w.level_after}</td><td>$${w.pay}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">First week gets locked Monday.</p>'}
     </article></div>`;
 }
+// 📅 every scheduled picture, day by day, as a clean photo board
+async function xSched(D){
+  const box = $('#xSched'); if (!box) return;
+  const from = D.today, to = xShift(D.today, 6);
+  const [pl, ss] = await Promise.all([
+    sb.from('x_plan').select('account,day,slot,posted_at,photo_id,quote_id').gte('day', from).lte('day', to).order('day').order('slot'),
+    sb.from('x_sessions').select('account,slot,start_time').eq('active', true)
+  ]);
+  if (pl.error) return box.innerHTML = `<div class="msg err">${esc(pl.error.message)}</div>`;
+  const rows = pl.data || [];
+  if (!rows.length) return box.innerHTML = '<div class="card"><p class="muted">Nothing scheduled yet.</p></div>';
+  const pIds = [...new Set(rows.map(r => r.photo_id).filter(Boolean))], qIds = [...new Set(rows.map(r => r.quote_id).filter(Boolean))];
+  const [ph, qq] = await Promise.all([
+    pIds.length ? sb.from('photos').select('id,num,path,thumb,caption').in('id', pIds) : Promise.resolve({ data: [] }),
+    qIds.length ? sb.from('quotes').select('id,it,en').in('id', qIds) : Promise.resolve({ data: [] })
+  ]);
+  const P = Object.fromEntries((ph.data || []).map(x => [x.id, x])), Q = Object.fromEntries((qq.data || []).map(x => [x.id, x]));
+  const url = await photoUrls(Object.values(P).map(x => x.thumb || x.path));
+  const t = {}; (ss.data || []).forEach(x => t[x.account + '|' + x.slot] = String(x.start_time || '').slice(0, 5));
+  const order = D.accounts.map(a => a.handle), days = [...new Set(rows.map(r => r.day))];
+  const card = r => { const p = P[r.photo_id], q = Q[r.quote_id];
+    return `<div class="card" style="padding:8px;display:flex;flex-direction:column;gap:6px;position:relative${r.posted_at ? ';opacity:.6' : ''}">
+      ${p ? `<span style="position:absolute;top:14px;left:14px;z-index:1;background:var(--pink);color:#fff;font-weight:800;font-size:13px;padding:2px 9px;border-radius:999px">#${p.num}</span>
+      <img src="${url(p.thumb || p.path)}" alt="" data-open="${esc(p.path)}" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;cursor:zoom-in">` : '<div class="muted" style="aspect-ratio:3/4;display:grid;place-items:center;border:1px dashed var(--line);border-radius:10px">No photo</div>'}
+      <div style="display:flex;justify-content:space-between;gap:6px;align-items:center"><b style="font-size:13px">@${esc(r.account)}</b><span class="pill ${r.posted_at ? 'yes' : ''}" style="font-size:11px">${r.posted_at ? 'posted ✓' : 'Pic ' + r.slot + (t[r.account + '|' + r.slot] ? ' · ' + t[r.account + '|' + r.slot] + ' PH' : '')}</span></div>
+      ${q ? `<div style="font-size:12.5px;line-height:1.35">🇮🇹 ${esc(q.it || q.en)}</div>` : '<div class="muted" style="font-size:12px">No quote</div>'}
+    </div>`; };
+  box.className = '';
+  box.innerHTML = days.map(d => { const list = rows.filter(r => r.day === d).sort((a, b) => (order.indexOf(a.account) - order.indexOf(b.account)) || a.slot - b.slot);
+    return `<div style="margin:6px 0 18px"><h2 style="margin:0 0 10px">${d === D.today ? 'Today' : d === xShift(D.today, 1) ? 'Tomorrow' : esc(xLabel(d))} <small class="muted" style="font-size:13px;font-weight:500">· ${esc(xLabel(d))} · ${list.length} picture${list.length > 1 ? 's' : ''}</small></h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px">${list.map(card).join('')}</div></div>`; }).join('');
+  box.querySelectorAll('[data-open]').forEach(i => i.onclick = () => openPhoto(i.dataset.open));
+}
+
 function xRender(D){
   const v = $('#view'), admin = D.admin;
-  const modes = [['todo', '✅ To-do'], ['track', '📊 Tracking'], ['log', '🧾 Action log'], ['score', '🏆 Scorecard'], ['set', '⚙ Goals']];
+  const modes = [['todo', '✅ To-do'], ['sched', '📅 Scheduled'], ['track', '📊 Tracking'], ['log', '🧾 Action log'], ['score', '🏆 Scorecard'], ['set', '⚙ Goals']];
   v.innerHTML = `<div class="smstop" style="align-items:center">${admin ? `<div class="cfilt" id="xModes" style="padding:0;border:0">${modes.map(m => `<button data-m="${m[0]}" class="${xMode === m[0] ? 'on' : ''}">${m[1]}</button>`).join('')}</div>` : '<span></span>'}
       <div class="stats">${admin ? `<button class="btn sm ghost" id="xPrev">◀</button><b>${esc(xLabel(xDay))}</b><button class="btn sm ghost" id="xNext"${xDay >= xShift(D.today, 14) ? ' disabled' : ''}>${esc(xLabel(xShift(xDay, 1)))} ▶</button>${xDay !== D.today ? '<button class="btn sm" id="xToday">Today</button>' : ''}` : `<b>${esc(xLabel(D.today))}</b>`}<span class="muted" style="font-size:12px">● live · ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</span></div></div>
-    <div id="xBody">${xMode === 'track' && admin ? xTrack(D) : xMode === 'log' && admin ? xLog(D) : xMode === 'set' && admin ? xSet(D) : xMode === 'score' && admin ? '<div id="xScore" class="muted">Loading…</div>' : xTodo(D)}</div>`;
+    <div id="xBody">${xMode === 'track' && admin ? xTrack(D) : xMode === 'log' && admin ? xLog(D) : xMode === 'set' && admin ? xSet(D) : xMode === 'score' && admin ? '<div id="xScore" class="muted">Loading…</div>' : xMode === 'sched' && admin ? '<div id="xSched" class="muted">Loading…</div>' : xTodo(D)}</div>`;
   const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));
   v.querySelectorAll('[data-cp]').forEach(b => b.onclick = () => copy(b.dataset.cp));
   v.querySelectorAll('[data-open]').forEach(i => i.onclick = () => openPhoto(i.dataset.open));
@@ -1955,6 +1989,7 @@ function xRender(D){
   v.querySelectorAll('[data-posted]').forEach(b => b.onclick = async () => { const { error } = await sb.rpc('x_mark_posted', { p_id: b.dataset.posted, p_posted: b.dataset.v === '1' }); if (error) return toast(error.message); xRefresh(); });
   if (!admin) return;
   if (xMode === 'score') xScore();
+  if (xMode === 'sched') xSched(D);
   const go = m => { xMode = m; xRender(D); };
   v.querySelectorAll('#xModes [data-m]').forEach(b => b.onclick = () => go(b.dataset.m));
   const day = d => { xDay = d; xRefresh(); };

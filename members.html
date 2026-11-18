@@ -465,6 +465,32 @@
   .co-utip{position:absolute;z-index:3;pointer-events:none;max-width:220px;background:rgba(10,10,14,.94);border:1px solid #33333d;border-radius:12px;padding:9px 12px;font-size:12.5px;color:#cfcfd6;box-shadow:0 10px 30px rgba(0,0,0,.5)}
   .co-utip b{display:block;color:#fff;font-size:13.5px;margin-bottom:2px}
   @media (max-width:900px){ .co-ucv{aspect-ratio:1/1.05} .co-uhud.tl,.co-uhud.tr,.co-uhud.bl,.co-uhud.br{position:static;padding:14px 16px 0} .co-uhud.tr{text-align:left} .co-uhud.br{justify-content:flex-start;padding-bottom:16px} .co-uni{display:flex;flex-direction:column} .co-uhud.bl{order:3} .co-uhud.br{order:4} }
+  /* J.A.R.V.I.S. */
+  .jv{display:flex;gap:18px;align-items:center;background:radial-gradient(500px 160px at 0 50%,rgba(94,208,255,.12),transparent 70%),var(--k-card);border:1px solid #1f3a4d;border-radius:24px;padding:18px 18px 18px 28px;margin-bottom:14px}
+  .jv-orb{position:relative;flex:none;width:96px;height:96px;border-radius:50%;border:0;cursor:pointer;background:radial-gradient(circle,#dff4ff 0,#7fd4ff 18%,#1b6f9c 45%,#071a26 72%);box-shadow:0 0 30px rgba(94,208,255,.45),inset 0 0 18px rgba(255,255,255,.4);display:grid;place-items:center}
+  .jv-orb span{position:relative;z-index:2;font-size:26px;filter:drop-shadow(0 0 6px #fff)}
+  .jv-orb i{position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(94,208,255,.55);border-left-color:transparent;border-bottom-color:transparent;animation:jvSpin 6s linear infinite}
+  .jv-orb i.r2{inset:-13px;border-width:1px;border-color:rgba(255,95,162,.5) transparent rgba(255,95,162,.5) transparent;animation-duration:9s;animation-direction:reverse}
+  .jv-orb i.r3{inset:6px;border:1px dashed rgba(255,255,255,.35);animation-duration:14s}
+  @keyframes jvSpin{to{transform:rotate(360deg)}}
+  .jv-orb.listen{box-shadow:0 0 40px rgba(255,95,162,.7),inset 0 0 18px rgba(255,255,255,.5);background:radial-gradient(circle,#ffe6f1 0,#ff8fc0 20%,#9c1b56 48%,#26070f 72%)}
+  .jv-orb.listen i{animation-duration:1.5s}
+  .jv-orb.think i{animation-duration:1s}
+  .jv-orb.speaking{animation:jvPulse .5s ease-in-out infinite alternate}
+  @keyframes jvPulse{to{box-shadow:0 0 60px rgba(94,208,255,.8),inset 0 0 24px rgba(255,255,255,.6);transform:scale(1.04)}}
+  .jv-body{flex:1;min-width:0}
+  .jv-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .jv-top b{font-family:var(--display);letter-spacing:.18em;color:#9be6ff;font-size:14px}
+  .jv-top #jvState{font-family:ui-monospace,"JetBrains Mono",monospace;font-size:11.5px;color:var(--k-mut);letter-spacing:.06em}
+  .jv-sp{flex:1}
+  .jv-ic{width:32px;height:32px;border-radius:50%;border:1px solid var(--k-line);background:#141418;color:#fff;cursor:pointer}
+  .jv-you{color:var(--k-dim);font-size:13px;margin-top:8px;min-height:18px}
+  .jv-you:not(:empty)::before{content:"Toi · ";color:var(--k-mut)}
+  .jv-out{color:#e6f6ff;font-size:16px;line-height:1.5;margin-top:2px;min-height:24px}
+  .jv-f{display:flex;gap:8px;margin-top:10px}
+  .jv-f input{flex:1;background:#0c0c10;border:1px solid #23323d;color:#fff;border-radius:999px;padding:10px 16px;font-size:14px}
+  .jv-go{width:42px;border-radius:50%;border:0;background:linear-gradient(135deg,#5ed0ff,#2a8fc4);color:#04121c;font-weight:800;cursor:pointer}
+  @media (max-width:700px){ .jv{flex-direction:column;align-items:stretch} .jv-orb{align-self:center} }
   /* version B */
   .cb-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
   .cb-head .st{display:flex;align-items:center;gap:8px;background:#0f1f16;border:1px solid #2e6b48;color:var(--k-green);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600}
@@ -2585,8 +2611,8 @@ function coreUniverse(cv, d, tok, tip){
     });
     g.globalAlpha = 1;
     /* the core: glow, turning particle sphere, rotating rings */
-    const R = core.r, a = reduce ? 0 : t * .22;
-    const gr = g.createRadialGradient(core.x, core.y, 0, core.x, core.y, R * 1.7); gr.addColorStop(0, 'rgba(220,235,255,.95)'); gr.addColorStop(.08, 'rgba(170,205,255,.55)'); gr.addColorStop(.35, 'rgba(120,150,255,.16)'); gr.addColorStop(1, 'rgba(120,150,255,0)');
+    const lv = window.__jvLevel || 0, R = core.r * (1 + lv * .1), a = reduce ? 0 : t * (.22 + lv * .6);
+    const gr = g.createRadialGradient(core.x, core.y, 0, core.x, core.y, R * 1.7); gr.addColorStop(0, 'rgba(220,235,255,.95)'); gr.addColorStop(.08, 'rgba(170,205,255,.55)'); gr.addColorStop(.35, 'rgba(120,150,255,' + (.16 + lv * .2).toFixed(3) + ')'); gr.addColorStop(1, 'rgba(120,150,255,0)');
     g.fillStyle = gr; g.beginPath(); g.arc(core.x, core.y, R * 1.7, 0, Math.PI * 2); g.fill();
     g.strokeStyle = 'rgba(200,225,255,.12)';
     for (let i = 0; i < 64; i++){ const th = i / 64 * Math.PI * 2 + a * .4, l = R * (.5 + .9 * ((i * 37) % 13) / 13); g.beginPath(); g.moveTo(core.x, core.y); g.lineTo(core.x + Math.cos(th) * l, core.y + Math.sin(th) * l); g.stroke(); }
@@ -2739,10 +2765,94 @@ function coreVersionB(d){
     <section class="co-card co-flow" style="grid-template-columns:minmax(0,860px);justify-content:center">${coreFlowSvg(d)}</section>`;
 }
 
+/* ---------- J.A.R.V.I.S.: ask by voice or text, answer spoken with a British-butler voice ---------- */
+let jvLang = (() => { try { return localStorage.getItem('jv-lang') || 'fr'; } catch(e){ return 'fr'; } })(), jvMute = false, jvHist = [], jvBusy = false, jvRec = null, jvLast = '';
+window.__jvLevel = 0;
+const JV_VOICES = { en:['Daniel','Arthur','Google UK English Male','Microsoft Ryan','Microsoft George','Oliver','Malcolm'], fr:['Thomas','Google français','Microsoft Henri','Microsoft Paul','Nicolas','Daniel'] };
+function jvVoice(){
+  const vs = speechSynthesis.getVoices(), want = JV_VOICES[jvLang], pre = jvLang === 'en' ? /^en-GB/i : /^fr/i;
+  for (const n of want){ const v = vs.find(x => x.name.includes(n) && pre.test(x.lang)); if (v) return v; }
+  return vs.find(x => pre.test(x.lang) && /male|homme|thomas|daniel/i.test(x.name)) || vs.find(x => pre.test(x.lang)) || null;
+}
+function jvState(t, on){ const s = $('#jvState'); if (s) s.textContent = t; const o = $('#jvMic'); if (o) o.classList.toggle(on || 'x', !!on); }
+function jvSay(text){
+  if (jvMute || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text), v = jvVoice(); if (v){ u.voice = v; u.lang = v.lang; } else u.lang = jvLang === 'en' ? 'en-GB' : 'fr-CA';
+  u.rate = jvLang === 'en' ? 1.0 : 1.02; u.pitch = .82;
+  u.onstart = () => { $('#jvMic')?.classList.add('speaking'); jvState(jvLang === 'en' ? 'Speaking…' : 'Jarvis parle…'); };
+  u.onboundary = () => { window.__jvLevel = 1; };
+  u.onend = u.onerror = () => { $('#jvMic')?.classList.remove('speaking'); window.__jvLevel = 0; jvState(jvLang === 'en' ? 'Standing by · tap to talk' : 'En attente · touche pour parler'); };
+  speechSynthesis.speak(u);
+}
+(function decay(){ window.__jvLevel *= .9; requestAnimationFrame(decay); })();
+function jvUnlock(){ try { if (window.speechSynthesis && !jvUnlock.done){ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); jvUnlock.done = true; } } catch(e){} }
+function coreCtx(d){
+  if (!d) return '';
+  const L = d.last || {}, ago = ts => ts ? coreAgo(ts) : 'aucun signal';
+  return [
+    `Données totales dans la base: ${d.dataN}. Détail: messages SMS ${d.counts.sms_messages}, contacts SMS ${d.counts.sms_contacts}, actions X des assistants ${d.counts.x_events}, signaux de l'extension X ${d.counts.x_beats}, signaux de temps du Mac ${d.counts.focus_beats + d.counts.aw_events}, tâches to-do ${d.counts.my_todos}, réponses du chatbot ${d.counts.ai_log}, photos ${d.counts.photos}, documents ${d.counts.docs}, citations ${d.counts.quotes}, jours de temps d'écran ${d.counts.screentime_daily}.`,
+    `Tâches faites ces 7 derniers jours: ${d.doneN}, dont ${d.aiDoneN} par l'IA (${d.aiPct}%). Dernières tâches faites par l'IA: ${(d.aiDone || []).map(x => x.title).join(' ; ') || 'aucune'}.`,
+    d.va ? `Assistant ${d.va.person}: score ${d.vaPct}/100 la semaine du ${d.va.week}, paie ${d.va.pay} $.` : 'Pas encore de score d\'assistant cette semaine.',
+    `Modèles d'IA du chatbot (réponses sur 7 jours): Claude ${d.eng.claude}, Dolphin ${d.eng.dolphin}, Nemotron ${d.eng.nemotron}. Total ${d.calls}.`,
+    `Services connectés (${UNI_SERV.length}): ${UNI_SERV.map(s => s[0] + ' (' + s[3] + ')').join(', ')}.`,
+    `Ventes ce mois: ${d.salesMonth} $ (${d.salesN} ventes), objectif mensuel ${d.target} $.`,
+    `Derniers signaux: extension X ${ago(L.ext)}, app du Mac ${ago(L.mac)}, temps d'écran ${ago(L.screen)}, chatbot ${ago(L.bot)}, to-do ${ago(L.todo)}.`,
+    `Routines automatiques: réchauffement des comptes sur iPhone à 9h14 et 20h41 heure d'Italie, rapport de temps d'écran à 23h47 heure de Bangkok, suivi en direct des assistants sur X, alarmes d'abonnements 2 jours avant chaque renouvellement, synchronisation du temps de travail du Mac chaque minute.`,
+  ].join('\n');
+}
+async function jvAsk(q){
+  q = (q || '').trim(); if (!q || jvBusy) return;
+  jvBusy = true; jvUnlock(); $('#jvQ').value = ''; $('#jvYou').textContent = q; $('#jvOut').textContent = '…'; jvState(jvLang === 'en' ? 'Thinking…' : 'Jarvis réfléchit…', 'think');
+  const { data, error } = await sb.functions.invoke('jarvis', { body:{ q, lang:jvLang, ctx:coreCtx(coreD), history:jvHist } });
+  jvBusy = false; $('#jvMic')?.classList.remove('think');
+  const a = data?.a || (jvLang === 'en' ? 'My apologies, sir, the link seems busy. Try again in a moment.' : 'Mes excuses, Monsieur, la liaison semble occupée. Réessayez dans un instant.');
+  jvLast = a; $('#jvOut').textContent = a;
+  if (data?.a){ jvHist.push({ role:'user', content:q }, { role:'assistant', content:a }); jvHist = jvHist.slice(-8); }
+  jvSay(a);
+  if (!data?.a) jvState(jvLang === 'en' ? 'Standing by · tap to talk' : 'En attente · touche pour parler');
+}
+function jvListen(){
+  jvUnlock();
+  if (window.speechSynthesis) speechSynthesis.cancel();
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ jvState(jvLang === 'en' ? 'Voice input not supported here: type your question' : 'Micro non pris en charge ici : écris ta question'); $('#jvQ').focus(); return; }
+  if (jvRec){ jvRec.stop(); return; }
+  const r = new SR(); jvRec = r; r.lang = jvLang === 'en' ? 'en-GB' : 'fr-CA'; r.interimResults = true; r.maxAlternatives = 1;
+  let fin = '';
+  r.onstart = () => { $('#jvMic')?.classList.add('listen'); jvState(jvLang === 'en' ? 'Listening…' : 'Jarvis écoute…'); };
+  r.onresult = e => { let t = ''; for (const res of e.results){ t += res[0].transcript; if (res.isFinal) fin = t; } $('#jvQ').value = t; window.__jvLevel = .6; };
+  r.onerror = e => { jvState(e.error === 'not-allowed' ? (jvLang === 'en' ? 'Microphone blocked: allow it in the browser' : 'Micro bloqué : autorise-le dans le navigateur') : (jvLang === 'en' ? 'Did not catch that' : 'Je n\'ai pas compris'), ''); };
+  r.onend = () => { jvRec = null; $('#jvMic')?.classList.remove('listen'); const q = fin || $('#jvQ').value; if (q.trim()) jvAsk(q); else jvState(jvLang === 'en' ? 'Standing by · tap to talk' : 'En attente · touche pour parler'); };
+  r.start();
+}
+function jvPanel(){
+  const en = jvLang === 'en';
+  return `<section class="jv">
+    <button class="jv-orb" id="jvMic" type="button" aria-label="${en ? 'Talk to Jarvis' : 'Parler à Jarvis'}"><i class="r1"></i><i class="r2"></i><i class="r3"></i><span>🎙</span></button>
+    <div class="jv-body">
+      <div class="jv-top"><b>J.A.R.V.I.S.</b><span id="jvState">${en ? 'Standing by · tap to talk' : 'En attente · touche pour parler'}</span>
+        <span class="jv-sp"></span><div class="co-seg"><button data-jl="fr" class="${en ? '' : 'on'}">FR</button><button data-jl="en" class="${en ? 'on' : ''}">EN · UK</button></div>
+        <button class="jv-ic" id="jvMute" type="button" title="${en ? 'Mute' : 'Couper la voix'}">${jvMute ? '🔇' : '🔊'}</button><button class="jv-ic" id="jvRep" type="button" title="${en ? 'Repeat' : 'Répéter'}">↻</button></div>
+      <div class="jv-you" id="jvYou"></div>
+      <div class="jv-out" id="jvOut">${esc(jvLast || (en ? 'Good evening, sir. All systems are online. Ask me anything about the agency.' : 'Bonjour Monsieur. Tous les systèmes sont en ligne. Posez-moi une question sur l\'agence.'))}</div>
+      <form class="jv-f" id="jvF"><input id="jvQ" autocomplete="off" placeholder="${en ? 'Ask Jarvis… (or tap the mic)' : 'Pose ta question à Jarvis… (ou touche le micro)'}"><button class="jv-go" type="submit">➤</button></form>
+    </div></section>`;
+}
+function jvBind(){
+  $('#jvMic').onclick = jvListen;
+  $('#jvF').onsubmit = e => { e.preventDefault(); jvAsk($('#jvQ').value); };
+  $('#jvMute').onclick = () => { jvMute = !jvMute; if (jvMute && window.speechSynthesis) speechSynthesis.cancel(); $('#jvMute').textContent = jvMute ? '🔇' : '🔊'; };
+  $('#jvRep').onclick = () => { jvUnlock(); jvSay($('#jvOut').textContent); };
+  document.querySelectorAll('[data-jl]').forEach(b => b.onclick = () => { jvLang = b.dataset.jl; try { localStorage.setItem('jv-lang', jvLang); } catch(e){} coreRender(); });
+  if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => {};
+}
+
 function coreRender(){
   const v = $('#view'); if (!coreD) return;
   coreTok++;
-  v.innerHTML = `<div class="core"><div class="co-top"><h2>🧠 AI Core</h2><div class="co-seg"><button data-cv="a" class="${coreVer === 'a' ? 'on' : ''}">A · Copie</button><button data-cv="b" class="${coreVer === 'b' ? 'on' : ''}">B · Optimisée</button></div></div>${coreVer === 'a' ? coreVersionA(coreD) : coreVersionB(coreD)}</div>`;
+  v.innerHTML = `<div class="core"><div class="co-top"><h2>🧠 AI Core</h2><div class="co-seg"><button data-cv="a" class="${coreVer === 'a' ? 'on' : ''}">A · Copie</button><button data-cv="b" class="${coreVer === 'b' ? 'on' : ''}">B · Optimisée</button></div></div>${jvPanel()}${coreVer === 'a' ? coreVersionA(coreD) : coreVersionB(coreD)}</div>`;
+  jvBind();
   v.querySelectorAll('[data-cv]').forEach(b => b.onclick = () => { coreVer = b.dataset.cv; try { localStorage.setItem('core-ver', coreVer); } catch(e){} coreRender(); });
   v.querySelectorAll('[data-cm]').forEach(b => b.onclick = () => { coreMode = b.dataset.cm; coreRender(); });
   v.querySelectorAll('[data-bt]').forEach(b => b.onclick = () => { coreBizTab = b.dataset.bt; coreRender(); });

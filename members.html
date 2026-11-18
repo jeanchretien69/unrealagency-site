@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-mode="dark">
 <head>
-<script>(function(){var m=null;try{m=localStorage.getItem("unreal-mode")}catch(e){}if(!m)m=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.setAttribute("data-mode",m)})();</script>
+<script>(function(){var m=null;try{localStorage.removeItem("unreal-mode");m=sessionStorage.getItem("unreal-mode")}catch(e){}if(!m)m=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.setAttribute("data-mode",m)})();</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
@@ -477,13 +477,14 @@ function md(src){
 // theme
 const root = document.documentElement;
 const sysLight = matchMedia('(prefers-color-scheme: light)');
-let savedMode = null; try { savedMode = localStorage.getItem('unreal-mode'); } catch(e){}
+// follows the computer's light/dark setting; the button only overrides it for this tab, and a system change wins again
+let savedMode = null; try { savedMode = sessionStorage.getItem('unreal-mode'); } catch(e){}
 root.dataset.mode = savedMode || (sysLight.matches ? 'light' : 'dark');
-sysLight.addEventListener('change', e => { let s=null; try{ s=localStorage.getItem('unreal-mode'); }catch(x){} if (!s){ root.dataset.mode = e.matches ? 'light' : 'dark'; syncMode(); } });
+sysLight.addEventListener('change', e => { try{ sessionStorage.removeItem('unreal-mode'); }catch(x){} root.dataset.mode = e.matches ? 'light' : 'dark'; syncMode(); });
 const modeBtn = $('#modeBtn');
 const syncMode = () => modeBtn.textContent = root.dataset.mode === 'dark' ? 'Light' : 'Dark';
 syncMode();
-modeBtn.onclick = () => { root.dataset.mode = root.dataset.mode === 'dark' ? 'light' : 'dark'; try{localStorage.setItem('unreal-mode', root.dataset.mode);}catch(e){} syncMode(); };
+modeBtn.onclick = () => { root.dataset.mode = root.dataset.mode === 'dark' ? 'light' : 'dark'; try{sessionStorage.setItem('unreal-mode', root.dataset.mode);}catch(e){} syncMode(); };
 
 // ---------- auth ----------
 let signUp = false;
@@ -1564,7 +1565,7 @@ function xSlot(D, a, i){
     if (q.it) h += `<div class="xq"><small class="muted">🇮🇹 Suggested quote, please modify if needed to make it better</small><p>${esc(q.it)}</p><button class="btn sm" data-cp="${esc(q.it)}">Copy</button></div>`;
     h += `<div class="xq" style="opacity:.7"><small class="muted">🇬🇧 Meaning (don't post this)</small><p style="font-size:13px">${esc(q.en)}</p></div>`;
   }
-  if (p) h += `<button class="btn sm ${p.posted_at ? 'ghost' : ''}" data-posted="${p.id}" data-v="${p.posted_at ? 0 : 1}">${p.posted_at ? 'Undo posted' : '✓ I posted it'}</button>`;
+  if (p && !p.posted_at) h += `<div class="muted" style="font-size:12px;margin-top:6px">✅ Ticks itself when the post is detected on X</div>`;
   if (D.admin) {
     h += `<div class="xs-adm"><select data-sq><option value="">— quote —</option>${D.pool.quotes.filter(x => !x.used_at || (p && p.quote_id === x.id)).map(x => `<option value="${x.id}"${p && p.quote_id === x.id ? ' selected' : ''}>🇮🇹 ${esc((x.it || x.en || '').slice(0, 48))}</option>`).join('')}</select>
       <select data-sp><option value="">— photo —</option>${D.pool.photos.map(x => `<option value="${x.id}"${p && p.photo_id === x.id ? ' selected' : ''}>${esc(x.model)} · ${esc((x.caption || x.path.split('/').pop()).slice(0, 36))}</option>`).join('')}</select></div>`;

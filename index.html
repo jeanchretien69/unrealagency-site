@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-mode="dark">
 <head>
-<script>(function(){var m=null;try{m=localStorage.getItem("unreal-mode")}catch(e){}if(!m)m=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.setAttribute("data-mode",m)})();</script>
+<script>(function(){var m=null;try{localStorage.removeItem("unreal-mode");m=sessionStorage.getItem("unreal-mode")}catch(e){}if(!m)m=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";document.documentElement.setAttribute("data-mode",m)})();</script>
 <script>/* clips are downloaded whole before they play (phones ignore video pre-loading and would stop mid-kiss to buffer); the opening kiss starts downloading right now */
 window.__clip={};window.__pre=function(u){if(!window.__clip[u]&&window.fetch&&window.URL&&URL.createObjectURL){window.__clip[u]=fetch(u).then(function(r){if(!r.ok)throw 0;return r.blob()}).then(function(b){return URL.createObjectURL(b)})}return window.__clip[u]};window.__pre("live/nami_kiss_auto.mp4?v=2");</script>
 <script>/* a refresh always opens on Nami at the top (Chrome otherwise reopens where you had scrolled); links to #packages etc. still jump there */
@@ -681,12 +681,12 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
 
   /* ---------- Dark / light mode (follows the visitor's system until they click) ---------- */
   var root = document.documentElement, mb = document.getElementById('modeBtn'), ml = document.getElementById('modeLbl');
-  function setMode(m){ root.setAttribute('data-mode', m); ml.textContent = T(m === 'dark' ? 'Light' : 'Dark'); mb.setAttribute('aria-pressed', m === 'dark'); try{ localStorage.setItem('unreal-mode', m); }catch(e){} }
-  var saved = null; try{ saved = localStorage.getItem('unreal-mode'); }catch(e){}
+  function setMode(m){ root.setAttribute('data-mode', m); ml.textContent = T(m === 'dark' ? 'Light' : 'Dark'); mb.setAttribute('aria-pressed', m === 'dark'); try{ sessionStorage.setItem('unreal-mode', m); }catch(e){} }
+  var saved = null; try{ saved = sessionStorage.getItem('unreal-mode'); }catch(e){}
   var sys = matchMedia('(prefers-color-scheme: light)');
   function setView(m){ root.setAttribute('data-mode', m); ml.textContent = T(m === 'dark' ? 'Light' : 'Dark'); mb.setAttribute('aria-pressed', m === 'dark'); }
   setView(saved || (sys.matches ? 'light' : 'dark'));
-  sys.addEventListener('change', function(e){ var s=null; try{ s = localStorage.getItem('unreal-mode'); }catch(x){} if (!s) setView(e.matches ? 'light' : 'dark'); });
+  sys.addEventListener('change', function(e){ try{ sessionStorage.removeItem('unreal-mode'); }catch(x){} setView(e.matches ? 'light' : 'dark'); });
   mb.addEventListener('click', function(){ setMode(root.getAttribute('data-mode') === 'dark' ? 'light' : 'dark'); });
   window.addEventListener('unreal-lang', function(){ ml.textContent = T(root.getAttribute('data-mode') === 'dark' ? 'Light' : 'Dark'); });
   /* ---------- Routing: home only (/coaching and /models redirect to /) ---------- */

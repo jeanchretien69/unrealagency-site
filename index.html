@@ -375,7 +375,8 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
     -webkit-mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 9%,#000 86%,transparent 100%);
     mask-image:linear-gradient(to right,transparent 0,#000 16%,#000 84%,transparent 100%),linear-gradient(to bottom,transparent 0,#000 9%,#000 86%,transparent 100%);
     -webkit-mask-composite:source-in;mask-composite:intersect}
-  .head .nv{opacity:0;transition:opacity .4s ease;pointer-events:none}
+  .head .nv{opacity:0;transition:opacity .4s ease;pointer-events:none;will-change:opacity;transform:translateZ(0)}
+  .head .nvw{will-change:transform;transform:translateZ(0)} /* keep every video on its own stable layer: a layer being rebuilt can show one see-through frame */
   .head .nv.quick{transition:opacity .13s linear}
   /* cut: the auto kiss starts on the exact photo pose, so it appears at once (a fade showed her arm twice); base: the breathing loop is always fully opaque under the clips, so nothing behind her ever shows through */
   .head .nv.cut,.head .nv.base{transition:none}
@@ -464,7 +465,7 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
   @media (max-width:860px){.chip-grid,.calc{grid-template-columns:1fr}.proof{grid-template-columns:1fr 1fr}.os-row{grid-template-columns:1fr}.uring{margin:0 auto}}
   @media (prefers-reduced-motion:reduce){.live::before{animation:none}}
 </style>
-<link rel="preload" as="image" href="live/nami_idle.jpg">
+<link rel="preload" as="image" href="live/nami_start.jpg?v=1">
 </head>
 <body>
 
@@ -489,9 +490,9 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
       <div class="floor"></div>
       <div class="head" id="head">
         <canvas id="gl" aria-hidden="true"></canvas>
-        <img id="face" src="live/nami_idle.jpg" alt="Nami, an Unreal Agency AI model" hidden>
+        <img id="face" src="live/nami_start.jpg?v=1" alt="Nami, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
-        <div class="nvw" id="nvw"><video class="nv" id="kissAuto" muted playsinline preload="auto" poster="live/nami_idle.jpg" src="live/nami_kiss_auto.mp4?v=1"></video></div>
+        <div class="nvw" id="nvw"><video class="nv" id="kissAuto" muted playsinline preload="auto" poster="live/nami_start.jpg?v=1" src="live/nami_kiss_auto.mp4?v=2"></video></div>
       
       </div>
       <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button><button data-m="hat">⚓ Construction la semaine, boat la fin de semaine</button></div>
@@ -840,15 +841,18 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
   function startLive(){
     canvas.style.display = 'none'; face.hidden = false;
     var v = document.createElement('video'); v.className = 'nv'; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = false;
-    v.setAttribute('playsinline',''); v.setAttribute('muted',''); v.preload = 'none'; v.poster = 'live/nami_idle.jpg';
+    v.setAttribute('playsinline',''); v.setAttribute('muted',''); v.preload = 'none'; v.poster = 'live/nami_start.jpg?v=1';
     /* load order: the kiss clip downloads first (she kisses right away), the breathing loop downloads while the kiss plays */
     var loopLoaded = false;
     function loadLoop(play){ if (!loopLoaded){ loopLoaded = true; v.preload = 'auto'; v.src = 'live/nami_idle.mp4?v=3'; v.load(); } if (play){ var pp = v.play(); if (pp && pp.catch) pp.catch(function(){}); } }
+    /* the still photo never disappears: once a video covers it, it becomes a still of the breathing pose, so if a browser ever skips drawing a video frame you see her, not the page behind */
+    function cover(){ if (face.dataset.under) return; face.dataset.under = '1'; face.src = 'live/nami_under.jpg?v=1'; }
     var wrap = document.getElementById('nvw'); wrap.insertBefore(v, wrap.firstChild); /* breathing loop sits under the kiss clip already in the page */
-    v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ v.classList.add('base'); face.hidden = true; }, 400); }, { once:true });
+    v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ v.classList.add('base'); cover(); }, 400); }, { once:true });
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
-      var SRC = { kissauto:'live/nami_kiss_auto.mp4?v=1', kiss:'live/nami_kiss.mp4?v=2', hat:'live/nami_hat.mp4?v=14' }, vids = { kissauto: document.getElementById('kissAuto') }, busy = false, curAct = null, FADE = 420;
+      /* every action clip ends with a blend into the breathing loop's first frames (HAND seconds), so the hand-back is the same picture, not a jump */
+      var SRC = { kissauto:'live/nami_kiss_auto.mp4?v=2', kiss:'live/nami_kiss_btn.mp4?v=2', hat:'live/nami_hat_b.mp4?v=2' }, HAND = { kissauto:8/24, kiss:8/24, hat:10/24 }, vids = { kissauto: document.getElementById('kissAuto') }, busy = false, curAct = null, FADE = 420;
       var btns = [].slice.call(document.querySelectorAll('#moves button[data-m]')); if (!btns.length) return;
       function lock(on){ btns.forEach(function(b){ b.disabled = on; }); }
       /* song for "Construction la semaine": only plays after a click, with a mute button */
@@ -864,22 +868,26 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
       function blinkWait(){ var t = v.currentTime || 0; for (var i = 0; i < BLINKS.length; i++){ var k = BLINKS[i]; if (t >= k[0] - 0.15 && t < k[1]) return (k[1] - t) * 1000 + 40; } return 0; }
       function start(m){ if (busy) return; var w = blinkWait(); if (w > 0){ busy = true; lock(true); setTimeout(function(){ busy = false; start(m); }, w); return; } var act = mk(m); if (!act) return; curAct = act; busy = true; lock(true); act.currentTime = 0; var over = false;
         /* hand back only on the clip's very last frame, where her pose matches the breathing loop */
-        function finish(){ if (over) return; over = true; v.currentTime = 0;
+        function finish(){ if (over) return; over = true;
+          /* the loop already waits (paused, frame decoded) at the point the clip's blended ending reaches here: no seek now, a seek can show an empty frame */
           var swap = function(){ act.classList.remove('cut'); act.classList.add('quick'); act.classList.remove('on');
             setTimeout(function(){ act.pause(); act.classList.remove('quick'); busy = false; lock(false); }, 220); };
-          var p = v.play(); if (p && p.then) p.then(function(){ requestAnimationFrame(swap); }).catch(swap); else requestAnimationFrame(swap); }
+          var shown = function(){ if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(function(){ requestAnimationFrame(swap); }); else requestAnimationFrame(function(){ requestAnimationFrame(swap); }); };
+          var p = v.play(); if (p && p.then) p.then(shown).catch(swap); else shown(); }
         function watch(){ if (over) return; if (act.ended || (act.duration && act.currentTime >= act.duration - .10)) return finish(); requestAnimationFrame(watch); }
         act.onended = finish;
-        var go = function(){ loadLoop(false); if (m === 'kissauto') act.classList.add('cut'); act.classList.add('on'); v.classList.add('base', 'on'); requestAnimationFrame(function(){ face.hidden = true; }); setTimeout(function(){ if (!over){ v.pause(); v.currentTime = 0; } }, FADE + 60); requestAnimationFrame(watch); };
+        var go = function(){ loadLoop(false); act.classList.add('on');
+          /* the opening kiss fades in over the still photo (same picture as its first frame, during its still lead-in); the loop is only put under it once the fade is done */
+          var under = function(){ v.classList.add('base', 'on'); cover(); };
+          if (m === 'kissauto') setTimeout(under, FADE + 40); else under(); var park = function(){ if (!over){ v.pause(); try { v.currentTime = Math.max(0, HAND[m] - 0.10); } catch(e){} } };
+          setTimeout(park, FADE + 60); v.addEventListener('loadedmetadata', park, { once:true }); requestAnimationFrame(watch); };
         var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); }); else go(); }
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });
-      /* the kiss clip (cut to start right at the lean-in) starts from the same pose as the still photo, so it can play as soon as it has loaded;
+      /* the still photo is the kiss clip's own first frame, so the kiss can start as soon as it has loaded;
          its last frame is the pose the breathing loop starts from, and the loop downloads while the kiss plays */
       var kissClip = mk('kissauto'), fired = false;
-      /* she first stays still on screen for a moment (KISS_DELAY after the page opens), then kisses; it waits until the whole clip can play without stopping */
-      var KISS_DELAY = 1600;
-      function fireKiss(){ if (fired) return; fired = true; var wait = Math.max(0, KISS_DELAY - performance.now());
-        setTimeout(function(){ if (!busy && !document.hidden) start('kissauto'); else loadLoop(true); }, wait); }
+      /* the opening kiss starts as soon as the whole clip can play without stopping (its own first half-second is her still pose) */
+      function fireKiss(){ if (fired) return; fired = true; requestAnimationFrame(function(){ requestAnimationFrame(function(){ if (!busy && !document.hidden) start('kissauto'); else loadLoop(true); }); }); }
       if (kissClip.readyState >= 4) fireKiss(); else { kissClip.addEventListener('canplaythrough', fireKiss, { once:true }); setTimeout(fireKiss, 4500); }
       setTimeout(function(){ mk('kiss'); mk('hat'); }, 9000);
       /* Safari pauses videos when you leave the tab or lock the phone: when you come back (or if the system pauses her), she starts breathing again by herself */

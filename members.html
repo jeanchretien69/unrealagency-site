@@ -647,6 +647,8 @@ function show(t){
 // ---------- My to-do (admin): personal + business, ticks itself ----------
 const TD_B = [['now','🔥 Now'],['today','☀️ Today'],['week','📅 This week'],['later','🗂 Later']];
 const TD_BY = { auto:'⚡ auto (tracked)', claude:'🤖 done by Claude', me:'✋ you' };
+const tdOpen = k => { try { return localStorage.getItem('unreal-td-' + k) === '1'; } catch(e){ return false; } };
+const tdSet = (k, on) => { try { localStorage.setItem('unreal-td-' + k, on ? '1' : '0'); } catch(e){} };
 async function todoView(){
   const v = $('#view');
   const { data, error } = await sb.from('my_todos').select('*').order('sort').order('created_at');
@@ -655,6 +657,7 @@ async function todoView(){
   const dayOf = d => d ? workday(new Date(d).getTime()) : '';
   const open = data.filter(x => !x.done), doneToday = data.filter(x => x.done && dayOf(x.done_at) === today);
   const auto = doneToday.filter(x => x.done_by !== 'me').length;
+  const allDone = data.filter(x => x.done).sort((a, b) => new Date(b.done_at) - new Date(a.done_at));
   const row = x => {
     const a = x.auto || null;
     const pct = !a ? 0 : a.type === 'aw' ? Math.min(100, Math.round(100 * (x.progress || 0) / (a.minutes || 1))) : Math.min(100, Math.round(x.progress || 0));
@@ -666,6 +669,13 @@ async function todoView(){
       <div class="td-act"><select data-move="${x.id}" aria-label="Move">${TD_B.map(b => `<option value="${b[0]}" ${b[0]===x.bucket?'selected':''}>${b[1]}</option>`).join('')}</select><button class="btn ghost sm" data-del="${x.id}" aria-label="Delete">✕</button></div></div>`;
   };
   v.innerHTML = `
+    <div class="stats" style="margin-bottom:12px">
+      <button class="btn sm ${tdOpen('today') ? '' : 'ghost'}" id="tdTgToday">✅ Done today (${doneToday.length})</button>
+      <button class="btn sm ghost" id="tdTgAll">📚 Everything done (${allDone.length})</button>
+    </div>
+    ${tdOpen('today') ? `<div class="card" style="margin-bottom:14px;padding:12px 16px">${doneToday.map(x => `<div class="td-row td-done"><div class="td-main"><span class="td-t">${esc(x.title)}</span>
+        <span class="td-n">${esc(TD_BY[x.done_by] || '✋ you')} · ${new Date(x.done_at).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}${x.proof ? ' · ' + esc(x.proof) : ''}</span></div>
+        <button class="btn ghost sm" data-undo="${x.id}">Undo</button></div>`).join('') || '<p class="muted" style="margin:0">Nothing yet today.</p>'}</div>` : ''}
     <div class="td-kpis">
       <div><b>${open.length}</b><span>left to do</span></div>
       <div><b>${doneToday.length}</b><span>done today</span></div>
@@ -673,21 +683,10 @@ async function todoView(){
       <div><b>${open.filter(x => x.auto).length}</b><span>auto-checking now</span></div>
     </div>
     ${TD_B.map(b => { const it = open.filter(x => x.bucket === b[0]); return it.length ? `<div class="td-sec"><h3>${b[1]}</h3><span>${it.length}</span></div>` + it.map(row).join('') : ''; }).join('') || '<div class="card empty" style="margin-top:16px">🎉 Nothing left. Go enjoy your day.</div>'}
-    <form class="card" id="tdAdd" style="margin-top:18px"><h2>Add a task</h2>
-      <label for="tdT">Task</label><input id="tdT" required placeholder="e.g. Film 3 reels for Kaya">
-      <div class="row">
-        <div><label for="tdB">When</label><select id="tdB">${TD_B.map(b => `<option value="${b[0]}" ${b[0]==='today'?'selected':''}>${b[1]}</option>`).join('')}</select></div>
-        <div><label for="tdA">Area</label><select id="tdA">${['Business','Personal','Models','Content','Team','Website','Admin'].map(a => `<option>${a}</option>`).join('')}</select></div>
-        <div><label for="tdD">Repeat</label><select id="tdD"><option value="0">Once</option><option value="1">Every day</option></select></div>
-      </div>
-      <details style="margin:6px 0 10px"><summary class="muted" style="cursor:pointer">⚡ Tick it automatically (optional)</summary>
-        <div class="row"><div><label for="tdM">When I spend time on (site, app or word)</label><input id="tdM" placeholder="e.g. higgsfield or capcut"></div>
-        <div><label for="tdMin">Minutes needed</label><input id="tdMin" type="number" min="1" value="20"></div></div></details>
-      <button class="btn">Add</button></form>
-    <details class="card" style="margin-top:14px" ${doneToday.length ? 'open' : ''}><summary style="cursor:pointer"><b>✅ Done today (${doneToday.length})</b></summary>
-      ${doneToday.map(x => `<div class="td-row td-done"><div class="td-main"><span class="td-t">${esc(x.title)}</span>
-        <span class="td-n">${esc(TD_BY[x.done_by] || '✋ you')} · ${new Date(x.done_at).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}${x.proof ? ' · ' + esc(x.proof) : ''}</span></div>
-        <button class="btn ghost sm" data-undo="${x.id}">Undo</button></div>`).join('') || '<p class="muted">Nothing yet today.</p>'}</details>`;
+    ${allDone.length ? `<details class="card" id="tdAll" style="margin-top:18px" ${tdOpen('all') ? 'open' : ''}><summary style="cursor:pointer"><b>📚 Everything done (${allDone.length})</b></summary>
+      ${Object.entries(allDone.reduce((g, x) => { (g[dayOf(x.done_at)] = g[dayOf(x.done_at)] || []).push(x); return g; }, {})).map(([d, it]) => `<h3 style="margin:14px 0 4px;font-size:14px">${esc(new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'short', timeZone:'UTC' }))} <span class="muted" style="font-weight:400">· ${it.length}</span></h3>
+        ${it.map(x => `<div class="td-row td-done"><div class="td-main"><span class="td-t">${esc(x.title)}</span><span class="td-n">${esc(TD_BY[x.done_by] || '✋ you')} · ${new Date(x.done_at).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}${x.proof ? ' · ' + esc(x.proof) : ''}</span></div><button class="btn ghost sm" data-undo="${x.id}">Undo</button></div>`).join('')}`).join('')}
+    </details>` : ''}`;
   v.querySelectorAll('[data-done]').forEach(b => b.onchange = async () => {
     const r = b.closest('.td-row'); r.classList.add('bye');
     const { error } = await sb.from('my_todos').update({ done:true, done_at:new Date().toISOString(), done_by:'me', proof:null }).eq('id', b.dataset.done);
@@ -696,14 +695,9 @@ async function todoView(){
   v.querySelectorAll('[data-undo]').forEach(b => b.onclick = async () => { const { error } = await sb.from('my_todos').update({ done:false, done_at:null, done_by:null, proof:null }).eq('id', b.dataset.undo); if (error) toast(error.message); todoView(); });
   v.querySelectorAll('[data-move]').forEach(s => s.onchange = async () => { const { error } = await sb.from('my_todos').update({ bucket:s.value }).eq('id', s.dataset.move); if (error) toast(error.message); todoView(); });
   v.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { if (!confirm('Delete this task?')) return; const { error } = await sb.from('my_todos').delete().eq('id', b.dataset.del); toast(error ? error.message : 'Deleted'); todoView(); });
-  $('#tdAdd').onsubmit = async e => {
-    e.preventDefault();
-    const m = $('#tdM').value.trim(), mins = +$('#tdMin').value || 20;
-    const esc_re = m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const { error } = await sb.from('my_todos').insert({ title:$('#tdT').value.trim(), bucket:$('#tdB').value, area:$('#tdA').value, daily:$('#tdD').value === '1',
-      auto: m ? { type:'aw', match: esc_re, minutes: mins, label: m } : null, sort: Date.now() % 100000 });
-    toast(error ? error.message : 'Added'); todoView();
-  };
+  $('#tdTgToday').onclick = () => { tdSet('today', !tdOpen('today')); todoView(); };
+  $('#tdTgAll').onclick = () => { const d = $('#tdAll'); if (!d) return; d.open = true; tdSet('all', true); d.scrollIntoView({ behavior:'smooth', block:'start' }); };
+  if ($('#tdAll')) $('#tdAll').ontoggle = e => tdSet('all', e.target.open);
   clearTimeout(window._tdT); window._tdT = setTimeout(() => { if (tab === 'todo') todoView(); }, 60000);
 }
 

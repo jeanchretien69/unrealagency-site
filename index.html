@@ -489,7 +489,7 @@
         <canvas id="gl" aria-hidden="true"></canvas>
         <img id="face" src="live/nami_idle.jpg" alt="Nami, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
-        <div class="nvw" id="nvw"><video class="nv" id="kissAuto" muted playsinline preload="auto" poster="live/nami_idle.jpg" src="live/nami_kiss_fast.mp4?v=2"></video></div>
+        <div class="nvw" id="nvw"><video class="nv" id="kissAuto" muted playsinline preload="auto" poster="live/nami_idle.jpg" src="live/nami_kiss_auto.mp4?v=1"></video></div>
       
       </div>
       <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button><button data-m="hat">⚓ Construction la semaine, boat la fin de semaine</button></div>
@@ -846,7 +846,7 @@
     v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ v.classList.add('base'); face.hidden = true; }, 400); }, { once:true });
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
-      var SRC = { kissauto:'live/nami_kiss_fast.mp4?v=2', kiss:'live/nami_kiss_btn.mp4?v=1', hat:'live/nami_hat.mp4?v=14' }, vids = { kissauto: document.getElementById('kissAuto') }, busy = false, curAct = null, FADE = 420;
+      var SRC = { kissauto:'live/nami_kiss_auto.mp4?v=1', kiss:'live/nami_kiss.mp4?v=2', hat:'live/nami_hat.mp4?v=14' }, vids = { kissauto: document.getElementById('kissAuto') }, busy = false, curAct = null, FADE = 420;
       var btns = [].slice.call(document.querySelectorAll('#moves button[data-m]')); if (!btns.length) return;
       function lock(on){ btns.forEach(function(b){ b.disabled = on; }); }
       /* song for "Construction la semaine": only plays after a click, with a mute button */

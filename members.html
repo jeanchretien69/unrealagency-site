@@ -365,6 +365,105 @@
   .td-kpis b{display:block;font-family:var(--display);font-size:22px;color:var(--pink-deep)}
   .td-kpis span{font-size:12px;color:var(--muted)}
   @media (max-width:700px){.td-kpis{grid-template-columns:1fr 1fr}}
+  /* ---------- AI Core (admin home) — always dark ---------- */
+  .core{--k-bg:#0b0b0d;--k-card:#111114;--k-card2:#16161a;--k-line:#24242a;--k-ink:#f2f2f4;--k-mut:#8d8d96;--k-dim:#5b5b63;--k-gold:#f0b35a;--k-green:#5fe39a;
+    background:var(--k-bg);color:var(--k-ink);border-radius:22px;padding:18px;margin:-6px -6px 0;font-family:var(--body)}
+  .core *{box-sizing:border-box}
+  .co-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .co-top h2{font-family:var(--display);font-size:18px;font-weight:600;color:var(--k-ink);margin:0}
+  .co-seg{display:inline-flex;background:#0f0f12;border:1px solid var(--k-line);border-radius:999px;padding:3px}
+  .co-seg button{border:0;background:none;color:var(--k-mut);font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:999px;cursor:pointer}
+  .co-seg button.on{background:#26262c;color:#fff}
+  .co-card{background:var(--k-card);border:1px solid var(--k-line);border-radius:24px;padding:22px;position:relative;overflow:hidden}
+  .co-eyebrow{font-size:11px;font-weight:700;letter-spacing:.2em;color:var(--k-mut);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+  .co-eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--k-gold)}
+  .co-row1{display:grid;grid-template-columns:1fr minmax(260px,330px);gap:14px}
+  .co-usage .co-tools{position:absolute;right:18px;top:16px;display:flex;gap:10px;align-items:center;z-index:2}
+  .co-orbs{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:8px 0}
+  .co-orbw{display:flex;align-items:center;gap:22px}
+  .co-orb{--c:#d9774f;position:relative;flex:none;width:clamp(120px,13vw,176px);aspect-ratio:1;border-radius:50%;overflow:hidden;
+    background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.14),transparent 38%),radial-gradient(circle at 50% 50%,#121216 55%,#050506 100%);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),inset 0 -14px 30px rgba(0,0,0,.6),0 0 0 6px #0d0d10,0 20px 40px -18px rgba(0,0,0,.9)}
+  .co-liq{position:absolute;left:-10%;right:-10%;bottom:0;height:calc(var(--p) * 1% + 10%);background:radial-gradient(ellipse at 50% 0,color-mix(in srgb,var(--c) 85%,#fff) 0,var(--c) 30%,color-mix(in srgb,var(--c) 40%,#000) 100%);border-radius:50% 50% 0 0/14px 14px 0 0;transition:height 1.2s cubic-bezier(.2,.8,.2,1);filter:saturate(1.1)}
+  .co-orb::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 34% 26%,rgba(255,255,255,.28),transparent 34%),radial-gradient(circle at 50% 120%,transparent 55%,rgba(0,0,0,.35));pointer-events:none}
+  .co-liq::before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.7) 0 1px,transparent 1.5px);background-size:9px 7px;opacity:.35;animation:coFizz 6s linear infinite}
+  @keyframes coFizz{to{background-position:0 -70px}}
+  .co-ic{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:38%;aspect-ratio:1;border-radius:22%;display:grid;place-items:center;font-size:clamp(26px,3vw,40px);color:#fff;font-weight:800;box-shadow:0 10px 24px -8px rgba(0,0,0,.8)}
+  .co-pct{font-family:var(--display);font-size:clamp(46px,5.4vw,78px);font-weight:600;line-height:1;letter-spacing:-.04em;color:#fff}
+  .co-pct small{font-size:.38em;color:var(--k-mut);margin-left:2px;letter-spacing:0}
+  .co-lbl{display:flex;align-items:center;gap:8px;color:var(--k-mut);font-size:14.5px;margin-top:10px}
+  .co-lbl i{width:7px;height:7px;border-radius:50%}
+  .co-bars{display:flex;flex-direction:column;gap:22px;padding:34px 6px 14px}
+  .co-barrow .t{display:flex;justify-content:space-between;color:var(--k-mut);font-size:14px;margin-bottom:8px}
+  .co-barrow .t b{color:#fff;font-size:22px;font-family:var(--display);font-weight:600}
+  .co-barrow .tr{height:12px;border-radius:999px;background:#1d1d22;overflow:hidden}
+  .co-barrow .tr i{display:block;height:100%;border-radius:999px;transition:width 1.2s}
+  .co-models .big{font-family:var(--display);font-size:clamp(34px,3.6vw,48px);font-weight:600;color:var(--k-gold);letter-spacing:-.03em;margin:14px 0 6px}
+  .co-models .sm{color:var(--k-mut);font-size:13.5px;line-height:1.5;display:flex;gap:8px}
+  .co-models .sm i{width:6px;height:6px;border-radius:50%;background:var(--k-gold);margin-top:7px}
+  .co-chips{display:flex;gap:8px;margin:14px 0}
+  .co-chip{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#1b1b20;border:1px solid var(--k-line);font-size:15px;font-weight:800}
+  .co-pills{display:flex;gap:8px;align-items:center}
+  .co-pill{white-space:nowrap;border:1px solid var(--k-line);background:#141418;color:var(--k-mut);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .co-pill.gold{border-color:#7a5a2a;color:var(--k-gold);background:#1e170d}
+  .co-pill.green{border-color:#2e6b48;color:var(--k-green);background:#0f1f16}
+  .co-pill.on{color:#fff}
+  .co-mini{position:absolute;right:-22px;top:28px;width:120px;height:120px;border-radius:50%;border:1px solid var(--k-line);background:#08080a}
+  .co-flow{margin-top:14px;display:grid;grid-template-columns:300px 1fr;gap:10px;align-items:center}
+  .co-ctl{background:#0e0e11;border:1px solid var(--k-line);border-radius:18px;padding:14px;display:grid;grid-template-columns:auto 1fr;gap:12px 14px;align-items:center;margin-top:14px}
+  .co-ctl span{color:var(--k-mut);font-size:13px;font-weight:600}
+  .co-ctl .co-pills .co-pill{padding:7px 12px}
+  .co-flow p.note{color:#c6c6cc;font-size:14px;line-height:1.5;margin-top:14px}
+  .co-stage{position:relative;width:100%;aspect-ratio:1000/430}
+  .co-stage svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+  .co-stage canvas{position:absolute;left:0;top:0;width:43%;aspect-ratio:1}
+  .co-rib{fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .co-spark{fill:none;stroke:#fff;stroke-linecap:round;stroke-dasharray:1 9;opacity:.55;animation:coDash 2.4s linear infinite}
+  @keyframes coDash{to{stroke-dashoffset:-60}}
+  .co-biz{margin-top:30px}
+  .co-biz h3{font-family:var(--display);font-size:clamp(30px,3.6vw,46px);font-weight:600;letter-spacing:-.04em;color:#fff;margin:8px 0 16px}
+  .co-tabs{display:inline-flex;max-width:100%;overflow-x:auto;scrollbar-width:none;background:#101013;border:1px solid var(--k-line);border-radius:999px;padding:4px;gap:2px}
+  .co-tabs button{flex:none;border:0;background:none;color:var(--k-mut);font-size:13.5px;padding:9px 18px;border-radius:999px;cursor:pointer}
+  .co-tabs button.on{background:#f2f2f4;color:#111}
+  .co-bizbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .co-glance{display:flex;justify-content:space-between;color:var(--k-dim);font-size:12.5px;margin:22px 2px 12px;flex-wrap:wrap;gap:6px}
+  .co-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .co-bc{background:linear-gradient(160deg,#1c1924,#121216 60%);border:1px solid var(--k-line);border-radius:24px;padding:22px;min-height:170px;display:flex;flex-direction:column}
+  .co-bc .h{display:flex;align-items:center;gap:12px;font-family:var(--display);font-size:clamp(18px,1.8vw,24px);font-weight:600;color:#fff;letter-spacing:-.02em}
+  .co-bc .h .ic{width:38px;height:38px;border-radius:50%;border:1px solid var(--k-line);display:grid;place-items:center;font-size:16px;flex:none}
+  .co-bc .h .tag{margin-left:auto;font-family:var(--body);font-size:10.5px;font-weight:600;color:var(--k-mut);border:1px solid var(--k-line);border-radius:6px;padding:3px 7px;letter-spacing:.04em}
+  .co-bc .v{margin-top:auto;font-family:var(--display);font-size:clamp(26px,2.6vw,36px);font-weight:600;color:#fff;letter-spacing:-.03em}
+  .co-bc .s{color:var(--k-mut);font-size:13px;margin-top:4px}
+  .co-bc .pb{height:6px;border-radius:999px;background:#25252b;margin-top:10px;overflow:hidden}
+  .co-bc .pb i{display:block;height:100%;background:linear-gradient(90deg,#e2367f,#ff9ccb)}
+  .co-bc input{background:#0e0e11;border:1px solid var(--k-line);color:#fff;border-radius:10px;padding:6px 10px;width:120px;font-size:14px}
+  /* version B */
+  .cb-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .cb-head .st{display:flex;align-items:center;gap:8px;background:#0f1f16;border:1px solid #2e6b48;color:var(--k-green);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600}
+  .cb-head .st.warn{background:#241c0c;border-color:#7a5a2a;color:var(--k-gold)}
+  .cb-head .st i{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+  .cb-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .cb-k{background:var(--k-card);border:1px solid var(--k-line);border-radius:20px;padding:16px 18px;display:flex;gap:14px;align-items:center}
+  .cb-k .ring{--p:0;--c:#d9774f;width:62px;height:62px;flex:none;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),#222228 0);display:grid;place-items:center}
+  .cb-k .ring span{width:48px;height:48px;border-radius:50%;background:var(--k-card);display:grid;place-items:center;font-size:18px}
+  .cb-k b{display:block;font-family:var(--display);font-size:26px;font-weight:600;color:#fff;letter-spacing:-.03em}
+  .cb-k small{color:var(--k-mut);font-size:12.5px;line-height:1.35;display:block}
+  .cb-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-top:14px}
+  .cb-sys{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
+  .cb-s{display:flex;align-items:center;gap:12px;background:#0e0e11;border:1px solid var(--k-line);border-radius:14px;padding:11px 12px}
+  .cb-s .ic{width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;font-size:15px;font-weight:800;background:#1b1b20}
+  .cb-s .n{font-size:14px;font-weight:600;color:#fff}
+  .cb-s .d{font-size:12px;color:var(--k-mut)}
+  .cb-s .w{margin-left:auto;text-align:right;font-size:12px;color:var(--k-mut);white-space:nowrap}
+  .cb-s .w i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}
+  .cb-feed{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .cb-feed li{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:#d6d6dc;background:#0e0e11;border:1px solid var(--k-line);border-radius:12px;padding:10px 12px}
+  .cb-feed li .t{margin-left:auto;color:var(--k-dim);font-size:12px;white-space:nowrap}
+  .cb-feed li.al{border-color:#5a3a1a;background:#1a130a;color:#f5d6a8}
+  .cb-empty{color:var(--k-mut);font-size:13.5px;margin-top:14px}
+  @media (max-width:1100px){ .co-row1{grid-template-columns:1fr} .co-flow{grid-template-columns:1fr} .cb-kpis{grid-template-columns:repeat(2,1fr)} .cb-grid{grid-template-columns:1fr} }
+  @media (max-width:700px){ .core{padding:12px;margin:-4px} .co-orbs{grid-template-columns:1fr} .co-cards{grid-template-columns:1fr} .co-mini{display:none} .cb-kpis{grid-template-columns:1fr} .cb-sys{grid-template-columns:1fr} .co-usage .co-tools{position:static;margin-bottom:8px} }
+  @media (prefers-reduced-motion:reduce){ .co-liq::before,.co-spark{animation:none} }
 </style>
 </head>
 <body>
@@ -416,6 +515,7 @@
     </div>
     <div class="app">
       <aside class="side" id="side">
+        <button data-tab="core" class="adm" hidden>🧠 AI Core</button>
         <button data-tab="todo" class="adm" hidden>🎯 My to-do</button>
         <button data-tab="plan" class="adm" hidden>📋 My plan</button>
         <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
@@ -561,7 +661,7 @@ async function boot(session){
   if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }
   badgesStart(); if (can('ask')) askInit();
   const h = location.hash.slice(1);
-  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'todo' : first.dataset.tab));
+  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'core' : first.dataset.tab));
 }
 
 // little red numbers in the menu: unread texts, and new accounts waiting for access
@@ -642,16 +742,16 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.dataset.href ? (location.href = b.dataset.href) : show(b.dataset.tab));
-const titles = { todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { core:['AI Core','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function show(t){
   if (t !== 'time') timeStop();
   tab = t; history.replaceState(null, '', '#' + t); badges();
-  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'dropp' || t === 'brains' || t === 'twitter');
+  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'core');
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ photos:photosView, quotes:quotesView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ core:coreView, photos:photosView, quotes:quotesView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
@@ -2270,6 +2370,212 @@ async function photosView(){
   $('#pFiles').onchange = e => go(e.target.files);
   const dz = $('#pDrop'); dz.ondragover = e => { e.preventDefault(); dz.style.outline = '2px dashed var(--pink)'; }; dz.ondragleave = () => dz.style.outline = ''; dz.ondrop = e => { e.preventDefault(); dz.style.outline = ''; go(e.dataTransfer.files); };
   draw();
+}
+
+// ---------- AI Core (admin home): version A = copy of the reference, version B = optimized ----------
+let coreVer = (() => { try { return localStorage.getItem('core-ver') || 'a'; } catch(e){ return 'a'; } })();
+let coreMode = 'orb', coreBizTab = 'overview', coreTok = 0, coreD = null;
+const CORE_MODELS = [ ['claude','✳','Claude','#d9774f'], ['dolphin','🐬','Dolphin','#4aa3e6'], ['nemotron','N','Nemotron','#76b900'] ];
+const CORE_APIS = [ ['OpenRouter','⇄','#7c7cff'], ['Supabase','⚡','#3ecf8e'], ['n8n','n8n','#ea4b71'], ['Higgsfield','H','#d6ff3a'], ['ALI Remote','📱','#9aa4b2'] ];
+const CORE_API_TOTAL = 15;
+const coreUsd = n => '$' + Math.round(n).toLocaleString('en-US');
+const coreAgo = ts => { if (!ts) return 'jamais'; const s = (Date.now() - new Date(ts)) / 1000; return s < 90 ? 'à l\'instant' : s < 3600 ? 'il y a ' + Math.round(s / 60) + ' min' : s < 86400 ? 'il y a ' + Math.round(s / 3600) + ' h' : 'il y a ' + Math.round(s / 86400) + ' j'; };
+
+async function coreData(){
+  const now = new Date(), since7 = new Date(Date.now() - 7 * 864e5).toISOString(), mStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const TABLES = ['focus_beats','aw_events','sms_messages','ai_log','x_beats','my_todos','x_events','docs','photos','quotes','sms_contacts','screentime_daily'];
+  const cnt = t => sb.from(t).select('*', { count:'exact', head:true });
+  const last = (t, c) => sb.from(t).select(c).order(c, { ascending:false }).limit(1);
+  const [todo, va, ai, sales, ...rest] = await Promise.all([
+    sb.from('my_todos').select('title,done,done_by,done_at').gte('done_at', since7).order('done_at', { ascending:false }),
+    sb.from('va_weeks').select('person,week,total,pay').order('week', { ascending:false }).limit(1),
+    sb.from('ai_log').select('engine,created_at').gte('created_at', since7).order('created_at', { ascending:false }).limit(5000),
+    sb.from('sales').select('amount,created_at').gte('created_at', mStart),
+    ...TABLES.map(cnt),
+    last('x_beats', 'ts'), last('focus_beats', 'ts'), last('screentime_daily', 'captured_at'), last('sms_messages', 'created_at'), last('ai_log', 'created_at'), last('my_todos', 'done_at'),
+  ]);
+  const counts = rest.slice(0, TABLES.length).map(r => r.count || 0), lasts = rest.slice(TABLES.length).map(r => (r.data && r.data[0]) ? Object.values(r.data[0])[0] : null);
+  const done = (todo.data || []).filter(x => x.done), aiDone = done.filter(x => x.done_by && x.done_by !== 'me');
+  const eng = { claude:0, dolphin:0, nemotron:0, other:0 };
+  (ai.data || []).forEach(x => { const k = /claude/i.test(x.engine) ? 'claude' : /dolphin/i.test(x.engine) ? 'dolphin' : /nemotron/i.test(x.engine) ? 'nemotron' : 'other'; eng[k]++; });
+  const v = (va.data || [])[0] || null;
+  return {
+    aiPct: done.length ? Math.round(100 * aiDone.length / done.length) : 0, doneN: done.length, aiDoneN: aiDone.length, aiDone: aiDone.slice(0, 7),
+    vaPct: v ? Math.max(0, Math.min(100, Math.round(Number(v.total) || 0))) : 0, va: v,
+    calls: (ai.data || []).length, eng,
+    salesMonth: (sales.data || []).reduce((a, x) => a + Number(x.amount || 0), 0), salesN: (sales.data || []).length,
+    dataN: counts.reduce((a, b) => a + b, 0), counts: Object.fromEntries(TABLES.map((t, i) => [t, counts[i]])),
+    last: { ext: lasts[0], mac: lasts[1], screen: lasts[2], sms: lasts[3], bot: lasts[4], todo: lasts[5] },
+    target: Number(settings.revenue_target || 10000),
+  };
+}
+
+/* particle orb (canvas): a slowly turning sphere of coloured points with light rays from the centre */
+function coreParticles(cv, n, tok){
+  const g = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1), cols = ['#ffffff','#9fd3ff','#ffb3d1','#ffd49a','#b9a7ff'];
+  const P = Array.from({ length:n }, () => { const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = Math.cbrt(Math.random()); return { x:r * Math.sqrt(1 - u * u) * Math.cos(th), y:r * u, z:r * Math.sqrt(1 - u * u) * Math.sin(th), c:cols[(Math.random() * cols.length) | 0], s:Math.random() * 1.4 + .4 }; });
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let a = 0;
+  function frame(){
+    if (tok !== coreTok || !cv.isConnected) return;
+    const w = cv.clientWidth, h = cv.clientHeight; if (cv.width !== w * dpr){ cv.width = w * dpr; cv.height = h * dpr; }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2, R = Math.min(w, h) * .44;
+    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, R * .55); gr.addColorStop(0, 'rgba(210,230,255,.9)'); gr.addColorStop(.12, 'rgba(160,200,255,.35)'); gr.addColorStop(1, 'rgba(120,160,255,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, R * .55, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(200,225,255,.10)'; g.lineWidth = 1;
+    for (let i = 0; i < 46; i++){ const t = i / 46 * Math.PI * 2 + a * .3, l = R * (.35 + .55 * ((i * 37) % 11) / 11); g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(t) * l, cy + Math.sin(t) * l); g.stroke(); }
+    const ca = Math.cos(a), sa = Math.sin(a);
+    for (const p of P){ const x = p.x * ca - p.z * sa, z = p.x * sa + p.z * ca, k = 1.6 / (2.6 - z); const px = cx + x * R * k, py = cy + p.y * R * k;
+      g.globalAlpha = .35 + .5 * (z + 1) / 2; g.fillStyle = p.c; g.beginPath(); g.arc(px, py, p.s * k, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 1;
+    g.setLineDash([2, 5]); g.strokeStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+    if (!reduce) a += .0035;
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+/* the ribbons from "your data" to the models (top) and the API services (bottom) */
+function coreFlowSvg(d){
+  const ox = 215, oy = 215, mx = [700, 820, 940], ax = [470, 580, 690, 800, 910, 990];
+  const rib = (tx, ty, lane, col, up, i) => {
+    const path = `M ${ox + 40} ${oy} C ${ox + 150} ${oy - 10}, ${ox + 170} ${lane}, ${ox + 260} ${lane} L ${tx - 34} ${lane} Q ${tx} ${lane} ${tx} ${lane + (up ? -34 : 34)} L ${tx} ${ty}`;
+    return `<path class="co-rib" d="${path}" stroke="${col}" stroke-width="9" opacity=".9"/><path class="co-spark" d="${path}" stroke-width="3" style="animation-delay:-${i * .3}s"/>`;
+  };
+  let s = '';
+  CORE_MODELS.forEach((m, i) => { s += rib(mx[i], 82, 150 + i * 13, m[3], true, i); });
+  const apis = CORE_APIS.map((a, i) => [ax[i], a]);
+  apis.forEach((x, i) => { s += rib(x[0], 330, 236 + i * 9, ['#9b8cff','#b8b8c6','#c9c9d4','#a9a9b8','#8f8fa0'][i], false, i + 3); });
+  s += rib(ax[5], 330, 236 + 5 * 9, '#7c7c8c', false, 9);
+  const chip = (x, y, ic, col, lbl, sub) => `<g transform="translate(${x} ${y})"><rect x="-24" y="-24" width="48" height="48" rx="14" fill="#141418" stroke="#2a2a31"/><text text-anchor="middle" dominant-baseline="central" font-size="${ic.length > 2 ? 13 : 20}" font-weight="800" fill="${col}">${ic}</text>${lbl ? `<text y="${sub ? -36 : 46}" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">${esc(lbl)}</text>` : ''}</g>`;
+  CORE_MODELS.forEach((m, i) => { s += chip(mx[i], 58, m[1], m[3], m[2], true); s += `<text x="${mx[i] + 12}" y="112" font-size="11" fill="#8d8d96">${d.eng[m[0]] || 0} rép.</text>`; });
+  apis.forEach(x => { s += chip(x[0], 358, x[1][1], x[1][2], x[1][0]); });
+  s += `<g transform="translate(${ax[5]} 358)"><rect x="-24" y="-24" width="48" height="48" rx="14" fill="#141418" stroke="#2a2a31"/><text text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="#fff">+${CORE_API_TOTAL - CORE_APIS.length}</text><text y="46" text-anchor="middle" font-size="13" fill="#8d8d96">autres</text></g>`;
+  s += `<text x="${mx[0] - 70}" y="62" text-anchor="end" font-size="11" letter-spacing="2.5" font-weight="700" fill="#8d8d96">MODÈLES</text><text x="${ax[0] - 50}" y="362" text-anchor="end" font-size="11" letter-spacing="2.5" font-weight="700" fill="#8d8d96">SERVICES</text>`;
+  s += `<g transform="translate(${ox} ${oy})"><rect x="-70" y="-16" width="140" height="32" rx="16" fill="rgba(10,10,12,.85)" stroke="#2a2a31"/><text text-anchor="middle" dominant-baseline="central" font-size="14" font-weight="700" fill="#fff">Tes données <tspan fill="#c9c9d4" font-weight="500">${d.dataN.toLocaleString('fr-CA')}</tspan></text></g>`;
+  return `<div class="co-stage"><canvas></canvas><svg viewBox="0 0 1000 430" font-family="DM Sans, system-ui, sans-serif">${s}</svg></div>`;
+}
+
+function coreVersionA(d){
+  const orbs = coreMode === 'orb'
+    ? `<div class="co-orbs">
+        <div class="co-orbw"><div class="co-orb" style="--c:#d9774f;--p:${d.aiPct}"><div class="co-liq"></div><span class="co-ic" style="background:#d9774f">✳</span></div>
+          <div><div class="co-pct">${d.aiPct}<small>%</small></div><div class="co-lbl"><i style="background:#d9774f"></i>Tâches faites par l'IA · 7 j</div></div></div>
+        <div class="co-orbw"><div class="co-orb" style="--c:#4f6bff;--p:${d.vaPct}"><div class="co-liq"></div><span class="co-ic" style="background:#fff;color:#4f6bff">◆</span></div>
+          <div><div class="co-pct">${d.vaPct}<small>%</small></div><div class="co-lbl"><i style="background:#4f6bff"></i>Score de l'assistant · semaine</div></div></div>
+      </div>`
+    : `<div class="co-bars">
+        <div class="co-barrow"><div class="t"><span>Tâches faites par l'IA · 7 j</span><b>${d.aiPct}%</b></div><div class="tr"><i style="width:${d.aiPct}%;background:#d9774f"></i></div></div>
+        <div class="co-barrow"><div class="t"><span>Score de l'assistant · semaine</span><b>${d.vaPct}%</b></div><div class="tr"><i style="width:${d.vaPct}%;background:#4f6bff"></i></div></div>
+      </div>`;
+  const biz = {
+    overview: `<div class="co-cards">
+      <div class="co-bc"><div class="h"><span class="ic">🏦</span>Ventes ce mois<span class="tag">LIVE</span></div><div class="v">${coreUsd(d.salesMonth)}</div><div class="s">${d.salesN} vente${d.salesN > 1 ? 's' : ''} ce mois</div></div>
+      <div class="co-bc"><div class="h"><span class="ic">📄</span>Paie de l'assistant<span class="tag">LIVE</span></div><div class="v">${d.va ? coreUsd(Number(d.va.pay || 0)) : '—'}</div><div class="s">${d.va ? esc(d.va.person) + ' · semaine du ' + esc(d.va.week) : 'Pas encore de semaine calculée'}</div></div>
+      <div class="co-bc"><div class="h"><span class="ic">◎</span>Objectif du mois<span class="tag">LIVE</span></div><div class="v">${Math.round(100 * d.salesMonth / Math.max(1, d.target))}%</div><div class="s">${coreUsd(d.salesMonth)} sur <input id="coTarget" type="number" min="0" step="500" value="${d.target}"></div><div class="pb"><i style="width:${Math.min(100, 100 * d.salesMonth / Math.max(1, d.target))}%"></i></div></div></div>`,
+    finances: `<div class="co-cards">
+      <div class="co-bc"><div class="h"><span class="ic">💰</span>Ventes ce mois</div><div class="v">${coreUsd(d.salesMonth)}</div><div class="s">Onglet 💰 Sales & fees pour le détail</div></div>
+      <div class="co-bc"><div class="h"><span class="ic">🧾</span>Paie assistant</div><div class="v">${d.va ? coreUsd(Number(d.va.pay || 0)) : '—'}</div><div class="s">Dernière semaine calculée</div></div>
+      <div class="co-bc"><div class="h"><span class="ic">🤖</span>Réponses IA · 7 j</div><div class="v">${d.calls.toLocaleString('fr-CA')}</div><div class="s">Messages écrits par le chatbot</div></div></div>`,
+    progress: `<div class="co-cards">
+      <div class="co-bc"><div class="h"><span class="ic">✅</span>Tâches faites · 7 j</div><div class="v">${d.doneN}</div><div class="s">dont ${d.aiDoneN} par l'IA</div></div>
+      <div class="co-bc"><div class="h"><span class="ic">🏆</span>Score assistant</div><div class="v">${d.vaPct}/100</div><div class="s">Travail + résultats</div></div>
+      <div class="co-bc"><div class="h"><span class="ic">⏱</span>Mac · dernier signal</div><div class="v" style="font-size:22px">${coreAgo(d.last.mac)}</div><div class="s">Suivi du temps de travail</div></div></div>`,
+    audience: `<div class="co-cards">
+      <div class="co-bc"><div class="h"><span class="ic">📱</span>Contacts SMS</div><div class="v">${d.counts.sms_contacts}</div><div class="s">${d.counts.sms_messages.toLocaleString('fr-CA')} messages échangés</div></div>
+      <div class="co-bc"><div class="h"><span class="ic">🐦</span>Actions X suivies</div><div class="v">${d.counts.x_events}</div><div class="s">Faites par les assistants, en direct</div></div>
+      <div class="co-bc"><div class="h"><span class="ic">📸</span>Contenu</div><div class="v">${d.counts.photos + d.counts.docs}</div><div class="s">Photos et documents</div></div></div>`,
+  };
+  return `
+    <div class="co-row1">
+      <section class="co-card co-usage">
+        <div class="co-tools"><div class="co-seg"><button data-cm="orb" class="${coreMode === 'orb' ? 'on' : ''}">Orb</button><button data-cm="bar" class="${coreMode === 'bar' ? 'on' : ''}">Bar</button></div></div>
+        ${orbs}
+      </section>
+      <section class="co-card co-models">
+        <div class="co-eyebrow"><i></i>AI Models</div>
+        <div class="big">Cloud</div>
+        <div class="sm"><i></i><span>${CORE_MODELS.length} modèles<br>${CORE_API_TOTAL} services</span></div>
+        <div class="co-chips">${CORE_MODELS.map(m => `<span class="co-chip" style="color:${m[3]}">${m[1]}</span>`).join('')}</div>
+        <div class="co-pills"><span class="co-pill gold">☁ Cloud</span><span class="co-pill">⚙ Local</span><span class="co-pill" style="color:#ff6b8b">🔒</span></div>
+        <canvas class="co-mini"></canvas>
+      </section>
+    </div>
+    <section class="co-card co-flow">
+      <div>
+        <div class="co-eyebrow"><i></i>AI Models</div>
+        <div class="co-ctl"><span>Modèles</span><div class="co-pills"><span class="co-pill gold on">☁ Cloud</span><span class="co-pill">⚙ Local</span></div>
+          <span>Connecteurs</span><div class="co-pills"><span class="co-pill green on">● On</span><span class="co-pill">🔒 Locked</span></div></div>
+        <p class="note">Tes données restent ici. Les requêtes peuvent aller à ${CORE_MODELS.length} modèles et ${CORE_API_TOTAL} services.</p>
+      </div>
+      ${coreFlowSvg(d)}
+    </section>
+    <div class="co-biz">
+      <div class="co-eyebrow" style="letter-spacing:.24em">Ton business, en focus</div>
+      <h3>De la place pour grandir.</h3>
+      <div class="co-bizbar"><div class="co-tabs">${[['overview','Aperçu'],['finances','Finances'],['progress','Progrès'],['audience','Audience']].map(t => `<button data-bt="${t[0]}" class="${coreBizTab === t[0] ? 'on' : ''}">${t[1]}</button>`).join('')}</div>
+        <span style="color:var(--k-dim);font-size:12.5px">Devise · USD</span></div>
+      <div class="co-glance"><span>Ton business d'un coup d'œil</span><span>Données réelles · ${new Date().toLocaleDateString('fr-CA', { day:'numeric', month:'short' })}</span></div>
+      ${biz[coreBizTab]}
+    </div>`;
+}
+
+function coreVersionB(d){
+  const H = 3600e3, sys = [
+    ['🐦','#1d9bf0','Extension des profils X','Suit chaque action des assistants', d.last.ext, 2 * H],
+    ['⏱','#f0b35a','App du Mac','Temps de travail par activité', d.last.mac, 2 * H],
+    ['📱','#9aa4b2','Temps d\'écran','Capture chaque nuit (Mac + iPhone)', d.last.screen, 30 * H],
+    ['💬','#4aa3e6','Chatbot SMS','Répond aux fans par texto', d.last.bot, 48 * H],
+    ['✅','#5fe39a','To-do auto','Se coche à partir de ce qui est fait', d.last.todo, 24 * H],
+    ['🧠','#3ecf8e','Base de données','La mémoire de tout le site', new Date(), 24 * H],
+  ];
+  const state = (ts, lim) => !ts ? ['#ff6b8b','hors ligne'] : (Date.now() - new Date(ts)) < lim ? ['#5fe39a', coreAgo(ts)] : ['#f0b35a', coreAgo(ts)];
+  const stale = sys.filter(s => state(s[4], s[5])[0] !== '#5fe39a');
+  const alerts = [];
+  stale.forEach(s => alerts.push(`${s[2]} : aucun signal ${s[4] ? 'depuis ' + coreAgo(s[4]).replace('il y a ', '') : ''}`));
+  if (d.va && d.vaPct < 60) alerts.push(`Score de l'assistant bas cette semaine (${d.vaPct}/100)`);
+  const dayOfMonth = new Date().getDate(), pace = d.target * dayOfMonth / 30;
+  if (d.salesMonth < pace) alerts.push(`Ventes en retard sur l'objectif : ${coreUsd(d.salesMonth)} au lieu de ${coreUsd(pace)} à ce jour du mois`);
+  const k = (p, c, ic, v, l) => `<div class="cb-k"><div class="ring" style="--p:${p};--c:${c}"><span>${ic}</span></div><div><b>${v}</b><small>${l}</small></div></div>`;
+  return `
+    <div class="cb-head"><span class="st${stale.length ? ' warn' : ''}"><i></i>${stale.length ? stale.length + ' système' + (stale.length > 1 ? 's' : '') + ' à vérifier' : 'Tout roule · ' + sys.length + '/' + sys.length + ' systèmes en direct'}</span>
+      <span style="color:var(--k-mut);font-size:13px">${d.dataN.toLocaleString('fr-CA')} données · ${CORE_MODELS.length} modèles · ${CORE_API_TOTAL} services</span></div>
+    <div class="cb-kpis">
+      ${k(d.aiPct, '#d9774f', '✳', d.aiPct + '%', 'des tâches faites par l\'IA<br>7 derniers jours')}
+      ${k(d.vaPct, '#4f6bff', '🏆', d.vaPct + '/100', 'score de l\'assistant<br>cette semaine')}
+      ${k(Math.min(100, d.calls / 5), '#4aa3e6', '💬', d.calls.toLocaleString('fr-CA'), 'réponses du chatbot<br>7 derniers jours')}
+      ${k(Math.min(100, 100 * d.salesMonth / Math.max(1, d.target)), '#ff5fa2', '🎯', coreUsd(d.salesMonth), 'ventes ce mois<br>objectif ' + coreUsd(d.target))}
+    </div>
+    <div class="cb-grid">
+      <section class="co-card"><div class="co-eyebrow"><i style="background:#5fe39a"></i>Systèmes en direct</div>
+        <div class="cb-sys">${sys.map(s => { const st = state(s[4], s[5]); return `<div class="cb-s"><span class="ic" style="color:${s[1]}">${s[0]}</span><div><div class="n">${s[2]}</div><div class="d">${s[3]}</div></div><div class="w"><i style="background:${st[0]};box-shadow:0 0 6px ${st[0]}"></i>${st[1]}</div></div>`; }).join('')}</div>
+      </section>
+      <section class="co-card"><div class="co-eyebrow"><i style="background:#ff5fa2"></i>À regarder</div>
+        ${alerts.length ? `<ul class="cb-feed">${alerts.map(a => `<li class="al">⚠️ ${esc(a)}</li>`).join('')}</ul>` : '<p class="cb-empty">Rien à signaler. 👌</p>'}
+        <div class="co-eyebrow" style="margin-top:20px"><i></i>Fait par l'IA pour toi · 7 j</div>
+        ${d.aiDone.length ? `<ul class="cb-feed">${d.aiDone.map(x => `<li>⚡ ${esc(x.title)}<span class="t">${coreAgo(x.done_at)}</span></li>`).join('')}</ul>` : '<p class="cb-empty">Aucune tâche cochée par l\'IA cette semaine.</p>'}
+      </section>
+    </div>
+    <section class="co-card co-flow" style="grid-template-columns:minmax(0,860px);justify-content:center">${coreFlowSvg(d)}</section>`;
+}
+
+function coreRender(){
+  const v = $('#view'); if (!coreD) return;
+  coreTok++;
+  v.innerHTML = `<div class="core"><div class="co-top"><h2>🧠 AI Core</h2><div class="co-seg"><button data-cv="a" class="${coreVer === 'a' ? 'on' : ''}">A · Copie</button><button data-cv="b" class="${coreVer === 'b' ? 'on' : ''}">B · Optimisée</button></div></div>${coreVer === 'a' ? coreVersionA(coreD) : coreVersionB(coreD)}</div>`;
+  v.querySelectorAll('[data-cv]').forEach(b => b.onclick = () => { coreVer = b.dataset.cv; try { localStorage.setItem('core-ver', coreVer); } catch(e){} coreRender(); });
+  v.querySelectorAll('[data-cm]').forEach(b => b.onclick = () => { coreMode = b.dataset.cm; coreRender(); });
+  v.querySelectorAll('[data-bt]').forEach(b => b.onclick = () => { coreBizTab = b.dataset.bt; coreRender(); });
+  const t = v.querySelector('#coTarget');
+  if (t) t.onchange = async () => { const val = String(Math.max(0, Number(t.value) || 0)); const { error } = await sb.from('settings').upsert({ key:'revenue_target', value:val }); if (error) return toast(error.message); settings.revenue_target = val; coreD.target = Number(val); coreRender(); };
+  const tok = coreTok;
+  v.querySelectorAll('.co-stage canvas').forEach(c => coreParticles(c, 420, tok));
+  v.querySelectorAll('canvas.co-mini').forEach(c => coreParticles(c, 160, tok));
+}
+async function coreView(){
+  try { coreD = await coreData(); coreRender(); }
+  catch (e) { $('#view').innerHTML = `<div class="msg err">${esc((e && e.message) || String(e))}</div>`; }
 }
 
 // ---------- AI brains ----------

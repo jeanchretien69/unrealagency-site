@@ -346,10 +346,13 @@
     .word.l,.word.r{text-align:center}
     .side.l{align-items:center;text-align:center;order:-1}
     .side.r{align-items:center}
-    /* phone: the three chips become one small row in the empty strip above her hair, so they no longer cover her */
-    .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;position:absolute;top:6px;left:4px;right:4px;z-index:3;pointer-events:none}
-    .chips .chip{position:static;font-size:10px;line-height:1.2;padding:3px 8px;gap:5px;white-space:nowrap;box-shadow:0 4px 12px -6px rgba(42,20,32,.3)}
+    /* phone: the chips sit around her like on PC, smaller and see-through, along the edges and off her chest */
+    .chips .chip{font-size:10.5px;line-height:1.2;padding:4px 9px;gap:5px;font-weight:500;background:rgba(255,255,255,.72);border-color:rgba(42,20,32,.08);box-shadow:0 4px 14px -8px rgba(42,20,32,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);pointer-events:none}
+    :root[data-mode="dark"] .chips .chip{background:rgba(18,9,14,.55);border-color:rgba(255,199,221,.18)}
     .chips .chip .dot{width:6px;height:6px}
+    .chips .chip.a{left:3%;right:auto;top:9%;bottom:auto}
+    .chips .chip.b{right:3%;left:auto;top:27%;bottom:auto}
+    .chips .chip.c{left:3%;right:auto;top:44%;bottom:auto}
     .grid3,.grid4,.grid2{grid-template-columns:1fr}
     .stats{grid-template-columns:repeat(3,1fr)}
     .studio-wrap{grid-template-columns:1fr}
@@ -375,7 +378,9 @@
   .head .nv.on{opacity:1}
   .head img[hidden]{display:none}
   :root[data-mode="dark"] .head .nvw{overflow:hidden}
-  :root[data-mode="dark"] .head img,:root[data-mode="dark"] .head .nvw{-webkit-mask-image:none;mask-image:none;border-radius:32px;box-shadow:0 0 0 1px rgba(255,199,221,.35),0 30px 90px -20px rgba(255,95,162,.55)}
+  :root[data-mode="dark"] .head img,:root[data-mode="dark"] .head .nvw{-webkit-mask-image:none;mask-image:none;border-radius:32px}
+  /* one glow on the frame itself (it used to sit on both the photo and the video, so it glowed brighter until the photo was hidden) */
+  :root[data-mode="dark"] .head{border-radius:32px;box-shadow:0 0 0 1px rgba(255,199,221,.35),0 30px 90px -20px rgba(255,95,162,.55)}
   :root[data-mode="dark"] .stage::before,:root[data-mode="dark"] .ring,:root[data-mode="dark"] .floor{display:none}
   .head .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
   :root[data-mode="dark"] .head .fx{border-radius:32px}
@@ -456,7 +461,6 @@
   @media (prefers-reduced-motion:reduce){.live::before{animation:none}}
 </style>
 <link rel="preload" as="image" href="live/nami_idle.jpg">
-<link rel="preload" as="video" href="live/nami_kiss_fast.mp4?v=1" type="video/mp4">
 </head>
 <body>
 
@@ -483,6 +487,7 @@
         <canvas id="gl" aria-hidden="true"></canvas>
         <img id="face" src="live/nami_idle.jpg" alt="Nami, an Unreal Agency AI model" hidden>
         <div class="shine" id="shine"></div>
+        <div class="nvw" id="nvw"><video class="nv" id="kissAuto" muted playsinline preload="auto" poster="live/nami_idle.jpg" src="live/nami_kiss_fast.mp4?v=2"></video></div>
       
       </div>
       <div class="moves kiss" id="moves"><button data-m="kiss">😘 Blow a kiss</button><button data-m="hat">⚓ Construction la semaine, boat la fin de semaine</button></div>
@@ -835,11 +840,11 @@
     /* load order: the kiss clip downloads first (she kisses right away), the breathing loop downloads while the kiss plays */
     var loopLoaded = false;
     function loadLoop(play){ if (!loopLoaded){ loopLoaded = true; v.preload = 'auto'; v.src = 'live/nami_idle.mp4?v=3'; v.load(); } if (play){ var pp = v.play(); if (pp && pp.catch) pp.catch(function(){}); } }
-    var wrap = document.createElement('div'); wrap.className = 'nvw'; head.appendChild(wrap); wrap.appendChild(v);
+    var wrap = document.getElementById('nvw'); wrap.insertBefore(v, wrap.firstChild); /* breathing loop sits under the kiss clip already in the page */
     v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ face.hidden = true; }, 400); }, { once:true });
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
-      var SRC = { kissauto:'live/nami_kiss_fast.mp4?v=1', kiss:'live/nami_kiss_btn.mp4?v=1', hat:'live/nami_hat.mp4?v=14' }, vids = {}, busy = false, curAct = null, FADE = 420;
+      var SRC = { kissauto:'live/nami_kiss_fast.mp4?v=2', kiss:'live/nami_kiss_btn.mp4?v=1', hat:'live/nami_hat.mp4?v=14' }, vids = { kissauto: document.getElementById('kissAuto') }, busy = false, curAct = null, FADE = 420;
       var btns = [].slice.call(document.querySelectorAll('#moves button[data-m]')); if (!btns.length) return;
       function lock(on){ btns.forEach(function(b){ b.disabled = on; }); }
       /* song for "Construction la semaine": only plays after a click, with a mute button */
@@ -868,7 +873,7 @@
          its last frame is the pose the breathing loop starts from, and the loop downloads while the kiss plays */
       var kissClip = mk('kissauto'), fired = false;
       function fireKiss(){ if (fired) return; fired = true; if (!busy && !document.hidden) start('kissauto'); else loadLoop(true); }
-      if (kissClip.readyState >= 3) fireKiss(); else { kissClip.addEventListener('canplay', fireKiss, { once:true }); setTimeout(fireKiss, 2500); }
+      if (kissClip.readyState >= 3) fireKiss(); else { kissClip.addEventListener('canplay', fireKiss, { once:true }); kissClip.addEventListener('canplaythrough', fireKiss, { once:true }); setTimeout(fireKiss, 2500); }
       setTimeout(function(){ mk('kiss'); mk('hat'); }, 9000);
       /* Safari pauses videos when you leave the tab or lock the phone: when you come back (or if the system pauses her), she starts breathing again by herself */
       function wake(){ if (document.hidden) return;

@@ -483,6 +483,7 @@
   .jv-top b{font-family:var(--display);letter-spacing:.18em;color:#9be6ff;font-size:14px}
   .jv-top #jvState{font-family:ui-monospace,"JetBrains Mono",monospace;font-size:11.5px;color:var(--k-mut);letter-spacing:.06em}
   .jv-sp{flex:1}
+  .jv-vsel{max-width:190px;background:#141418;color:#fff;border:1px solid var(--k-line);border-radius:999px;padding:6px 10px;font-size:12.5px;width:auto}
   .jv-ic{width:32px;height:32px;border-radius:50%;border:1px solid var(--k-line);background:#141418;color:#fff;cursor:pointer}
   .jv-you{color:var(--k-dim);font-size:13px;margin-top:8px;min-height:18px}
   .jv-you:not(:empty)::before{content:"Toi · ";color:var(--k-mut)}
@@ -2768,25 +2769,40 @@ function coreVersionB(d){
 /* ---------- J.A.R.V.I.S.: ask by voice or text, answer spoken with a British-butler voice ---------- */
 let jvLang = (() => { try { return localStorage.getItem('jv-lang') || 'fr'; } catch(e){ return 'fr'; } })(), jvMute = false, jvHist = [], jvBusy = false, jvRec = null, jvLast = '';
 window.__jvLevel = 0;
-const JV_VOICES = { en:['Daniel','Arthur','Google UK English Male','Microsoft Ryan','Microsoft George','Oliver','Malcolm'], fr:['Thomas','Google français','Microsoft Henri','Microsoft Paul','Nicolas','Daniel'] };
-function jvVoice(){
-  const vs = speechSynthesis.getVoices(), want = JV_VOICES[jvLang], pre = jvLang === 'en' ? /^en-GB/i : /^fr/i;
-  for (const n of want){ const v = vs.find(x => x.name.includes(n) && pre.test(x.lang)); if (v) return v; }
-  return vs.find(x => pre.test(x.lang) && /male|homme|thomas|daniel/i.test(x.name)) || vs.find(x => pre.test(x.lang)) || null;
+/* voices: the most natural one on this device first (Edge "Natural", Apple "Enhanced/Premium", Google), and the person can pick another */
+function jvList(){
+  if (!window.speechSynthesis) return [];
+  const pre = jvLang === 'en' ? /^en[-_](GB|IE|AU)/i : /^fr/i;
+  const score = v => (/natural|neural|online/i.test(v.name) ? 60 : 0) + (/enhanced|premium|améliorée|siri/i.test(v.name) ? 50 : 0) + (/ryan|thomas|daniel|arthur|george|oliver|henri|antoine|jean|nicolas|paul|male|homme/i.test(v.name) ? 20 : 0)
+    + (jvLang === 'en' && /^en[-_]GB/i.test(v.lang) ? 15 : 0) + (jvLang === 'fr' && /CA/i.test(v.lang) ? 8 : 0) + (/google/i.test(v.name) ? 10 : 0) - (/female|femme|amelie|amélie|audrey|marie|aurelie|julie|karen|serena|kate|martha|hazel|libby|sonia|denise|sylvie/i.test(v.name) ? 40 : 0);
+  return speechSynthesis.getVoices().filter(v => pre.test(v.lang)).sort((a, b) => score(b) - score(a));
 }
+function jvVoice(){
+  const vs = jvList(); let want = ''; try { want = localStorage.getItem('jv-voice-' + jvLang) || ''; } catch(e){}
+  return vs.find(v => v.name === want) || vs[0] || null;
+}
+/* sound design (Web Audio): a short activation chime and a soft reactor hum under the voice */
+let jvAC = null, jvHum = null;
+function jvAudio(){ try { jvAC = jvAC || new (window.AudioContext || window.webkitAudioContext)(); if (jvAC.state === 'suspended') jvAC.resume(); } catch(e){} return jvAC; }
+function jvChime(up){ const ac = jvAudio(); if (!ac || jvMute) return; const t = ac.currentTime;
+  [[up ? 660 : 880, 0], [up ? 990 : 660, .09]].forEach(([f, d]) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(.06, t + d + .015); g.gain.exponentialRampToValueAtTime(.0001, t + d + .22); o.connect(g).connect(ac.destination); o.start(t + d); o.stop(t + d + .25); }); }
+function jvHumOn(){ const ac = jvAudio(); if (!ac || jvMute || jvHum) return; const g = ac.createGain(); g.gain.value = 0; g.connect(ac.destination);
+  const a = ac.createOscillator(), b = ac.createOscillator(), f = ac.createBiquadFilter(); a.type = 'sine'; a.frequency.value = 55; b.type = 'triangle'; b.frequency.value = 110.6; f.type = 'lowpass'; f.frequency.value = 400;
+  a.connect(f); b.connect(f); f.connect(g); a.start(); b.start(); g.gain.linearRampToValueAtTime(.022, ac.currentTime + .4); jvHum = { g, a, b }; }
+function jvHumOff(){ if (!jvHum || !jvAC) return; const h = jvHum; jvHum = null; h.g.gain.linearRampToValueAtTime(0, jvAC.currentTime + .5); setTimeout(() => { try { h.a.stop(); h.b.stop(); } catch(e){} }, 600); }
 function jvState(t, on){ const s = $('#jvState'); if (s) s.textContent = t; const o = $('#jvMic'); if (o) o.classList.toggle(on || 'x', !!on); }
 function jvSay(text){
   if (jvMute || !window.speechSynthesis) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text), v = jvVoice(); if (v){ u.voice = v; u.lang = v.lang; } else u.lang = jvLang === 'en' ? 'en-GB' : 'fr-CA';
-  u.rate = jvLang === 'en' ? 1.0 : 1.02; u.pitch = .82;
-  u.onstart = () => { $('#jvMic')?.classList.add('speaking'); jvState(jvLang === 'en' ? 'Speaking…' : 'Jarvis parle…'); };
+  u.rate = 1; u.pitch = 1;
+  u.onstart = () => { jvHumOn(); $('#jvMic')?.classList.add('speaking'); jvState(jvLang === 'en' ? 'Speaking…' : 'Jarvis parle…'); };
   u.onboundary = () => { window.__jvLevel = 1; };
-  u.onend = u.onerror = () => { $('#jvMic')?.classList.remove('speaking'); window.__jvLevel = 0; jvState(jvLang === 'en' ? 'Standing by · tap to talk' : 'En attente · touche pour parler'); };
-  speechSynthesis.speak(u);
+  u.onend = u.onerror = () => { jvHumOff(); $('#jvMic')?.classList.remove('speaking'); window.__jvLevel = 0; jvState(jvLang === 'en' ? 'Standing by · tap to talk' : 'En attente · touche pour parler'); };
+  jvChime(false); setTimeout(() => speechSynthesis.speak(u), 260);
 }
 (function decay(){ window.__jvLevel *= .9; requestAnimationFrame(decay); })();
-function jvUnlock(){ try { if (window.speechSynthesis && !jvUnlock.done){ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); jvUnlock.done = true; } } catch(e){} }
+function jvUnlock(){ jvAudio(); try { if (window.speechSynthesis && !jvUnlock.done){ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); jvUnlock.done = true; } } catch(e){} }
 function coreCtx(d){
   if (!d) return '';
   const L = d.last || {}, ago = ts => ts ? coreAgo(ts) : 'aucun signal';
@@ -2820,7 +2836,7 @@ function jvListen(){
   if (jvRec){ jvRec.stop(); return; }
   const r = new SR(); jvRec = r; r.lang = jvLang === 'en' ? 'en-GB' : 'fr-CA'; r.interimResults = true; r.maxAlternatives = 1;
   let fin = '';
-  r.onstart = () => { $('#jvMic')?.classList.add('listen'); jvState(jvLang === 'en' ? 'Listening…' : 'Jarvis écoute…'); };
+  r.onstart = () => { jvChime(true); $('#jvMic')?.classList.add('listen'); jvState(jvLang === 'en' ? 'Listening…' : 'Jarvis écoute…'); };
   r.onresult = e => { let t = ''; for (const res of e.results){ t += res[0].transcript; if (res.isFinal) fin = t; } $('#jvQ').value = t; window.__jvLevel = .6; };
   r.onerror = e => { jvState(e.error === 'not-allowed' ? (jvLang === 'en' ? 'Microphone blocked: allow it in the browser' : 'Micro bloqué : autorise-le dans le navigateur') : (jvLang === 'en' ? 'Did not catch that' : 'Je n\'ai pas compris'), ''); };
   r.onend = () => { jvRec = null; $('#jvMic')?.classList.remove('listen'); const q = fin || $('#jvQ').value; if (q.trim()) jvAsk(q); else jvState(jvLang === 'en' ? 'Standing by · tap to talk' : 'En attente · touche pour parler'); };
@@ -2833,7 +2849,7 @@ function jvPanel(){
     <div class="jv-body">
       <div class="jv-top"><b>J.A.R.V.I.S.</b><span id="jvState">${en ? 'Standing by · tap to talk' : 'En attente · touche pour parler'}</span>
         <span class="jv-sp"></span><div class="co-seg"><button data-jl="fr" class="${en ? '' : 'on'}">FR</button><button data-jl="en" class="${en ? 'on' : ''}">EN · UK</button></div>
-        <button class="jv-ic" id="jvMute" type="button" title="${en ? 'Mute' : 'Couper la voix'}">${jvMute ? '🔇' : '🔊'}</button><button class="jv-ic" id="jvRep" type="button" title="${en ? 'Repeat' : 'Répéter'}">↻</button></div>
+        <select class="jv-vsel" id="jvVoice" title="${en ? 'Voice' : 'Voix'}"></select><button class="jv-ic" id="jvMute" type="button" title="${en ? 'Mute' : 'Couper la voix'}">${jvMute ? '🔇' : '🔊'}</button><button class="jv-ic" id="jvRep" type="button" title="${en ? 'Repeat' : 'Répéter'}">↻</button></div>
       <div class="jv-you" id="jvYou"></div>
       <div class="jv-out" id="jvOut">${esc(jvLast || (en ? 'Good evening, sir. All systems are online. Ask me anything about the agency.' : 'Bonjour Monsieur. Tous les systèmes sont en ligne. Posez-moi une question sur l\'agence.'))}</div>
       <form class="jv-f" id="jvF"><input id="jvQ" autocomplete="off" placeholder="${en ? 'Ask Jarvis… (or tap the mic)' : 'Pose ta question à Jarvis… (ou touche le micro)'}"><button class="jv-go" type="submit">➤</button></form>
@@ -2845,7 +2861,10 @@ function jvBind(){
   $('#jvMute').onclick = () => { jvMute = !jvMute; if (jvMute && window.speechSynthesis) speechSynthesis.cancel(); $('#jvMute').textContent = jvMute ? '🔇' : '🔊'; };
   $('#jvRep').onclick = () => { jvUnlock(); jvSay($('#jvOut').textContent); };
   document.querySelectorAll('[data-jl]').forEach(b => b.onclick = () => { jvLang = b.dataset.jl; try { localStorage.setItem('jv-lang', jvLang); } catch(e){} coreRender(); });
-  if (window.speechSynthesis) speechSynthesis.onvoiceschanged = () => {};
+  const fill = () => { const sel = $('#jvVoice'); if (!sel) return; const vs = jvList(), cur = jvVoice();
+    sel.innerHTML = vs.length ? vs.map(v => `<option value="${esc(v.name)}"${cur && v.name === cur.name ? ' selected' : ''}>${esc(v.name.replace(/Microsoft |Google /, '').replace(/ - .*$/, ''))}</option>`).join('') : `<option>${jvLang === 'en' ? 'Default voice' : 'Voix par défaut'}</option>`; };
+  fill(); if (window.speechSynthesis) speechSynthesis.onvoiceschanged = fill;
+  $('#jvVoice').onchange = () => { try { localStorage.setItem('jv-voice-' + jvLang, $('#jvVoice').value); } catch(e){} jvUnlock(); jvSay(jvLang === 'en' ? 'At your service, sir.' : 'À votre service, Monsieur.'); };
 }
 
 function coreRender(){

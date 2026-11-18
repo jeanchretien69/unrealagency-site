@@ -121,7 +121,14 @@ function M.start()
   if state ~= "idle" then return end
   prev = hs.application.frontmostApplication()
   os.remove(DIR .. "/rec.pid"); os.remove(DIR .. "/in.wav")
-  hs.execute("open -g '" .. APP .. "'")
+  -- launch the mic app only once Ctrl/Option/Cmd are released: macOS shows a "Press Run to run this script"
+  -- window when an applet opens while Control is held (the shortcut is Ctrl+Option+Cmd+D)
+  local tries = 0
+  hs.timer.waitUntil(function()
+    tries = tries + 1
+    local m = hs.eventtap.checkKeyboardModifiers()
+    return tries > 40 or not (m.ctrl or m.alt or m.cmd)
+  end, function() hs.execute("open -g '" .. APP .. "'") end, 0.03)
   state, t0 = "rec", os.time()
   hs.sound.getByName("Tink"):play()
   local function upd()

@@ -1,7 +1,7 @@
 # unrealagency.ai — Home version 1 (Nami hero, approved by Gael on 2026-11-18)
 
 This version of the Nami hero on the homepage is the reference: smooth on PC and phone, no flash, no ghost arm, no stop mid-kiss.
-Git tag: `home-v1`. To see or restore it: `git checkout home-v1 -- index.html live/` (or open the tag on GitHub).
+Saved on GitHub as the branch `home-v1` (never changed afterwards). To restore the hero: `git checkout origin/home-v1 -- index.html live/`.
 
 ## The files (all in `live/`)
 

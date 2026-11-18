@@ -386,6 +386,11 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
   /* cut: the auto kiss starts on the exact photo pose, so it appears at once (a fade showed her arm twice); base: the breathing loop is always fully opaque under the clips, so nothing behind her ever shows through */
   .head .nv.cut,.head .nv.base{transition:none}
   .head .nv.on{opacity:1}
+  /* PC: Nami is drawn into one canvas (photo-free), so Chrome/Safari on a Mac never switch colour path between the videos (that made a tiny colour flash) */
+  .head .nvc{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;border-radius:inherit;opacity:0;transition:opacity .35s ease}
+  .head .nvc.on{opacity:1}
+  .head.pc #face{visibility:hidden}
+  .head.pc.nofx #face{visibility:visible}
   .head img[hidden]{display:none}
   :root[data-mode="dark"] .head .nvw{overflow:hidden}
   :root[data-mode="dark"] .head img,:root[data-mode="dark"] .head .nvw{-webkit-mask-image:none;mask-image:none;border-radius:32px}
@@ -856,6 +861,27 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
     /* the still photo never disappears: once a video covers it, it becomes a still of the breathing pose, so if a browser ever skips drawing a video frame you see her, not the page behind */
     function cover(){ if (face.dataset.under) return; face.dataset.under = '1'; face.src = 'live/nami_under.jpg?v=1'; }
     var wrap = document.getElementById('nvw'); wrap.insertBefore(v, wrap.firstChild); /* breathing loop sits under the kiss clip already in the page */
+    /* PC only (mouse + hover; phones keep the plain videos, they are perfect): everything is drawn into one canvas.
+       The still photo is not used on PC: she fades in from the page on the kiss clip's own first frame, so no photo-to-video colour change.
+       The canvas is never cleared, so if a video ever has no frame to give, the last good picture stays. ?mode=video turns it off. */
+    var PC = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches && !/[?&]mode=video/.test(location.search);
+    var kissStarted = false;
+    if (PC) (function(){
+      head.classList.add('pc');
+      var cv = document.createElement('canvas'); cv.className = 'nvc'; cv.width = 1080; cv.height = 1440; head.appendChild(cv);
+      var g = cv.getContext('2d'), kissEl = document.getElementById('kissAuto');
+      setTimeout(function(){ if (!cv.classList.contains('on')) head.classList.add('nofx'); }, 5000); /* nothing drawable after 5 s: show the photo */
+      function draw(){
+        var vs = wrap.querySelectorAll('video'), drew = false;
+        for (var i = 0; i < vs.length; i++){ var a = vs[i];
+          var o = (a === kissEl && !kissStarted) ? 1 : +getComputedStyle(a).opacity;
+          if (o > 0.001 && a.readyState >= 2){ g.globalAlpha = o; g.drawImage(a, 0, 0, 1080, 1440); drew = true; } }
+        g.globalAlpha = 1;
+        if (drew && !cv.classList.contains('on')) cv.classList.add('on');
+        requestAnimationFrame(draw);
+      }
+      requestAnimationFrame(draw);
+    })();
     v.addEventListener('playing', function(){ v.classList.add('on'); setTimeout(function(){ v.classList.add('base'); cover(); }, 400); }, { once:true });
     /* Action clips (kiss, captain hat): each covers the breathing loop completely, then hands back to it while both are moving */
     (function(){
@@ -887,7 +913,7 @@ if("scrollRestoration" in history)history.scrollRestoration="manual";if(!locatio
         var go = function(){ loadLoop(false); act.classList.add('on');
           /* the opening kiss fades in over the still photo (same picture as its first frame, during its still lead-in); the loop is only put under it once the fade is done */
           var under = function(){ v.classList.add('base', 'on'); cover(); };
-          if (m === 'kissauto') setTimeout(under, FADE + 40); else under(); var park = function(){ if (!over){ v.pause(); try { v.currentTime = Math.max(0, HAND[m] - 0.10); } catch(e){} } };
+          if (m === 'kissauto'){ kissStarted = true; if (PC) act.classList.add('cut'); setTimeout(under, FADE + 40); } else under(); var park = function(){ if (!over){ v.pause(); try { v.currentTime = Math.max(0, HAND[m] - 0.10); } catch(e){} } };
           setTimeout(park, FADE + 60); v.addEventListener('loadedmetadata', park, { once:true }); requestAnimationFrame(watch); };
         var p = act.play(); if (p && p.then) p.then(go).catch(function(){ busy = false; lock(false); if (m === 'kissauto') loadLoop(true); }); else go(); }
       btns.forEach(function(b){ b.addEventListener('click', function(){ start(b.dataset.m); }); });

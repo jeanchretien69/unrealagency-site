@@ -72,19 +72,17 @@ endReview = function()
   if state == "review" then state = "idle"; hide() end
 end
 function M.review()
+  if reviewTimer then reviewTimer:stop() end
+  if reviewTap then reviewTap:stop() end
+  if reviewFollow then reviewFollow:stop() end
   state = "review"
+  -- the green bubble only shows for a few seconds, then hides; the back button still sends for 2 minutes
   show("✏️  Fix your text · back button = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 })
-  reviewTimer = hs.timer.doAfter(300, endReview)
-  -- the green bubble follows you to whichever screen your mouse is on
-  local lastScr = hs.mouse.getCurrentScreen()
-  reviewFollow = hs.timer.doEvery(0.7, function()
-    if state ~= "review" then return end
-    local s2 = hs.mouse.getCurrentScreen()
-    if s2 and lastScr and s2:id() ~= lastScr:id() then lastScr = s2; show("✏️  Fix your text · back button = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 }) end
-  end)
+  reviewFollow = hs.timer.doAfter(6, function() if state == "review" then hide() end end)
+  reviewTimer = hs.timer.doAfter(120, endReview)
   -- you pressed Enter yourself in Claude: done, the next button press starts a new message
   reviewTap = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(e)
-    if e:getKeyCode() == 36 then local f = hs.application.frontmostApplication(); if f and f:bundleID() == CLAUDE then hs.timer.doAfter(0, endReview) end end
+    if e:getKeyCode() == 36 or e:getKeyCode() == 76 then local f = hs.application.frontmostApplication(); if f and f:bundleID() == CLAUDE then hs.timer.doAfter(0, endReview) end end
     return false
   end):start()
 end

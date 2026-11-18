@@ -492,6 +492,36 @@
   .jv-f input{flex:1;background:#0c0c10;border:1px solid #23323d;color:#fff;border-radius:999px;padding:10px 16px;font-size:14px}
   .jv-go{width:42px;border-radius:50%;border:0;background:linear-gradient(135deg,#5ed0ff,#2a8fc4);color:#04121c;font-weight:800;cursor:pointer}
   @media (max-width:700px){ .jv{flex-direction:column;align-items:stretch} .jv-orb{align-self:center} }
+  /* full-screen Unreal Autopilot */
+  body.core-open{overflow:hidden}
+  body.core-open #askBtn,body.core-open #askP{display:none!important}
+  .core.core-fs{position:fixed;inset:0;z-index:300;margin:0;border-radius:0;padding:0;background:#08080b}
+  .co-uni.fs{position:absolute;inset:0;margin:0;border:0;border-radius:0;display:block}
+  .co-uni.fs .co-ucv{width:100%;height:100%;aspect-ratio:auto;max-height:none}
+  .co-uhud.leg{display:flex;gap:14px;flex-wrap:wrap}
+  .co-uhud.leg span{display:flex;align-items:center;gap:6px}
+  .co-uhud.leg i{display:inline-block;width:16px;height:4px;border-radius:3px}
+  .co-uhud.leg i.dash{background:repeating-linear-gradient(90deg,#9aa4c8 0 3px,transparent 3px 6px)}
+  .co-fsbtns{position:absolute;right:20px;bottom:18px;z-index:4;display:flex;gap:8px}
+  .co-fsb{height:38px;min-width:38px;padding:0 14px;border-radius:999px;border:1px solid #33333d;background:rgba(16,16,20,.85);color:#fff;font-weight:700;font-size:13px;cursor:pointer;backdrop-filter:blur(6px)}
+  .co-fsb.exit{border-color:#7a2a4a;color:#ffb3d1}
+  .co-fsb:hover{border-color:#ff5fa2}
+  .ap{position:absolute;left:0;right:0;margin:0 auto;bottom:16px;z-index:5;width:min(640px,calc(100vw - 420px))}
+  .ap-out{position:fixed;right:20px;bottom:70px;width:min(380px,30vw);background:rgba(10,12,18,.88);border:1px solid #1f3a4d;border-radius:18px;padding:12px 16px;margin-bottom:8px;backdrop-filter:blur(8px);max-height:30vh;overflow:auto}
+  .ap-bar{display:flex;align-items:center;gap:10px;background:rgba(10,12,18,.88);border:1px solid #1f3a4d;border-radius:999px;padding:6px 8px 6px 6px;backdrop-filter:blur(8px)}
+  .ap .jv-orb{width:46px;height:46px}
+  .ap .jv-orb span{font-size:18px}
+  .ap .jv-orb i{inset:-4px}.ap .jv-orb i.r2{inset:-8px}.ap .jv-orb i.r3{inset:4px}
+  .ap .jv-f{flex:1;margin:0}
+  .ap .jv-f input{background:transparent;border:0;padding:10px 6px}
+  .ap .jv-go{width:38px;height:38px;flex:none}
+  .ap-tools{display:flex;align-items:center;gap:6px}
+  .ap-tools .co-seg button{padding:5px 9px;font-size:11.5px}
+  .ap-tools .jv-vsel{max-width:120px}
+  .ap-state{text-align:center;margin-top:6px;font-family:ui-monospace,"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.08em;color:#6f8597}
+  .ap-state b{color:#9be6ff;letter-spacing:.16em}
+  @media (max-width:1100px){ .ap{width:min(560px,calc(100vw - 40px));bottom:66px} .ap-out{position:static;width:auto} }
+  @media (max-width:900px){ .co-uni.fs .co-uhud.tl,.co-uni.fs .co-uhud.leg{display:none} .co-uni.fs .co-uhud.tr{position:absolute;right:14px;top:14px;padding:0;text-align:right;font-size:0} .co-uni.fs .co-uhud.tr .live{font-size:10px} .ap-tools .co-seg,.ap-state{display:none} .ap{bottom:10px} .co-fsbtns{top:14px;left:14px;right:auto;bottom:auto} .ap{width:calc(100vw - 20px);bottom:10px} .ap-tools .jv-vsel,.ap-tools #jvRep{display:none} }
   /* version B */
   .cb-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
   .cb-head .st{display:flex;align-items:center;gap:8px;background:#0f1f16;border:1px solid #2e6b48;color:var(--k-green);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600}
@@ -571,7 +601,7 @@
     <div class="app">
       <aside class="side" id="side">
         <div class="grp" data-g="me"><div class="gh" role="button" tabindex="0" aria-expanded="true">Me<i>▾</i></div><div class="gb">
-          <button data-tab="core" class="adm" hidden>🧠 AI Core</button>
+          <button data-tab="core" class="adm" hidden>🚀 Unreal Autopilot</button>
           <button data-tab="todo" class="adm" hidden>🎯 My to-do</button>
           <button data-tab="plan" class="adm" hidden>📋 My plan</button>
         </div></div>
@@ -725,7 +755,7 @@ async function boot(session){
   if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }
   badgesStart(); if (can('ask')) askInit();
   const h = location.hash.slice(1);
-  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'core' : first.dataset.tab));
+  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'todo' : first.dataset.tab));
 }
 
 // little red numbers in the menu: unread texts, and new accounts waiting for access
@@ -806,7 +836,7 @@ sb.auth.onAuthStateChange((ev, session) => {
 });
 
 document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.dataset.href ? (location.href = b.dataset.href) : show(b.dataset.tab));
-const titles = { core:['AI Core','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 /* menu sections: a section with nothing visible inside is hidden; open/closed is remembered; the active page's section always opens */
 function sideGroups(){
@@ -822,6 +852,7 @@ function sideGroups(){
   });
 }
 function show(t){
+  if (t !== 'core') document.body.classList.remove('core-open');
   if (t !== 'time') timeStop();
   tab = t; history.replaceState(null, '', '#' + t); badges();
   document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'core');
@@ -2559,11 +2590,11 @@ function coreUniverse(cv, d, tok, tip){
   const c = d.counts;
   const SRC = [ ['Messages SMS', c.sms_messages, 'OpenRouter'], ['Actions X', c.x_events, 'AdsPower'], ['Signaux X', c.x_beats, 'AdsPower'], ['Temps Mac', c.focus_beats + c.aw_events, 'Mac'],
     ['To-do', c.my_todos, 'Supabase'], ['Réponses IA', c.ai_log, 'OpenRouter'], ['Contenu', c.photos + c.docs + c.quotes, 'Higgsfield'], ['Écran', c.screentime_daily, 'Mac'] ];
-  let W = 0, H = 0, nodes = [], links = [], hover = null, mx = -1, my = -1, t0 = performance.now();
+  let RX = 0, RY = 0, W = 0, H = 0, nodes = [], links = [], hover = null, mx = -1, my = -1, t0 = performance.now();
   const P = Array.from({ length:520 }, () => { const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = Math.cbrt(Math.random()); return { x:r * Math.sqrt(1 - u * u) * Math.cos(th), y:r * u, z:r * Math.sqrt(1 - u * u) * Math.sin(th), c:['#ffffff','#9fd3ff','#ffb3d1','#ffd49a','#b9a7ff'][(Math.random() * 5) | 0], s:Math.random() * 1.5 + .4 }; });
   function layout(){
     W = cv.clientWidth; H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr;
-    const cx = W / 2, cy = H / 2, small = W < 640, rx = W * (small ? .43 : .44), ry = H * (small ? .42 : .41);
+    const fs = !!cv.closest('.fs'), cx = W / 2, cy = fs ? H * .45 : H / 2, small = W < 640, rx = W * (small ? .43 : .44), ry = H * (fs ? (small ? .34 : .35) : small ? .42 : .41); RX = rx; RY = ry;
     nodes = []; links = [];
     const core = { k:'core', x:cx, y:cy, r:Math.min(W, H) * (small ? .15 : .14) }; nodes.push(core);
     SRC.forEach((s, i) => { const a = -Math.PI / 2 + (i + .5) * 2 * Math.PI / SRC.length; nodes.push({ k:'src', id:s[0], n:s[1], to:s[2], x:cx + Math.cos(a) * rx * .46, y:cy + Math.sin(a) * ry * .5, col:'#5ed0ff', r:small ? 4 : 5 }); });
@@ -2590,7 +2621,7 @@ function coreUniverse(cv, d, tok, tip){
     for (let x = (W / 2) % 40; x < W; x += 40){ g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
     for (let y = (H / 2) % 40; y < H; y += 40){ g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
     [[.46, .5, 'rgba(94,208,255,.14)', [2, 6]], [.72, .74, 'rgba(255,255,255,.07)', [1, 7]], [1, 1, 'rgba(255,95,162,.12)', [3, 9]]].forEach((r, i) => {
-      g.save(); g.setLineDash(r[3]); g.lineDashOffset = -t * (i % 2 ? 8 : -6); g.strokeStyle = r[2]; g.beginPath(); g.ellipse(core.x, core.y, W * (small ? .43 : .44) * r[0], H * (small ? .42 : .41) * r[1], 0, 0, Math.PI * 2); g.stroke(); g.restore(); });
+      g.save(); g.setLineDash(r[3]); g.lineDashOffset = -t * (i % 2 ? 8 : -6); g.strokeStyle = r[2]; g.beginPath(); g.ellipse(core.x, core.y, RX * r[0], RY * r[1], 0, 0, Math.PI * 2); g.stroke(); g.restore(); });
     const hot = hover ? new Set(links.filter(l => l.a === hover || l.b === hover).flatMap(l => [l.a, l.b])) : null;
     /* links */
     links.forEach(l => {
@@ -2796,9 +2827,9 @@ function jvSay(text){
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text), v = jvVoice(); if (v){ u.voice = v; u.lang = v.lang; } else u.lang = jvLang === 'en' ? 'en-GB' : 'fr-CA';
   u.rate = 1; u.pitch = 1;
-  u.onstart = () => { jvHumOn(); $('#jvMic')?.classList.add('speaking'); jvState(jvLang === 'en' ? 'Speaking…' : 'Jarvis parle…'); };
+  u.onstart = () => { jvHumOn(); $('#jvMic')?.classList.add('speaking'); jvState(jvLang === 'en' ? 'Speaking…' : 'Je parle…'); };
   u.onboundary = () => { window.__jvLevel = 1; };
-  u.onend = u.onerror = () => { jvHumOff(); $('#jvMic')?.classList.remove('speaking'); window.__jvLevel = 0; jvState(jvLang === 'en' ? 'Standing by · tap to talk' : 'En attente · touche pour parler'); };
+  u.onend = u.onerror = () => { jvHumOff(); $('#jvMic')?.classList.remove('speaking'); window.__jvLevel = 0; jvState(jvLang === 'en' ? 'Standing by · tap the mic' : 'En attente · touche le micro'); };
   jvChime(false); setTimeout(() => speechSynthesis.speak(u), 260);
 }
 (function decay(){ window.__jvLevel *= .9; requestAnimationFrame(decay); })();
@@ -2819,14 +2850,14 @@ function coreCtx(d){
 }
 async function jvAsk(q){
   q = (q || '').trim(); if (!q || jvBusy) return;
-  jvBusy = true; jvUnlock(); $('#jvQ').value = ''; $('#jvYou').textContent = q; $('#jvOut').textContent = '…'; jvState(jvLang === 'en' ? 'Thinking…' : 'Jarvis réfléchit…', 'think');
+  jvBusy = true; jvUnlock(); $('#jvQ').value = ''; $('#apOut').hidden = false; $('#jvYou').textContent = q; $('#jvOut').textContent = '…'; jvState(jvLang === 'en' ? 'Thinking…' : 'Réflexion…', 'think');
   const { data, error } = await sb.functions.invoke('jarvis', { body:{ q, lang:jvLang, ctx:coreCtx(coreD), history:jvHist } });
   jvBusy = false; $('#jvMic')?.classList.remove('think');
   const a = data?.a || (jvLang === 'en' ? 'My apologies, sir, the link seems busy. Try again in a moment.' : 'Mes excuses, Monsieur, la liaison semble occupée. Réessayez dans un instant.');
-  jvLast = a; $('#jvOut').textContent = a;
+  jvLast = a; $('#jvOut').textContent = a; $('#apOut').hidden = false;
   if (data?.a){ jvHist.push({ role:'user', content:q }, { role:'assistant', content:a }); jvHist = jvHist.slice(-8); }
   jvSay(a);
-  if (!data?.a) jvState(jvLang === 'en' ? 'Standing by · tap to talk' : 'En attente · touche pour parler');
+  if (!data?.a) jvState(jvLang === 'en' ? 'Standing by · tap the mic' : 'En attente · touche le micro');
 }
 function jvListen(){
   jvUnlock();
@@ -2836,24 +2867,24 @@ function jvListen(){
   if (jvRec){ jvRec.stop(); return; }
   const r = new SR(); jvRec = r; r.lang = jvLang === 'en' ? 'en-GB' : 'fr-CA'; r.interimResults = true; r.maxAlternatives = 1;
   let fin = '';
-  r.onstart = () => { jvChime(true); $('#jvMic')?.classList.add('listen'); jvState(jvLang === 'en' ? 'Listening…' : 'Jarvis écoute…'); };
+  r.onstart = () => { jvChime(true); $('#jvMic')?.classList.add('listen'); jvState(jvLang === 'en' ? 'Listening…' : 'J\'écoute…'); };
   r.onresult = e => { let t = ''; for (const res of e.results){ t += res[0].transcript; if (res.isFinal) fin = t; } $('#jvQ').value = t; window.__jvLevel = .6; };
   r.onerror = e => { jvState(e.error === 'not-allowed' ? (jvLang === 'en' ? 'Microphone blocked: allow it in the browser' : 'Micro bloqué : autorise-le dans le navigateur') : (jvLang === 'en' ? 'Did not catch that' : 'Je n\'ai pas compris'), ''); };
-  r.onend = () => { jvRec = null; $('#jvMic')?.classList.remove('listen'); const q = fin || $('#jvQ').value; if (q.trim()) jvAsk(q); else jvState(jvLang === 'en' ? 'Standing by · tap to talk' : 'En attente · touche pour parler'); };
+  r.onend = () => { jvRec = null; $('#jvMic')?.classList.remove('listen'); const q = fin || $('#jvQ').value; if (q.trim()) jvAsk(q); else jvState(jvLang === 'en' ? 'Standing by · tap the mic' : 'En attente · touche le micro'); };
   r.start();
 }
 function jvPanel(){
   const en = jvLang === 'en';
-  return `<section class="jv">
-    <button class="jv-orb" id="jvMic" type="button" aria-label="${en ? 'Talk to Jarvis' : 'Parler à Jarvis'}"><i class="r1"></i><i class="r2"></i><i class="r3"></i><span>🎙</span></button>
-    <div class="jv-body">
-      <div class="jv-top"><b>J.A.R.V.I.S.</b><span id="jvState">${en ? 'Standing by · tap to talk' : 'En attente · touche pour parler'}</span>
-        <span class="jv-sp"></span><div class="co-seg"><button data-jl="fr" class="${en ? '' : 'on'}">FR</button><button data-jl="en" class="${en ? 'on' : ''}">EN · UK</button></div>
+  return `<section class="ap" id="ap">
+    <div class="ap-out"${jvLast ? '' : ' hidden'} id="apOut"><div class="jv-you" id="jvYou"></div><div class="jv-out" id="jvOut">${esc(jvLast)}</div></div>
+    <div class="ap-bar">
+      <button class="jv-orb" id="jvMic" type="button" aria-label="${en ? 'Talk to Unreal Autopilot' : 'Parler à Unreal Autopilot'}"><i class="r1"></i><i class="r2"></i><i class="r3"></i><span>🎙</span></button>
+      <form class="jv-f" id="jvF"><input id="jvQ" autocomplete="off" placeholder="${en ? 'Ask Unreal Autopilot…' : 'Demande à Unreal Autopilot…'}"><button class="jv-go" type="submit">➤</button></form>
+      <div class="ap-tools"><div class="co-seg"><button data-jl="fr" class="${en ? '' : 'on'}">FR</button><button data-jl="en" class="${en ? 'on' : ''}">EN</button></div>
         <select class="jv-vsel" id="jvVoice" title="${en ? 'Voice' : 'Voix'}"></select><button class="jv-ic" id="jvMute" type="button" title="${en ? 'Mute' : 'Couper la voix'}">${jvMute ? '🔇' : '🔊'}</button><button class="jv-ic" id="jvRep" type="button" title="${en ? 'Repeat' : 'Répéter'}">↻</button></div>
-      <div class="jv-you" id="jvYou"></div>
-      <div class="jv-out" id="jvOut">${esc(jvLast || (en ? 'Good evening, sir. All systems are online. Ask me anything about the agency.' : 'Bonjour Monsieur. Tous les systèmes sont en ligne. Posez-moi une question sur l\'agence.'))}</div>
-      <form class="jv-f" id="jvF"><input id="jvQ" autocomplete="off" placeholder="${en ? 'Ask Jarvis… (or tap the mic)' : 'Pose ta question à Jarvis… (ou touche le micro)'}"><button class="jv-go" type="submit">➤</button></form>
-    </div></section>`;
+    </div>
+    <div class="ap-state"><b>UNREAL AUTOPILOT</b> · <span id="jvState">${en ? 'Standing by · tap the mic' : 'En attente · touche le micro'}</span></div>
+  </section>`;
 }
 function jvBind(){
   $('#jvMic').onclick = jvListen;
@@ -2867,21 +2898,30 @@ function jvBind(){
   $('#jvVoice').onchange = () => { try { localStorage.setItem('jv-voice-' + jvLang, $('#jvVoice').value); } catch(e){} jvUnlock(); jvSay(jvLang === 'en' ? 'At your service, sir.' : 'À votre service, Monsieur.'); };
 }
 
+function coreClose(){ document.body.classList.remove('core-open'); try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){} if (window.speechSynthesis) speechSynthesis.cancel(); show('todo'); }
 function coreRender(){
   const v = $('#view'); if (!coreD) return;
-  coreTok++;
-  v.innerHTML = `<div class="core"><div class="co-top"><h2>🧠 AI Core</h2><div class="co-seg"><button data-cv="a" class="${coreVer === 'a' ? 'on' : ''}">A · Copie</button><button data-cv="b" class="${coreVer === 'b' ? 'on' : ''}">B · Optimisée</button></div></div>${jvPanel()}${coreVer === 'a' ? coreVersionA(coreD) : coreVersionB(coreD)}</div>`;
+  coreTok++; document.body.classList.add('core-open');
+  const d = coreD;
+  v.innerHTML = `<div class="core core-fs">
+    <section class="co-card co-uni fs">
+      <div class="co-uhud tl"><div class="co-eyebrow"><i></i>Unreal Autopilot · Tes données</div>
+        <div class="co-ctl"><span>Modèles</span><div class="co-pills"><span class="co-pill gold on">☁ Cloud</span><span class="co-pill">⚙ Local</span></div>
+          <span>Connecteurs</span><div class="co-pills"><span class="co-pill green on">● On</span><span class="co-pill">🔒 Locked</span></div></div></div>
+      <div class="co-uhud tr"><span class="live">LIVE</span><br><b>${CORE_MODELS.length}</b> modèles<br><b>${UNI_SERV.length}</b> services<br><b>8</b> sources de données<br><b>${(8 * 2 + CORE_MODELS.length * 2 + UNI_SERV.length + UNI_X.length)}</b> liens actifs</div>
+      <canvas class="co-ucv"></canvas><div class="co-utip" hidden></div>
+      <div class="co-uhud bl leg"><span><i style="background:#5ed0ff"></i>données</span><span><i style="background:linear-gradient(90deg,#d9774f,#4aa3e6,#76b900)"></i>modèles</span><span><i style="background:#2c2c35;border:1px solid #555"></i>services</span><span><i class="dash"></i>liens</span></div>
+      <div class="co-fsbtns"><button type="button" class="co-fsb" id="coFull" title="Plein écran">⛶</button><button type="button" class="co-fsb exit" id="coExit">Exit ✕</button></div>
+    </section>
+    ${jvPanel()}
+  </div>`;
   jvBind();
-  v.querySelectorAll('[data-cv]').forEach(b => b.onclick = () => { coreVer = b.dataset.cv; try { localStorage.setItem('core-ver', coreVer); } catch(e){} coreRender(); });
-  v.querySelectorAll('[data-cm]').forEach(b => b.onclick = () => { coreMode = b.dataset.cm; coreRender(); });
-  v.querySelectorAll('[data-bt]').forEach(b => b.onclick = () => { coreBizTab = b.dataset.bt; coreRender(); });
-  const t = v.querySelector('#coTarget');
-  if (t) t.onchange = async () => { const val = String(Math.max(0, Number(t.value) || 0)); const { error } = await sb.from('settings').upsert({ key:'revenue_target', value:val }); if (error) return toast(error.message); settings.revenue_target = val; coreD.target = Number(val); coreRender(); };
+  $('#coExit').onclick = coreClose;
+  $('#coFull').onclick = () => { try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch(e){} };
   const tok = coreTok;
-  v.querySelectorAll('.co-stage canvas').forEach(c => coreParticles(c, 420, tok));
-  v.querySelectorAll('canvas.co-mini').forEach(c => coreParticles(c, 160, tok));
-  v.querySelectorAll('canvas.co-ucv').forEach(c => coreUniverse(c, coreD, tok, c.parentNode.querySelector('.co-utip')));
+  v.querySelectorAll('canvas.co-ucv').forEach(c => coreUniverse(c, d, tok, c.parentNode.querySelector('.co-utip')));
 }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('core-open') && !document.fullscreenElement) coreClose(); });
 async function coreView(){
   try { coreD = await coreData(); coreRender(); }
   catch (e) { $('#view').innerHTML = `<div class="msg err">${esc((e && e.message) || String(e))}</div>`; }

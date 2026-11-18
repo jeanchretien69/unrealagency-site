@@ -651,16 +651,17 @@ async function todoView(){
   const v = $('#view');
   const { data, error } = await sb.from('my_todos').select('*').order('sort').order('created_at');
   if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
-  const today = new Date().toLocaleDateString('en-CA', { timeZone:'Asia/Bangkok' });
-  const dayOf = d => d ? new Date(d).toLocaleDateString('en-CA', { timeZone:'Asia/Bangkok' }) : '';
+  const today = workday();
+  const dayOf = d => d ? workday(new Date(d).getTime()) : '';
   const open = data.filter(x => !x.done), doneToday = data.filter(x => x.done && dayOf(x.done_at) === today);
   const auto = doneToday.filter(x => x.done_by !== 'me').length;
   const row = x => {
-    const a = x.auto && x.auto.type === 'aw' ? x.auto : null;
-    const pct = a ? Math.min(100, Math.round(100 * (x.progress || 0) / (a.minutes || 1))) : 0;
+    const a = x.auto || null;
+    const pct = !a ? 0 : a.type === 'aw' ? Math.min(100, Math.round(100 * (x.progress || 0) / (a.minutes || 1))) : Math.min(100, Math.round(x.progress || 0));
+    const atag = !a ? '' : a.type === 'aw' ? `⚡ auto · ${Math.round(x.progress||0)}/${a.minutes} min on ${esc(a.label || a.match)}` : a.type === 'x' ? `⚡ auto · ${pct}% · X tracker @${esc(a.account)}` : `⚡ auto · ${pct}% · ${esc(a.n)} ${esc(a.table)} today`;
     return `<div class="td-row" data-row="${x.id}"><input type="checkbox" data-done="${x.id}" aria-label="Done: ${esc(x.title)}">
       <div class="td-main"><span class="td-t">${esc(x.title)}</span>${x.note ? `<span class="td-n">${esc(x.note)}</span>` : ''}
-        <div class="td-tags"><span class="td-tag">${esc(x.area)}</span>${x.daily ? '<span class="td-tag">every day</span>' : ''}${a ? `<span class="td-tag auto">⚡ auto · ${Math.round(x.progress||0)}/${a.minutes} min on ${esc(a.label || a.match)}</span>` : ''}</div>
+        <div class="td-tags"><span class="td-tag">${esc(x.area)}</span>${x.daily ? '<span class="td-tag">every day</span>' : ''}${a ? `<span class="td-tag auto">${atag}</span>` : ''}</div>
         ${a ? `<div class="td-prog"><i style="width:${pct}%"></i></div>` : ''}</div>
       <div class="td-act"><select data-move="${x.id}" aria-label="Move">${TD_B.map(b => `<option value="${b[0]}" ${b[0]===x.bucket?'selected':''}>${b[1]}</option>`).join('')}</select><button class="btn ghost sm" data-del="${x.id}" aria-label="Delete">✕</button></div></div>`;
   };

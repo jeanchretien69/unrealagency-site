@@ -610,7 +610,7 @@
     .mnav .mi{font-size:18px;line-height:1}
     .mnav .mt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .mnav .mc{color:var(--muted);font-size:12px;font-weight:700}
-    .side{position:fixed;top:0;left:0;bottom:0;z-index:80;width:min(320px,86vw);max-height:none;flex-direction:column;flex-wrap:nowrap;overflow-y:auto;background:var(--card);border-right:1px solid var(--line);padding:calc(16px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));transform:translateX(-105%);transition:transform .22s ease;box-shadow:12px 0 40px rgba(0,0,0,.35)}
+    .side{position:fixed;top:0;left:0;bottom:0;z-index:80;width:min(320px,86vw);align-self:stretch;height:100vh;height:100dvh;max-height:100dvh;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;flex-direction:column;flex-wrap:nowrap;overflow-y:auto;background:var(--card);border-right:1px solid var(--line);padding:calc(16px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));transform:translateX(-105%);transition:transform .22s ease;box-shadow:12px 0 40px rgba(0,0,0,.35)}
     body.mopen .side{transform:none}
     .side .grp,.side .gb{flex-direction:column;flex-wrap:nowrap}
     .side .gh{display:flex}

@@ -333,6 +333,13 @@
   .askp form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
   .askp textarea{flex:1;resize:none;min-height:42px;max-height:120px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--surface);font:inherit;font-size:14px}
   .askp .hint{font-size:11.5px;color:var(--muted);padding:0 14px 8px}
+  .askp #askAtt{padding:0 12px;font-size:17px}
+  .askimgs{display:flex;gap:8px;padding:8px 12px 0;flex-wrap:wrap}
+  .askimgs .ai{position:relative;width:58px;height:58px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+  .askimgs .ai img{width:100%;height:100%;object-fit:cover}
+  .askimgs .ai button{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:11px;line-height:20px;padding:0;cursor:pointer}
+  .askp .m img{display:block;max-width:100%;max-height:180px;border-radius:10px;margin-top:6px}
+  .askp.drop{outline:3px dashed var(--pink);outline-offset:-6px}
 
   .td-sec{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 6px}
   .td-sec h3{margin:0;font-family:var(--display);font-size:15px}
@@ -441,7 +448,8 @@
 <button class="askbtn" id="askBtn" hidden>💬 Ask</button>
 <div class="askp" id="askP" hidden><header><b>💬 Ask Unreal</b><span><button class="btn ghost sm" id="askNew">New</button> <button class="btn ghost sm" id="askX">✕</button></span></header>
   <div class="msgs" id="askMsgs"></div><div class="hint">Questions about your tasks only. Never share passwords or codes here.</div>
-  <form id="askF"><textarea id="askQ" rows="1" placeholder="Ask anything about your tasks…"></textarea><button class="btn" id="askGo">Send</button></form></div>
+  <div class="askimgs" id="askImgs" hidden></div>
+  <form id="askF"><button type="button" class="btn ghost" id="askAtt" title="Add a screenshot" aria-label="Add a screenshot">📎</button><input type="file" id="askFile" accept="image/*" multiple hidden><textarea id="askQ" rows="1" placeholder="Ask, or paste a screenshot (Ctrl+V)…"></textarea><button class="btn" id="askGo">Send</button></form></div>
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const sb = createClient('https://ljhpdqttcxwgufcejfor.supabase.co', 'sb_publishable_Nu7S4SnvuTFRg1ODn4VVrA_hCH5X1wY');
@@ -1764,22 +1772,43 @@ async function twitterView(){
 }
 
 // ---------- Ask Unreal (floating helper, sees only what this person can already see) ----------
-let askHist = [];
-function askAdd(cls, t){ const m = $('#askMsgs'); const b = document.createElement('div'); b.className = 'm ' + cls; b.textContent = t; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; }
-function askHello(){ $('#askMsgs').innerHTML = ''; askHist = []; askAdd('a', `Hey ${(me.full_name || '').split(' ')[0] || 'there'} 👋 Ask me how to do a task, or "what's still missing today?"`); }
+let askHist = [], askPics = [];
+function askAdd(cls, t, pics){ const m = $('#askMsgs'); const b = document.createElement('div'); b.className = 'm ' + cls; b.textContent = t; (pics || []).forEach(u => { const i = document.createElement('img'); i.src = u; i.alt = 'screenshot'; b.appendChild(i); }); m.appendChild(b); m.scrollTop = m.scrollHeight; return b; }
+function askHello(){ $('#askMsgs').innerHTML = ''; askHist = []; askPics = []; askPicsShow(); askAdd('a', `Hey ${(me.full_name || '').split(' ')[0] || 'there'} 👋 Ask me how to do a task, or "what's still missing today?" You can paste a screenshot (Ctrl+V) or click 📎.`); }
+// screenshots: shrink to max 1400px JPEG so they upload fast, max 3 per question
+function askShrink(file){ return new Promise((ok, no) => { const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => { const k = Math.min(1, 1400 / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); ok(c.toDataURL('image/jpeg', 0.85)); }; im.onerror = no; im.src = r.result; }; r.onerror = no; r.readAsDataURL(file); }); }
+async function askAddFiles(files){
+  for (const f of [...files].filter(f => f && f.type && f.type.startsWith('image/'))){
+    if (askPics.length >= 3){ toast('Max 3 screenshots per question'); break; }
+    try { askPics.push(await askShrink(f)); } catch(e){ toast('Could not read that image'); }
+  }
+  askPicsShow();
+}
+function askPicsShow(){
+  const w = $('#askImgs'); if (!w) return; w.hidden = !askPics.length;
+  w.innerHTML = askPics.map((u, i) => `<div class="ai"><img src="${u}" alt="screenshot ${i + 1}"><button type="button" data-rm="${i}" aria-label="Remove screenshot">✕</button></div>`).join('');
+  w.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { askPics.splice(+b.dataset.rm, 1); askPicsShow(); });
+}
 function askInit(){
   const btn = $('#askBtn'); if (!btn || btn.dataset.on) return; btn.dataset.on = '1'; btn.hidden = false;
   btn.onclick = () => { const p = $('#askP'); p.hidden = !p.hidden; if (!p.hidden){ if (!$('#askMsgs').children.length) askHello(); $('#askQ').focus(); } };
   $('#askX').onclick = () => $('#askP').hidden = true;
   $('#askNew').onclick = askHello;
+  $('#askAtt').onclick = () => $('#askFile').click();
+  $('#askFile').onchange = e => { askAddFiles(e.target.files); e.target.value = ''; };
+  $('#askQ').addEventListener('paste', e => { const fs = [...(e.clipboardData?.items || [])].filter(i => i.kind === 'file').map(i => i.getAsFile()); if (fs.length){ e.preventDefault(); askAddFiles(fs); } });
+  const p = $('#askP');
+  p.addEventListener('dragover', e => { e.preventDefault(); p.classList.add('drop'); });
+  p.addEventListener('dragleave', () => p.classList.remove('drop'));
+  p.addEventListener('drop', e => { e.preventDefault(); p.classList.remove('drop'); askAddFiles(e.dataTransfer.files); });
   $('#askQ').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('#askF').requestSubmit(); } };
   $('#askF').onsubmit = async e => {
-    e.preventDefault(); const q = $('#askQ').value.trim(); if (!q) return;
-    $('#askQ').value = ''; askAdd('u', q); const w = askAdd('a', '…'); $('#askGo').disabled = true;
-    const { data, error } = await sb.functions.invoke('ask', { body: { q, history: askHist } });
+    e.preventDefault(); const q = $('#askQ').value.trim(), pics = askPics.slice(); if (!q && !pics.length) return;
+    $('#askQ').value = ''; askPics = []; askPicsShow(); askAdd('u', q, pics); const w = askAdd('a', pics.length ? 'Looking at your screenshot…' : '…'); $('#askGo').disabled = true;
+    const { data, error } = await sb.functions.invoke('ask', { body: { q, images: pics, history: askHist } });
     $('#askGo').disabled = false;
     const a = data?.a || data?.error || (error && (await error.context?.json?.().catch(() => null))?.error) || 'Something went wrong, try again.';
-    w.innerHTML = esc(a).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); if (data?.a){ askHist.push({ role:'user', content:q }, { role:'assistant', content:a }); askHist = askHist.slice(-8); }
+    w.innerHTML = esc(a).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'); if (data?.a){ askHist.push({ role:'user', content:(q || '(screenshot)') + (pics.length ? ` [${pics.length} screenshot]` : '') }, { role:'assistant', content:a }); askHist = askHist.slice(-8); }
   };
 }
 

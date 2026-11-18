@@ -1991,7 +1991,7 @@ async function xSched(D){
     return `<td style="padding:6px;vertical-align:top${r.posted_at ? ';opacity:.5' : ''}"><div style="position:relative">
       ${p ? `<span style="position:absolute;top:6px;left:6px;background:${col[r.account]};color:#fff;font-weight:800;font-size:12px;padding:1px 8px;border-radius:999px">#${p.num}</span><img src="${url(p.thumb || p.path)}" alt="" data-open="${esc(p.path)}" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;cursor:zoom-in;display:block">` : '<div class="muted">No photo</div>'}
       ${r.posted_at ? '<span class="pill yes" style="position:absolute;bottom:6px;right:6px;font-size:11px">posted ✓</span>' : ''}</div>
-      ${q ? `<div style="font-size:12px;line-height:1.3;margin-top:5px">${esc(q.it || q.en)}</div>` : ''}</td>`; };
+      ${q ? `${q.en ? `<div style="font-size:12px;line-height:1.3;margin-top:5px"><b style="opacity:.6">🇬🇧</b> ${esc(q.en)}</div>` : ''}${q.it ? `<div style="font-size:12px;line-height:1.3;margin-top:4px"><b style="opacity:.6">🇮🇹</b> ${esc(q.it)}</div>` : ''}` : ''}</td>`; };
   box.className = '';
   box.innerHTML = (dupes.length ? `<div class="msg err" style="margin-bottom:12px">⚠ Same photo on 2 accounts: ${dupes.map(([id, l]) => '#' + (P[id] ? P[id].num : '?') + ' (' + l.map(h => '@' + h).join(', ') + ')').join(' · ')}</div>` : '') +
     days.map(d => { const list = rows.filter(r => r.day === d);

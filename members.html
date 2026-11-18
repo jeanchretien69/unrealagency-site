@@ -807,9 +807,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) badg
 
 
 // ---------- Kaya rule: every quote for Kaya is about her being trans ----------
-const KAYA_RULE = { id: 'kaya-trans-1', text: '🏳️‍⚧️ New rule: every quote for Kaya must be about her being trans. No exception. Make it clear in the words (\u201ctrans girl\u201d), not only with the flag.' };
-const isKaya = m => /^kaya/i.test((m || 'Kaya').trim());
-const isTransQuote = t => /trans|t-?girl/i.test(t || '');
+const KAYA_RULE = { id: 'kaya-trans-1', text: '🏳️‍⚧️ New rule: every quote for Kaya must be about her being trans.' };
 function kayaRuleBanner(){ return `<div class="card" style="border:2px solid var(--pink);padding:12px 16px;margin-bottom:14px;font-size:14.5px"><b>${esc(KAYA_RULE.text)}</b></div>`; }
 function kayaRulePopup(){
   if (!me || me.role === 'admin') return;
@@ -2426,7 +2424,7 @@ async function quotesView(){
   const sugg = {}; all.forEach(x => { [x.en, x.it].forEach(t => { if (t) sugg[t.trim().toLowerCase()] = true; }); });
   const postedHtml = posted.length ? `<details class="card" style="margin-bottom:14px" open><summary style="cursor:pointer"><b>📤 Posted on X (${posted.length})</b> <span class="muted" style="font-size:12.5px">what was really written, from the X tracker</span></summary>
     <div class="tbl" style="margin-top:10px;max-height:360px;overflow:auto"><table style="font-size:13.5px"><thead><tr><th>When</th><th>Account</th><th>Text posted</th><th></th></tr></thead><tbody>
-    ${posted.map(x => { const t = (x.body || '').trim(), same = t && sugg[t.toLowerCase()]; return `<tr><td class="muted" style="white-space:nowrap">${new Date(x.ts).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' })}</td><td>@${esc(x.account)}</td><td>${esc(t || '(picture only)')}${x.has_media ? ' 🖼' : ''}</td><td style="white-space:nowrap"><span class="pill ${same ? '' : 'yes'}">${!t ? 'no text' : same ? 'as suggested' : '✏️ his own edit'}</span>${t && !isTransQuote(t) ? ' <span class="pill" style="background:var(--bad);color:#fff">⚠️ not trans</span>' : ''}</td></tr>`; }).join('')}
+    ${posted.map(x => { const t = (x.body || '').trim(), same = t && sugg[t.toLowerCase()]; return `<tr><td class="muted" style="white-space:nowrap">${new Date(x.ts).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' })}</td><td>@${esc(x.account)}</td><td>${esc(t || '(picture only)')}${x.has_media ? ' 🖼' : ''}</td><td style="white-space:nowrap"><span class="pill ${same ? '' : 'yes'}">${!t ? 'no text' : same ? 'as suggested' : '✏️ his own edit'}</span></td></tr>`; }).join('')}
     </tbody></table></div></details>` : '';
   const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));
   v.innerHTML = `${kayaRuleBanner()}${postedHtml}<div class="card"><h2>Add a quote</h2>
@@ -2460,7 +2458,6 @@ async function quotesView(){
   $('#qSearch').oninput = e => { quoteQ = e.target.value; draw(); };
   $('#qAdd').onclick = async () => {
     const en = $('#qEn').value.trim(); let it = $('#qIt').value.trim(); if (!en && !it) return toast('Write the quote first');
-    if (isKaya($('#qModel').value) && !isTransQuote(en + ' ' + it)) return toast('Kaya rule: the quote must be about her being trans (say \u201ctrans girl\u201d in it)');
     const ab = $('#qAdd'); ab.disabled = true;
     if (en && !it) { ab.textContent = 'Translating…'; it = await translateIt(en); if (!it) toast('Could not translate, saved without Italian'); }
     const { error } = await sb.from('quotes').insert({ en: en || it, it: it || null, photo: $('#qPhoto').value.trim() || null, photo_id: ($('#qPhotoId') || {}).value || null, model: $('#qModel').value.trim() || 'Kaya' });

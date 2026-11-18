@@ -12,6 +12,7 @@ local CLAUDE = "com.anthropic.claudefordesktop"
 local REVIEW = true
 local WORDS = "Claude, Unreal Agency, Kaya, Gian, AdsPower, Higgsfield, Supabase, Discord, Twitter, OnlyFans."
 local state, prev, bubble, tick, t0 = "idle", nil, nil, nil, 0
+local endReview
 
 local function hide()
   if tick then tick:stop(); tick = nil end
@@ -31,7 +32,7 @@ local function show(text, color)
                 frame = { x = 0, y = 11, w = w, h = h - 11 } }
   bubble:clickActivating(false)
   bubble:canvasMouseEvents(true, true)
-  bubble:mouseCallback(function(_, msg) if msg == "mouseUp" and state == "rec" then M.cancel() end end)
+  bubble:mouseCallback(function(_, msg) if msg ~= "mouseUp" then return end if state == "rec" then M.cancel() elseif state == "review" then endReview() end end)
   bubble:show()
 end
 
@@ -46,8 +47,8 @@ local function sendToClaude(text)
   hs.timer.doAfter(0.45, function()
     hs.eventtap.keyStroke({ "cmd" }, "v", 0)
     if REVIEW then
-      hs.alert.show("✏️  Check your text, then press Enter to send", 3)
       hs.timer.doAfter(1.5, function() if old then hs.pasteboard.setContents(old) end end)
+      M.review()
       return
     end
     hs.timer.doAfter(0.35, function()
@@ -58,6 +59,41 @@ local function sendToClaude(text)
       end)
     end)
   end)
+end
+
+-- review: the text waits in Claude; the mouse button (or Enter in Claude) sends it, even if you clicked elsewhere meanwhile
+local reviewTimer, reviewTap
+endReview = function()
+  if reviewTimer then reviewTimer:stop(); reviewTimer = nil end
+  if reviewTap then reviewTap:stop(); reviewTap = nil end
+  if state == "review" then state = "idle"; hide() end
+end
+function M.review()
+  state = "review"
+  show("✏️  Fix your text · mouse button = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 })
+  reviewTimer = hs.timer.doAfter(300, endReview)
+  -- you pressed Enter yourself in Claude: done, the next button press starts a new message
+  reviewTap = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(e)
+    if e:getKeyCode() == 36 then local f = hs.application.frontmostApplication(); if f and f:bundleID() == CLAUDE then hs.timer.doAfter(0, endReview) end end
+    return false
+  end):start()
+end
+function M.send()
+  endReview()
+  local back = hs.application.frontmostApplication()
+  local c = hs.application.get(CLAUDE); if c then c:activate() end
+  local tries = 0
+  hs.timer.waitUntil(function()
+    tries = tries + 1; local f = hs.application.frontmostApplication()
+    if f and f:bundleID() ~= CLAUDE and c and tries % 10 == 0 then c:activate() end
+    return tries > 60 or (f and f:bundleID() == CLAUDE)
+  end, function()
+    hs.timer.doAfter(0.2, function()
+      hs.eventtap.keyStroke({}, "return", 0)
+      hs.sound.getByName("Pop"):play()
+      hs.timer.doAfter(0.4, function() if back and back:bundleID() ~= CLAUDE then back:activate() end end)
+    end)
+  end, 0.05)
 end
 
 function M.start()
@@ -109,7 +145,7 @@ function M.stop()
   end)
 end
 
-function M.toggle() if state == "idle" then M.start() elseif state == "rec" then M.stop() end end
+function M.toggle() if state == "idle" then M.start() elseif state == "rec" then M.stop() elseif state == "review" then M.send() end end
 
 M.key = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "d", M.toggle)
 hs.autoLaunch(true)

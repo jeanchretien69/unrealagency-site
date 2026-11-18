@@ -2443,9 +2443,21 @@ async function photoUpload(files, model, caption){
 }
 async function photosView(){
   const v = $('#view'), admin = me.role === 'admin';
-  const { data, error } = await sb.from('photos').select('*').order('created_at', { ascending:false });
+  const [{ data, error }, qr, pr] = await Promise.all([
+    sb.from('photos').select('*').order('created_at', { ascending:false }),
+    can('quotes') ? sb.from('quotes').select('id,en,it,photo_id,created_at') : Promise.resolve({ data: [] }),
+    can('quotes') ? sb.from('x_plan').select('photo_id,quote_id') : Promise.resolve({ data: [] })
+  ]);
   if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
   const all = data || [];
+  // quotes already paired with each photo (saved with it, or posted together on X)
+  const qById = Object.fromEntries((qr.data || []).map(q => [q.id, q])), qFor = {};
+  const pair = (ph, q) => { if (!ph || !q) return; const l = qFor[ph] = qFor[ph] || []; if (!l.includes(q)) l.push(q); };
+  (qr.data || []).forEach(q => pair(q.photo_id, q));
+  (pr.data || []).forEach(r => pair(r.photo_id, qById[r.quote_id]));
+  const qBlock = x => (qFor[x.id] || []).map(q => `<div style="border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px">
+      ${q.it ? `<div style="display:flex;gap:6px;align-items:flex-start"><span style="flex:1;font-size:13px">🇮🇹 ${esc(q.it)}</span><button class="btn sm" data-cp="${esc(q.it)}">Copy</button></div>` : ''}
+      ${q.en ? `<div style="display:flex;gap:6px;align-items:flex-start"><span style="flex:1;font-size:13px" class="muted">🇬🇧 ${esc(q.en)}</span><button class="btn sm ghost" data-cp="${esc(q.en)}">Copy</button></div>` : ''}</div>`).join('');
   const models = [...new Set([...all.map(x => x.model), 'Kaya', 'Nami', 'Hakura', 'Jade'])].sort((a, b) => a === 'Unassigned' ? -1 : b === 'Unassigned' ? 1 : a.localeCompare(b));
   const url = await photoUrls(all.map(x => x.thumb || x.path));
   const count = m => all.filter(x => m === 'all' || x.model === m).length;
@@ -2467,11 +2479,13 @@ async function photosView(){
         ${x.num ? `<span style="position:absolute;top:16px;left:16px;z-index:1;background:var(--pink);color:#fff;font-weight:800;font-size:15px;padding:3px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.35)">#${x.num}</span>` : ''}
         <img src="${url(x.thumb || x.path)}" alt="" loading="lazy" data-act="open" style="width:100%;border-radius:12px;cursor:zoom-in;background:var(--blush);min-height:120px;object-fit:cover">
         <div><b style="font-size:13.5px">${x.num ? `<span style="color:var(--pink)">#${x.num}</span> · ` : ''}${esc(x.model)}</b>${x.used_at ? ' <small class="muted">· used</small>' : ''}<br><small class="muted">${esc(x.caption || '')}</small></div>
-        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="dl">Download</button><button class="btn sm ghost" data-act="quote">💬 Quote</button><button class="btn sm ghost" data-act="used">${x.used_at ? 'Not used' : 'Used'}</button><button class="btn sm ghost" data-act="edit">Edit</button>${admin ? '<button class="btn sm ghost" data-act="del">✕</button>' : ''}</div></article>`).join('') : '<div class="card empty">No photos here yet.</div>';
+        ${qBlock(x)}
+        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="dl">Download</button><button class="btn sm ghost" data-act="quote">＋ New quote</button><button class="btn sm ghost" data-act="used">${x.used_at ? 'Not used' : 'Used'}</button><button class="btn sm ghost" data-act="edit">Edit</button>${admin ? '<button class="btn sm ghost" data-act="del">✕</button>' : ''}</div></article>`).join('') : '<div class="card empty">No photos here yet.</div>';
     $('#pGrid').querySelectorAll('article').forEach(el => {
       const x = all.find(r => r.id === el.dataset.id);
       el.querySelector('[data-act=open]').onclick = () => openPhoto(x.path);
       el.querySelector('[data-act=dl]').onclick = () => downloadPhoto(x.path);
+      el.querySelectorAll('[data-cp]').forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.cp).then(() => toast('Copied'), () => prompt('Copy this:', b.dataset.cp)));
       el.querySelector('[data-act=quote]').onclick = () => { quotePhotoPick = x.id; if (!can('quotes')) return toast('The Quotes box is not ticked for you'); show('quotes'); };
       el.querySelector('[data-act=used]').onclick = async () => { const used_at = x.used_at ? null : new Date().toISOString(); const { error } = await sb.from('photos').update({ used_at }).eq('id', x.id); if (error) return toast(error.message); photosView(); };
       el.querySelector('[data-act=edit]').onclick = async () => { const m = prompt('Model name:', x.model); if (m === null) return; const c = prompt('Caption:', x.caption || ''); if (c === null) return; const { error } = await sb.from('photos').update({ model: m.trim() || 'Unassigned', caption: c.trim() || null }).eq('id', x.id); if (error) return toast(error.message); photosView(); };

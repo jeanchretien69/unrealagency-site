@@ -1779,12 +1779,15 @@ async function xLoad(){
   ]);
   let logs = [], pool = { quotes: [], photos: [] };
   if (admin) {
-    const [lg, pq, pp] = await Promise.all([
+    const [lg, pq, pp, pu] = await Promise.all([
       sb.from('x_events_v').select('*').eq('day', xDay).order('ts', { ascending: false }).limit(400),
       sb.from('quotes').select('id,en,model,used_at').order('created_at', { ascending: false }),
-      sb.from('photos').select('id,num,model,caption,path,used_at').order('created_at', { ascending: false })
+      sb.from('photos').select('id,num,model,caption,path,used_at').order('created_at', { ascending: false }),
+      sb.from('x_plan').select('photo_id,account')
     ]);
-    logs = lg.data || []; pool = { quotes: pq.data || [], photos: pp.data || [] };
+    // one photo = one X account: remember which account already has each photo
+    const owner = {}; (pu.data || []).forEach(r => { if (r.photo_id) owner[r.photo_id] = owner[r.photo_id] || r.account; });
+    logs = lg.data || []; pool = { quotes: pq.data || [], photos: pp.data || [], owner };
   }
   const photos = Object.fromEntries((ph.data || []).map(x => [x.id, x]));
   const urls = Object.keys(photos).length ? await photoUrls(Object.values(photos).map(x => x.thumb || x.path)) : (() => '');
@@ -1808,7 +1811,7 @@ function xSlot(D, a, i){
   if (p && !p.posted_at) h += `<div class="muted" style="font-size:12px;margin-top:6px">✅ Ticks itself when the post is detected on X</div>`;
   if (D.admin) {
     h += `<div class="xs-adm"><select data-sq><option value="">— quote —</option>${D.pool.quotes.filter(x => !x.used_at || (p && p.quote_id === x.id)).map(x => `<option value="${x.id}"${p && p.quote_id === x.id ? ' selected' : ''}>🇮🇹 ${esc((x.it || x.en || '').slice(0, 48))}</option>`).join('')}</select>
-      <select data-sp><option value="">— photo —</option>${D.pool.photos.map(x => `<option value="${x.id}"${p && p.photo_id === x.id ? ' selected' : ''}>${x.num ? '#' + x.num + ' · ' : ''}${esc(x.model)} · ${esc((x.caption || x.path.split('/').pop()).slice(0, 36))}</option>`).join('')}</select></div>`;
+      <select data-sp><option value="">— photo —</option>${D.pool.photos.filter(x => (p && p.photo_id === x.id) || !D.pool.owner[x.id] || D.pool.owner[x.id] === a.handle).map(x => `<option value="${x.id}"${p && p.photo_id === x.id ? ' selected' : ''}>${x.num ? '#' + x.num + ' · ' : ''}${esc(x.model)} · ${esc((x.caption || x.path.split('/').pop()).slice(0, 36))}</option>`).join('')}</select></div>`;
   }
   return h + '</div>';
 }

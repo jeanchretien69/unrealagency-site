@@ -582,6 +582,8 @@
   .xsm.done{opacity:.55}
   .xsm-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:14px}
   .xsm-h .muted{font-size:12.5px;flex:1}
+  .xsm-h{flex-wrap:wrap}
+  .xslot .pill,.xsm .pill,td .pill{white-space:normal;line-height:1.3;text-align:left}
   .xsm img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;display:block;cursor:zoom-in}
   .xsm-n{position:absolute;top:8px;left:8px;color:#fff;font-weight:800;font-size:13px;padding:2px 9px;border-radius:999px}
   .xsm-empty{border:1px dashed var(--line);border-radius:12px;padding:30px;text-align:center;color:var(--muted);font-size:13px}
@@ -1866,6 +1868,12 @@ const X_ACT = { post: '✍ post', reply: '💬 reply', like: '❤ like', unlike:
 const xOk = u => /^https:\/\/x\.com\//.test(u || '');
 const xNum = (o, k) => Number((o && o[k]) || 0);
 const xTime = d => d ? new Date(d).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—';
+// post state of a plan row: scheduled (waiting for X to send it) or posted
+const xLive = p => !!(p && p.posted_at && new Date(p.posted_at) <= new Date());
+const xWait = p => !!(p && p.posted_at && new Date(p.posted_at) > new Date());
+const xPill = (p, small) => { if (!p || !p.posted_at) return ''; const st = small ? ' style="font-size:11px"' : '';
+  if (p.scheduled_at) return xWait(p) ? `<span class="pill pending"${st}>📅 scheduled ${xTime(p.scheduled_at)} · goes out ${xTime(p.posted_at)}</span>` : `<span class="pill yes"${st}>scheduled ${xTime(p.scheduled_at)} · posted ${xTime(p.posted_at)} ✓</span>`;
+  return xWait(p) ? `<span class="pill pending"${st}>📅 goes out ${xTime(p.posted_at)}</span>` : `<span class="pill yes"${st}>posted ${xTime(p.posted_at)} ✓</span>`; };
 const xAgo = d => { if (!d) return 'never'; const s = Math.max(0, (Date.now() - new Date(d).getTime()) / 1000); if (s < 90) return 'just now'; if (s < 3600) return Math.round(s / 60) + ' min ago'; if (s < 86400) return Math.round(s / 3600) + ' h ago'; return Math.round(s / 86400) + ' d ago'; };
 const xShift = (d, n) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
 const xLabel = d => new Date(d + 'T12:00:00Z').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
@@ -1915,7 +1923,7 @@ async function xLoad(){
 function xSlot(D, a, i){
   const p = D.plan.find(r => r.account === a.handle && r.slot === i);
   const q = p && p.quote_id ? D.quotes[p.quote_id] : null, ph = p && p.photo_id ? D.photos[p.photo_id] : null;
-  let h = `<div class="xslot${p && p.posted_at ? ' posted' : ''}" data-slot="${esc(a.handle)}|${i}"><div class="xs-h"><b>Picture ${i}</b>${ph && ph.num ? ` <span class="pill" style="background:var(--pink);color:#fff;font-weight:800">#${ph.num}</span>` : ''}${p && p.posted_at ? ` <span class="pill yes">posted ${xTime(p.posted_at)}</span>` : ''}</div>`;
+  let h = `<div class="xslot${xLive(p) ? ' posted' : ''}" data-slot="${esc(a.handle)}|${i}"><div class="xs-h"><b>Picture ${i}</b>${ph && ph.num ? ` <span class="pill" style="background:var(--pink);color:#fff;font-weight:800">#${ph.num}</span>` : ''}</div>${p && p.posted_at ? `<div>${xPill(p)}</div>` : ''}`;
   h += ph ? `<img src="${esc(D.urls(ph.thumb || ph.path))}" alt="" data-open="${esc(ph.path)}"><div class="xs-b"><button class="btn sm ghost" data-dl="${esc(ph.path)}">⬇ Download</button></div>`
           : `<div class="xs-none">${q ? 'No picture yet' : 'Not ready yet'}</div>`;
   if (q) {
@@ -1923,7 +1931,7 @@ function xSlot(D, a, i){
     if (q.it) h += `<div class="xq"><small class="muted">🇮🇹 Suggested quote, please modify if needed to make it better</small><p>${esc(q.it)}</p><button class="btn sm" data-cp="${esc(q.it)}">Copy</button></div>`;
     h += `<div class="xq" style="opacity:.7"><small class="muted">🇬🇧 Meaning (don't post this)</small><p style="font-size:13px">${esc(q.en)}</p></div>`;
   }
-  if (p && !p.posted_at) h += `<div class="muted" style="font-size:12px;margin-top:6px">✅ Ticks itself when the post is detected on X</div>`;
+  if (p && !p.posted_at) h += `<div class="muted" style="font-size:12px;margin-top:6px">✅ Ticks itself when you press Schedule (or Post) on X</div>`;
   if (D.admin) {
     h += `<div class="xs-adm"><select data-sq><option value="">— quote —</option>${D.pool.quotes.filter(x => !x.used_at || (p && p.quote_id === x.id)).map(x => `<option value="${x.id}"${p && p.quote_id === x.id ? ' selected' : ''}>🇮🇹 ${esc((x.it || x.en || '').slice(0, 48))}</option>`).join('')}</select>
       <select data-sp><option value="">— photo —</option>${D.pool.photos.filter(x => (p && p.photo_id === x.id) || !D.pool.owner[x.id] || D.pool.owner[x.id] === a.handle).map(x => `<option value="${x.id}"${p && p.photo_id === x.id ? ' selected' : ''}>${x.num ? '#' + x.num + ' · ' : ''}${esc(x.model)} · ${esc((x.caption || x.path.split('/').pop()).slice(0, 36))}</option>`).join('')}</select></div>`;
@@ -1957,7 +1965,8 @@ function xRules(D){
 }
 
 function xSessCard(D, a){
-  const rows = D.sess.filter(r => r.account === a.handle && r.day === xDay).sort((x, y) => x.slot - y.slot);
+  const rows = D.sess.filter(r => r.account === a.handle && r.day === xDay).sort((x, y) => x.slot - y.slot)
+    .map(r => { const pl = D.plan.find(x => x.account === a.handle && x.slot === r.slot); return Object.assign({}, r, { c_posts: Math.max(Number(r.c_posts) || 0, pl && pl.posted_at ? 1 : 0) }); });
   const s = D.stats[a.handle] || {}, flagged = xNum(s, 'flagged');
   const states = rows.map(xSState), done = states.filter(x => x === 'done').length;
   const openIdx = states.indexOf('now') >= 0 ? states.indexOf('now') : states.indexOf('soon');
@@ -1968,7 +1977,7 @@ function xSessCard(D, a){
     ${rows.map((r, i) => { const stt = states[i], L = X_SLBL[stt]; return `<details class="xsess ${stt}"${i === openIdx ? ' open' : ''}>
       <summary><span class="xs-n">${r.slot}</span><span class="xs-time"><b>${xIn(r.st, 'Asia/Manila')} PH</b> <small class="muted">· ${xIn(r.st, 'Europe/Rome')} Italy</small></span><span class="xs-tt">${esc(r.title || 'Session ' + r.slot)}</span><span class="pill ${L[0]}">${L[1]}</span></summary>
       <div class="xs-body"><div>
-        <div class="xgoals">${goal('✍', 'Post', Number(r.c_posts), r.posts)}${goal('💬', 'Replies', Number(r.c_replies), r.replies)}${goal('❤', 'Likes', Number(r.c_likes), r.likes)}${goal('➕', 'Follows', Number(r.c_follows), r.follows)}</div>
+        <div class="xgoals">${/schedule picture/i.test(r.title || '') ? goal('📅', 'Schedule', Number(r.c_posts), r.posts) : goal('✍', 'Post', Number(r.c_posts), r.posts)}${goal('💬', 'Replies', Number(r.c_replies), r.replies)}${goal('❤', 'Likes', Number(r.c_likes), r.likes)}${goal('➕', 'Follows', Number(r.c_follows), r.follows)}</div>
         <ol class="xsteps">${String(r.guide || '').split('\n').filter(Boolean).map(l => `<li>${xBold(l)}</li>`).join('')}</ol>
         <p class="muted" style="font-size:12.5px">These boxes fill in by themselves while you work. Work done from 15 min before ${xIn(r.st, 'Asia/Manila')} until the next session counts for this session.</p>
       </div>${xSlot(D, a, r.slot)}</div></details>`; }).join('')}
@@ -2086,7 +2095,7 @@ async function xSched(D){
   const box = $('#xSched'); if (!box) return;
   const from = D.today, to = xShift(D.today, 6);
   const [pl, ss] = await Promise.all([
-    sb.from('x_plan').select('account,day,slot,posted_at,photo_id,quote_id').gte('day', from).lte('day', to).order('day').order('slot'),
+    sb.from('x_plan').select('account,day,slot,posted_at,scheduled_at,photo_id,quote_id').gte('day', from).lte('day', to).order('day').order('slot'),
     sb.from('x_sessions').select('account,slot,start_time').eq('active', true)
   ]);
   if (pl.error) return box.innerHTML = `<div class="msg err">${esc(pl.error.message)}</div>`;
@@ -2106,9 +2115,9 @@ async function xSched(D){
   const dupes = Object.entries(seen).filter(([, l]) => l.length > 1);
   const cell = r => { if (!r) return '<td style="padding:6px"><div class="muted" style="height:100%;min-height:120px;display:grid;place-items:center;border:1px dashed var(--line);border-radius:10px;font-size:12px">empty</div></td>';
     const p = P[r.photo_id], q = Q[r.quote_id];
-    return `<td style="padding:6px;vertical-align:top${r.posted_at ? ';opacity:.5' : ''}"><div style="position:relative">
+    return `<td style="padding:6px;vertical-align:top${xLive(r) ? ';opacity:.5' : ''}"><div style="position:relative">
       ${p ? `<span style="position:absolute;top:6px;left:6px;background:${col[r.account]};color:#fff;font-weight:800;font-size:12px;padding:1px 8px;border-radius:999px">#${p.num}</span><img src="${url(p.thumb || p.path)}" alt="" data-open="${esc(p.path)}" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;cursor:zoom-in;display:block">` : '<div class="muted">No photo</div>'}
-      ${r.posted_at ? '<span class="pill yes" style="position:absolute;bottom:6px;right:6px;font-size:11px">posted ✓</span>' : ''}</div>
+      ${r.posted_at ? `<div style="position:absolute;bottom:6px;left:6px;right:6px;text-align:right">${xPill(r, true)}</div>` : ''}</div>
       ${q ? `${q.en ? `<div style="font-size:12px;line-height:1.3;margin-top:5px"><b style="opacity:.6">🇬🇧</b> ${esc(q.en)}</div>` : ''}${q.it ? `<div style="font-size:12px;line-height:1.3;margin-top:4px"><b style="opacity:.6">🇮🇹</b> ${esc(q.it)}</div>` : ''}` : ''}</td>`; };
   box.className = '';
   if (matchMedia('(max-width:820px)').matches){
@@ -2121,7 +2130,7 @@ async function xSched(D){
         return `<div class="card" style="margin:0 0 14px;padding:12px;border-top:4px solid ${col[a.handle]}"><h2 style="margin:0 0 4px">${d === D.today ? 'Today' : d === xShift(D.today, 1) ? 'Tomorrow' : esc(xLabel(d))} <small class="muted" style="font-size:12.5px;font-weight:500">· ${esc(xLabel(d))}</small></h2>
           <div class="muted" style="font-size:12.5px;margin-bottom:10px">AdsPower ${esc(a.label || '?')} · ${list.length}/3 pictures${xNsfw(a) ? ' · <span class="pill no" style="font-size:10.5px">🔞 NSFW</span>' : ''}</div>
           ${[1, 2, 3].map(sl => { const r = list.find(x => x.slot === sl), p = r && P[r.photo_id], q = r && Q[r.quote_id];
-            return `<div class="xsm${r && r.posted_at ? ' done' : ''}"><div class="xsm-h"><b>Pic ${sl}</b><span class="muted">${sl === 3 ? 'post now' : 'schedule'}${t[a.handle + '|' + sl] ? ' · ' + t[a.handle + '|' + sl] + ' PH' : ''}</span>${r && r.posted_at ? '<span class="pill yes" style="font-size:11px">posted ✓</span>' : ''}</div>
+            return `<div class="xsm${xLive(r) ? ' done' : ''}"><div class="xsm-h"><b>Pic ${sl}</b><span class="muted">${sl === 3 ? 'post now' : 'schedule'}${t[a.handle + '|' + sl] ? ' · ' + t[a.handle + '|' + sl] + ' PH' : ''}</span>${r && r.posted_at ? xPill(r, true) : ''}</div>
               ${p ? `<div style="position:relative"><span class="xsm-n" style="background:${col[a.handle]}">#${p.num}</span><img src="${url(p.thumb || p.path)}" alt="" data-open="${esc(p.path)}"></div>` : '<div class="xsm-empty">empty</div>'}
               ${q && q.en ? `<p><b>🇬🇧</b> ${esc(q.en)}</p>` : ''}${q && q.it ? `<p><b>🇮🇹</b> ${esc(q.it)}</p>` : ''}</div>`; }).join('')}</div>`; }).join('') : '<div class="card empty">No active account.</div>');
     box.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { xSchedAcc = b.dataset.acc; try { localStorage.setItem('unreal-xsacc', xSchedAcc); } catch(e){} xSched(D); });
@@ -2656,8 +2665,8 @@ async function photosView(){
   const onX = {}; (pr.data || []).forEach(r => { if (r.photo_id) (onX[r.photo_id] = onX[r.photo_id] || []).push(r); });
   const PLAT = [['ig', 'IG', '#e1306c', 'Instagram'], ['snap', 'Snap', '#f7d000', 'Snapchat'], ['fb', 'FB', '#1877f2', 'Facebook'], ['tt', 'TikTok', '#25f4ee', 'TikTok']];
   const pill = (on, bg, txt, title, attr) => `<span ${attr || ''} title="${esc(title)}" style="display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:999px;${on ? `background:${bg};color:${bg === '#f7d000' || bg === '#25f4ee' ? '#000' : '#fff'}` : 'border:1px dashed var(--line);color:var(--muted);opacity:.7'};${attr ? 'cursor:pointer' : ''}">${txt}</span>`;
-  const platBlock = x => { const xs = onX[x.id] || [], posted = xs.filter(r => r.posted_at), have = x.platforms || [];
-    const xTitle = xs.length ? xs.map(r => '@' + r.account + (r.posted_at ? ' posted' : ' scheduled ' + r.day)).join(', ') : 'Not on X yet';
+  const platBlock = x => { const xs = onX[x.id] || [], posted = xs.filter(r => xLive(r)), have = x.platforms || [];
+    const xTitle = xs.length ? xs.map(r => '@' + r.account + (xLive(r) ? ' posted' : ' scheduled ' + r.day)).join(', ') : 'Not on X yet';
     return `<div style="display:flex;gap:5px;flex-wrap:wrap">${pill(xs.length, posted.length ? '#000' : '#555', '𝕏' + (xs.length ? (posted.length ? ' ✓' : ' 📅') : ''), xTitle)}${PLAT.map(([k, t, c, n]) => pill(have.includes(k), c, t + (have.includes(k) ? ' ✓' : ''), (have.includes(k) ? 'Used on ' : 'Not used on ') + n + (admin ? ' · click to change' : ''), admin ? `data-plat="${k}"` : '')).join('')}</div>`; };
   const qBlock = x => { const l = (qFor[x.id] || []).slice().sort((a, b) => (!!a.used_at - !!b.used_at)); const more = l.length - 1; return l.slice(0, 1).map(q => `<div style="border-top:1px solid var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px">
       ${q.it ? `<div style="display:flex;gap:6px;align-items:flex-start"><span style="flex:1;font-size:13px">🇮🇹 ${esc(q.it)}</span><button class="btn sm" data-cp="${esc(q.it)}">Copy</button></div>` : ''}

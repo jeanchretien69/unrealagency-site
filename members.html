@@ -3135,7 +3135,7 @@ async function jvAsk(q){
   jvBusy = true; jvUnlock(); $('#jvQ').value = ''; $('#apOut').hidden = false; $('#jvYou').textContent = q; $('#jvOut').textContent = '…'; jvState(jvLang === 'en' ? 'Thinking…' : 'Réflexion…', 'think');
   const { data, error } = await sb.functions.invoke('jarvis', { body:{ q, lang:jvLang, ctx:coreCtx(coreD), history:jvHist } });
   jvBusy = false; $('#jvMic')?.classList.remove('think');
-  const a = data?.a || (jvLang === 'en' ? 'My apologies, sir, the link seems busy. Try again in a moment.' : 'Mes excuses, Monsieur, la liaison semble occupée. Réessayez dans un instant.');
+  const a = data?.a || (jvLang === 'en' ? 'The link is busy for a second. Try again in a moment.' : 'La liaison est occupée une seconde. Réessaie dans un instant.');
   jvLast = a; $('#jvOut').textContent = a; $('#apOut').hidden = false;
   if (data?.a){ jvHist.push({ role:'user', content:q }, { role:'assistant', content:a }); jvHist = jvHist.slice(-8); }
   jvSay(a);
@@ -3225,7 +3225,7 @@ function jvBind(){
     sel.innerHTML = JV_ELEVEN.map(([v, l]) => `<option value="${v}"${pick === v ? ' selected' : ''}>${l}</option>`).join('')
       + (vs.length ? `<optgroup label="${jvLang === 'en' ? 'Device voices' : 'Voix de l\'appareil'}">` + vs.map(v => `<option value="${esc(v.name)}"${!pick.startsWith('eleven:') && cur && v.name === cur.name ? ' selected' : ''}>${esc(v.name.replace(/Microsoft |Google /, '').replace(/ - .*$/, ''))}</option>`).join('') + '</optgroup>' : ''); };
   fill(); if (window.speechSynthesis) speechSynthesis.onvoiceschanged = fill;
-  $('#jvVoice').onchange = () => { try { localStorage.setItem('jv-voice-' + jvLang, $('#jvVoice').value); } catch(e){} jvUnlock(); jvSay(jvLang === 'en' ? 'At your service, sir.' : 'À votre service, Monsieur.'); };
+  $('#jvVoice').onchange = () => { try { localStorage.setItem('jv-voice-' + jvLang, $('#jvVoice').value); } catch(e){} jvUnlock(); jvSay(jvLang === 'en' ? 'Unreal Autopilot, online.' : 'Unreal Autopilot, en ligne.'); };
 }
 
 function coreClose(){ document.body.classList.remove('core-open'); try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){} jvStop(); show('todo'); }

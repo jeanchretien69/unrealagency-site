@@ -3057,7 +3057,7 @@ function jvList(){
     + (jvLang === 'en' && /^en[-_]GB/i.test(v.lang) ? 15 : 0) + (jvLang === 'fr' && /CA/i.test(v.lang) ? 8 : 0) + (/google/i.test(v.name) ? 10 : 0) - (/female|femme|amelie|amélie|audrey|marie|aurelie|julie|karen|serena|kate|martha|hazel|libby|sonia|denise|sylvie/i.test(v.name) ? 40 : 0);
   return speechSynthesis.getVoices().filter(v => pre.test(v.lang)).sort((a, b) => score(b) - score(a));
 }
-const JV_ELEVEN = [['eleven:android', '🤖 Deep Android · ElevenLabs'], ['eleven:hologram', '💠 Hologram · ElevenLabs']];
+const JV_ELEVEN = [['eleven:android', '🤖 Deep Android v3 · ElevenLabs'], ['eleven:hologram', '💠 Hologram · ElevenLabs']];
 function jvPick(){ let want = ''; try { want = localStorage.getItem('jv-voice-' + jvLang) || ''; } catch(e){} return want || 'eleven:android'; }
 function jvVoice(){
   const vs = jvList(); const want = jvPick();

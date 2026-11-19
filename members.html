@@ -525,7 +525,7 @@
   .ap-state{text-align:center;margin-top:6px;font-family:ui-monospace,"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.08em;color:#6f8597}
   .ap-state b{color:#9be6ff;letter-spacing:.16em}
   @media (max-width:1100px){ .ap{width:min(560px,calc(100vw - 40px));bottom:66px} .ap-out{position:static;width:auto} }
-  @media (max-width:900px){ .co-uni.fs .co-uhud.tl,.co-uni.fs .co-uhud.leg{display:none} .co-uni.fs .co-uhud.tr{position:absolute;right:14px;top:14px;padding:0;text-align:right;font-size:0} .co-uni.fs .co-uhud.tr .live{font-size:10px} .ap-tools,.ap-state{display:none} .ap{bottom:10px} .co-fsbtns{top:14px;left:14px;right:auto;bottom:auto} .ap{width:calc(100vw - 20px);bottom:10px} .ap-tools .jv-vsel,.ap-tools #jvRep{display:none} }
+  @media (max-width:900px){ .co-uni.fs .co-uhud.tl,.co-uni.fs .co-uhud.leg{display:none} .co-uni.fs .co-uhud.tr{position:absolute;right:14px;top:14px;padding:0;text-align:right;font-size:0} .co-uni.fs .co-uhud.tr .live{font-size:10px} .ap-state{display:none} .ap{bottom:10px} .ap-bar{position:relative} .ap-tools{position:absolute;right:4px;bottom:calc(100% + 8px);background:rgba(10,12,18,.92);border:1px solid #1f3a4d;border-radius:999px;padding:5px 6px;z-index:3} .ap-tools .jv-vsel{max-width:170px;font-size:13px} .ap-out{margin-bottom:50px} .co-fsbtns{top:14px;left:14px;right:auto;bottom:auto} .ap{width:calc(100vw - 20px);bottom:10px} .ap-tools #jvRep{display:none} }
   /* Claude-style dictation in the Autopilot bar */
   .ap .jv-f{display:flex;align-items:center;gap:6px;position:relative}
   .ap-ic{width:36px;height:36px;flex:none;border-radius:50%;border:0;background:transparent;color:#cfe9ff;display:grid;place-items:center;cursor:pointer}
@@ -3073,7 +3073,7 @@ async function jvSayEleven(text, voice){
   const el = jvElInit(); try { el.pause(); } catch(e){}
   jvState(jvLang === 'en' ? 'Voice…' : 'Voix…', 'think');
   const { data: ss } = await sb.auth.getSession();
-  const r = await fetch('https://ljhpdqttcxwgufcejfor.supabase.co/functions/v1/voice-tts', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + (ss?.session?.access_token || ''), apikey:'sb_publishable_Nu7S4SnvuTFRg1ODn4VVrA_hCH5X1wY' }, body: JSON.stringify({ text, voice }) });
+  const r = await fetch('https://ljhpdqttcxwgufcejfor.supabase.co/functions/v1/voice-tts', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + (ss?.session?.access_token || ''), apikey:'sb_publishable_Nu7S4SnvuTFRg1ODn4VVrA_hCH5X1wY' }, body: JSON.stringify({ text, voice, lang: jvLang }) });
   $('#jvMic')?.classList.remove('think');
   if (!r.ok){ let j = {}; try { j = await r.json(); } catch(e){} throw new Error(j.error === 'no_key' ? 'no_key' : 'tts'); }
   const url = URL.createObjectURL(await r.blob());

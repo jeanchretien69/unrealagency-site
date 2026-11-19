@@ -2538,7 +2538,15 @@ function settingsView(){
     <label for="sAddr">Your USDC wallet address (Solana)</label><input id="sAddr" value="${esc(settings.usdc_solana_address||'')}" placeholder="Phantom → Solana address">
     <p class="muted" style="font-size:13px;margin-top:6px">Members send their top-ups here. Use your Phantom <b>Solana</b> address.</p>
     <label for="sFee">Fee on AI sales (%)</label><input id="sFee" type="number" min="0" max="100" step="0.5" value="${esc(settings.fee_percent||10)}" style="max-width:140px">
-    <button class="btn full">Save settings</button></form>`;
+    <button class="btn full">Save settings</button></form>
+    <form id="sEl" class="card" style="margin-top:14px">
+      <h2 style="margin:0 0 6px">🔊 Unreal Autopilot voice (ElevenLabs)</h2>
+      <p class="muted" style="font-size:13px;margin:0 0 10px">Paste your ElevenLabs API key (ElevenLabs → Developers → API keys). It's stored privately on the server and only used to speak the Autopilot answers. <span id="sElSt"></span></p>
+      <input id="sElKey" type="password" autocomplete="off" placeholder="sk_…">
+      <button class="btn full" style="margin-top:10px">Save key</button></form>`;
+  sb.rpc('has_eleven_key').then(({ data }) => { const t = $('#sElSt'); if (t) t.innerHTML = data ? '<b style="color:#1f8a4c">✓ Key saved</b>' : '<b style="color:#b3261e">No key yet</b>'; });
+  $('#sEl').onsubmit = async e => { e.preventDefault(); const v = $('#sElKey').value.trim(); if (!v) return toast('Paste the key first');
+    const { error } = await sb.rpc('set_eleven_key', { p_value: v }); if (error) return toast(error.message); $('#sElKey').value = ''; $('#sElSt').innerHTML = '<b style="color:#1f8a4c">✓ Key saved</b>'; toast('Saved'); };
   $('#sForm').onsubmit = async e => {
     e.preventDefault();
     const rows = [{ key:'usdc_solana_address', value:$('#sAddr').value.trim() }, { key:'fee_percent', value:String($('#sFee').value) }];
@@ -3049,9 +3057,30 @@ function jvList(){
     + (jvLang === 'en' && /^en[-_]GB/i.test(v.lang) ? 15 : 0) + (jvLang === 'fr' && /CA/i.test(v.lang) ? 8 : 0) + (/google/i.test(v.name) ? 10 : 0) - (/female|femme|amelie|amélie|audrey|marie|aurelie|julie|karen|serena|kate|martha|hazel|libby|sonia|denise|sylvie/i.test(v.name) ? 40 : 0);
   return speechSynthesis.getVoices().filter(v => pre.test(v.lang)).sort((a, b) => score(b) - score(a));
 }
+const JV_ELEVEN = [['eleven:android', '🤖 Deep Android · ElevenLabs'], ['eleven:hologram', '💠 Hologram · ElevenLabs']];
+function jvPick(){ let want = ''; try { want = localStorage.getItem('jv-voice-' + jvLang) || ''; } catch(e){} return want || 'eleven:android'; }
 function jvVoice(){
-  const vs = jvList(); let want = ''; try { want = localStorage.getItem('jv-voice-' + jvLang) || ''; } catch(e){}
+  const vs = jvList(); const want = jvPick();
   return vs.find(v => v.name === want) || vs[0] || null;
+}
+/* ElevenLabs voice: the server turns the answer into speech; one audio element, unlocked on the first tap (iPhone) */
+let jvEl = null;
+function jvElInit(){ if (jvEl) return jvEl; jvEl = new Audio(); jvEl.preload = 'auto'; jvEl.setAttribute('playsinline', '');
+  /* the orb moves while the voice plays (no audio routing, so the voice always plays on iPhone) */
+  (function lvl(){ if (jvEl && !jvEl.paused) window.__jvLevel = Math.max(window.__jvLevel, .35 + Math.random() * .5); setTimeout(lvl, 90); })();
+  return jvEl; }
+async function jvSayEleven(text, voice){
+  const el = jvElInit(); try { el.pause(); } catch(e){}
+  jvState(jvLang === 'en' ? 'Voice…' : 'Voix…', 'think');
+  const { data: ss } = await sb.auth.getSession();
+  const r = await fetch('https://ljhpdqttcxwgufcejfor.supabase.co/functions/v1/voice-tts', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + (ss?.session?.access_token || ''), apikey:'sb_publishable_Nu7S4SnvuTFRg1ODn4VVrA_hCH5X1wY' }, body: JSON.stringify({ text, voice }) });
+  $('#jvMic')?.classList.remove('think');
+  if (!r.ok){ let j = {}; try { j = await r.json(); } catch(e){} throw new Error(j.error === 'no_key' ? 'no_key' : 'tts'); }
+  const url = URL.createObjectURL(await r.blob());
+  el.src = url;
+  el.onplay = () => { jvHumOn(); $('#jvMic')?.classList.add('speaking'); jvState(jvLang === 'en' ? 'Speaking…' : 'Je parle…'); };
+  el.onended = el.onerror = () => { jvHumOff(); $('#jvMic')?.classList.remove('speaking'); window.__jvLevel = 0; URL.revokeObjectURL(url); jvState(jvLang === 'en' ? 'Standing by · tap the mic' : 'En attente · touche le micro'); };
+  jvChime(false); await el.play();
 }
 /* sound design (Web Audio): a short activation chime and a soft reactor hum under the voice */
 let jvAC = null, jvHum = null;
@@ -3064,6 +3093,18 @@ function jvHumOn(){ const ac = jvAudio(); if (!ac || jvMute || jvHum) return; co
 function jvHumOff(){ if (!jvHum || !jvAC) return; const h = jvHum; jvHum = null; h.g.gain.linearRampToValueAtTime(0, jvAC.currentTime + .5); setTimeout(() => { try { h.a.stop(); h.b.stop(); } catch(e){} }, 600); }
 function jvState(t, on){ const s = $('#jvState'); if (s) s.textContent = t; const o = $('#jvMic'); if (o) o.classList.toggle(on || 'x', !!on); }
 function jvSay(text){
+  if (jvMute || !text) return;
+  const pick = jvPick();
+  if (pick.startsWith('eleven:')){
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    jvSayEleven(text, pick.slice(7)).catch(err => { jvState(err.message === 'no_key' ? (jvLang === 'en' ? 'Add your ElevenLabs key in ⚙️ Settings' : 'Ajoute ta clé ElevenLabs dans ⚙️ Settings') : (jvLang === 'en' ? 'Voice busy, using the device voice' : 'Voix occupée, voix de l\'appareil'));
+      jvSayDevice(text); });
+    return;
+  }
+  jvSayDevice(text);
+}
+function jvStop(){ if (window.speechSynthesis) speechSynthesis.cancel(); try { jvEl && jvEl.pause(); } catch(e){} }
+function jvSayDevice(text){
   if (jvMute || !window.speechSynthesis) return;
   speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text), v = jvVoice(); if (v){ u.voice = v; u.lang = v.lang; } else u.lang = jvLang === 'en' ? 'en-GB' : 'fr-CA';
@@ -3074,7 +3115,7 @@ function jvSay(text){
   jvChime(false); setTimeout(() => speechSynthesis.speak(u), 260);
 }
 (function decay(){ window.__jvLevel *= .9; requestAnimationFrame(decay); })();
-function jvUnlock(){ jvAudio(); try { if (window.speechSynthesis && !jvUnlock.done){ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); jvUnlock.done = true; } } catch(e){} }
+function jvUnlock(){ jvAudio(); try { const el = jvElInit(); if (!jvUnlock.el){ jvUnlock.el = true; el.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='; el.play().catch(() => {}); } } catch(e){} try { if (window.speechSynthesis && !jvUnlock.done){ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); jvUnlock.done = true; } } catch(e){} }
 function coreCtx(d){
   if (!d) return '';
   const L = d.last || {}, ago = ts => ts ? coreAgo(ts) : 'aucun signal';
@@ -3102,7 +3143,7 @@ async function jvAsk(q){
 }
 function jvListen(){
   jvUnlock();
-  if (window.speechSynthesis) speechSynthesis.cancel();
+  jvStop();
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR){ jvState(jvLang === 'en' ? 'Voice input not supported here: type your question' : 'Micro non pris en charge ici : écris ta question'); $('#jvQ').focus(); return; }
   if (jvRec){ jvRec.stop(); return; }
@@ -3130,7 +3171,7 @@ function jvPanel(){
 }
 let apR = null;
 function apRecStart(){
-  jvUnlock(); if (window.speechSynthesis) speechSynthesis.cancel();
+  jvUnlock(); jvStop();
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR){ jvState(jvLang === 'en' ? 'Dictation needs Chrome, Edge or Safari' : 'La dictée marche dans Chrome, Edge ou Safari'); return; }
   if (apR) return;
@@ -3176,16 +3217,18 @@ function jvBind(){
   $('#apDone').onclick = () => apRecStop('done');
   $('#jvMic').onclick = jvListen;
   $('#jvF').onsubmit = e => { e.preventDefault(); if (apR) return apRecStop('send'); jvAsk($('#jvQ').value); };
-  $('#jvMute').onclick = () => { jvMute = !jvMute; if (jvMute && window.speechSynthesis) speechSynthesis.cancel(); $('#jvMute').textContent = jvMute ? '🔇' : '🔊'; };
+  $('#jvMute').onclick = () => { jvMute = !jvMute; if (jvMute){ if (window.speechSynthesis) speechSynthesis.cancel(); try { jvEl && jvEl.pause(); } catch(e){} } $('#jvMute').textContent = jvMute ? '🔇' : '🔊'; };
   $('#jvRep').onclick = () => { jvUnlock(); jvSay($('#jvOut').textContent); };
   document.querySelectorAll('[data-jl]').forEach(b => b.onclick = () => { jvLang = b.dataset.jl; try { localStorage.setItem('jv-lang', jvLang); } catch(e){} coreRender(); });
   const fill = () => { const sel = $('#jvVoice'); if (!sel) return; const vs = jvList(), cur = jvVoice();
-    sel.innerHTML = vs.length ? vs.map(v => `<option value="${esc(v.name)}"${cur && v.name === cur.name ? ' selected' : ''}>${esc(v.name.replace(/Microsoft |Google /, '').replace(/ - .*$/, ''))}</option>`).join('') : `<option>${jvLang === 'en' ? 'Default voice' : 'Voix par défaut'}</option>`; };
+    const pick = jvPick();
+    sel.innerHTML = JV_ELEVEN.map(([v, l]) => `<option value="${v}"${pick === v ? ' selected' : ''}>${l}</option>`).join('')
+      + (vs.length ? `<optgroup label="${jvLang === 'en' ? 'Device voices' : 'Voix de l\'appareil'}">` + vs.map(v => `<option value="${esc(v.name)}"${!pick.startsWith('eleven:') && cur && v.name === cur.name ? ' selected' : ''}>${esc(v.name.replace(/Microsoft |Google /, '').replace(/ - .*$/, ''))}</option>`).join('') + '</optgroup>' : ''); };
   fill(); if (window.speechSynthesis) speechSynthesis.onvoiceschanged = fill;
   $('#jvVoice').onchange = () => { try { localStorage.setItem('jv-voice-' + jvLang, $('#jvVoice').value); } catch(e){} jvUnlock(); jvSay(jvLang === 'en' ? 'At your service, sir.' : 'À votre service, Monsieur.'); };
 }
 
-function coreClose(){ document.body.classList.remove('core-open'); try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){} if (window.speechSynthesis) speechSynthesis.cancel(); show('todo'); }
+function coreClose(){ document.body.classList.remove('core-open'); try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){} jvStop(); show('todo'); }
 function coreRender(){
   const v = $('#view'); if (!coreD) return;
   coreTok++; document.body.classList.add('core-open');

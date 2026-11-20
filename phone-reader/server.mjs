@@ -77,7 +77,7 @@ async function startCapture() {
   try {
     let video, control;
     if (CFG.FAKE_DEVICE_PORT) {
-      video = await connectRetry(CFG.FAKE_DEVICE_PORT, 20); control = await connectRetry(CFG.FAKE_DEVICE_PORT, 20, true);
+      video = await connectFirstByte(CFG.FAKE_DEVICE_PORT, 50, () => gen !== S.gen); control = await connectRetry(CFG.FAKE_DEVICE_PORT, 20, true);
     } else {
       const a = adbArgs(CFG.PHONE_SERIAL);
       const devs = await sh(CFG.ADB, ['devices']);
@@ -94,8 +94,8 @@ async function startCapture() {
       S.proc = spawn(CFG.ADB, [...a, 'shell', cmd], { stdio: ['ignore', 'pipe', 'pipe'] });
       let out = ''; const keep = d => { out = (out + d).slice(-2000); };
       S.proc.stdout.on('data', keep); S.proc.stderr.on('data', keep);
-      S.proc.on('exit', () => { if (S.state !== 'idle') { log('scrcpy server exited', out.slice(-300)); failG(out.includes('stack corruption') ? 'Phone video encoder crashed (command too long).' : 'Phone stopped sharing.'); } });
-      video = await connectRetry(CFG.TUNNEL_PORT, 100);
+      S.proc.on('exit', () => { if (S.state !== 'idle') { log('scrcpy server exited', out.slice(-300)); const last = out.trim().split('\n').filter(Boolean).slice(-2).join(' ').slice(0, 220); failG(out.includes('stack corruption') ? 'Phone video encoder crashed (command too long).' : 'Phone stopped sharing.' + (last ? ' (' + last + ')' : '')); } });
+      video = await connectFirstByte(CFG.TUNNEL_PORT, 100, () => gen !== S.gen);
       control = await connectRetry(CFG.TUNNEL_PORT, 100);
       sh(CFG.ADB, [...a, 'forward', '--remove', 'tcp:' + CFG.TUNNEL_PORT]).catch(() => {});
     }
@@ -107,6 +107,19 @@ async function startCapture() {
   } catch (e) { failG(e.message); }
 }
 
+function connectFirstByte(port, tries, cancelled) {
+  return new Promise((resolve, reject) => {
+    let n = 0;
+    const attempt = () => {
+      if (cancelled()) return reject(new Error('cancelled'));
+      const s = net.connect(port, '127.0.0.1'); let done = false;
+      const retry = () => { if (done) return; done = true; s.destroy(); if (++n >= tries) reject(new Error('The phone did not start sharing its screen. Unlock the phone and keep it plugged in.')); else setTimeout(attempt, 100); };
+      s.once('error', retry); s.once('close', retry);
+      s.once('data', d => { if (done) return; done = true; s.removeAllListeners(); s.setNoDelay(true); s.pause(); s.first = d; resolve(s); });
+    };
+    attempt();
+  });
+}
 function connectRetry(port, tries, fake = false) {
   return new Promise((resolve, reject) => {
     let n = 0;
@@ -134,9 +147,8 @@ function teardown() {
 function stopCapture() { clearTimeout(S.retry); S.gen++; teardown(); setState('idle'); log('capture stopped (nobody watching)'); }
 
 function readVideo(sock, fail) {
-  let buf = Buffer.alloc(0), stage = 0; // 0: dummy byte, 1: device name (64), 2: codec id (4), 3: packets
-  sock.on('data', d => {
-    buf = buf.length ? Buffer.concat([buf, d]) : d;
+  let buf = sock.first || Buffer.alloc(0), stage = 0; sock.first = null; // 0: dummy byte, 1: device name (64), 2: codec id (4), 3: packets
+  const parse = () => {
     for (;;) {
       if (stage === 0) { if (buf.length < 1) return; buf = buf.subarray(1); stage = 1; }
       else if (stage === 1) { if (buf.length < 64) return; S.name = buf.subarray(0, 64).toString('utf8').replace(/\0.*$/, ''); buf = buf.subarray(64); stage = 2; }
@@ -170,7 +182,9 @@ function readVideo(sock, fail) {
         if (S.state !== 'live') setState('live');
       }
     }
-  });
+  };
+  sock.on('data', d => { buf = buf.length ? Buffer.concat([buf, d]) : d; parse(); });
+  parse(); sock.resume();
 }
 
 function requestKeyFrame() {

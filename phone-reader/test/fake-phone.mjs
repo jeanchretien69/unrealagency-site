@@ -7,7 +7,9 @@ const starts = []; for (let i=0;i+3<data.length;i++) if (data[i]===0&&data[i+1]=
 const nals = starts.map((s,i)=>{ let e = i+1<starts.length?starts[i+1]:data.length; let b = data.subarray(s,e); while(b.length&&b[b.length-1]===0) b=b.subarray(0,b.length-1); return Buffer.concat([Buffer.from([0,0,0,1]), b.subarray(3)]); });
 const type = n => n[4]&31;
 let conn = 0; globalThis.controlGot = [];
+let refused = 0;
 net.createServer(sock => {
+  if (process.env.ADB_LIKE && refused < 5) { refused++; sock.destroy(); return; } // like adb before the phone app listens
   const id = conn++;
   if (id % 2 === 1) { sock.on('data', d => { console.log('FAKE control got', d.length, 'bytes type', d[0]); }); return; }
   sock.write(Buffer.from([0])); const name = Buffer.alloc(64); name.write('Fake Galaxy'); sock.write(name);

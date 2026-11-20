@@ -695,6 +695,7 @@
   .phnote-r{display:flex;gap:8px}.phnote-r .btn{flex:1;color:#f5f5fa;border-color:#2e2e3d}
   .phnote-r .btn:hover{background:#22222d}
   .phnote-tip{margin:0;font-size:11px;color:#9a9ab0}
+  .phst{font-size:11px;color:#9a9ab0;margin-left:auto}
   .phnote-top{display:none;gap:6px;align-items:center}.phnote-top .btn{color:#f5f5fa;border-color:#2e2e3d;padding:6px 10px;font-size:12px}
   .phonecard.phmax .phnote-top{display:flex}
   .phonecard.phmax .phonebar{display:none}
@@ -2585,9 +2586,21 @@ async function phoneView(){
     </div></div>`;
   const PHONE_ORIGIN = 'https://phone.unrealagency.ai';
   const frame = $('#phFrame'); let ready = false;
+  // on the phone's own Mac: connect straight to it (no trip through Cloudflare)
+  const tryLocal = async () => {
+    if (me?.role !== 'admin' || innerWidth <= 640) return false;
+    try { const r = await fetch('http://localhost:8100/health', { signal: AbortSignal.timeout(900), cache: 'no-store' }); const j = await r.json(); return !!j.ok; } catch(e){ return false; }
+  };
   const load = async () => {
     ready = false;
     $('#phSt').textContent = 'Getting your access…'; $('#phMsg').hidden = false; $('#phMsg').innerHTML = '<div class="phspin"></div>'; frame.hidden = true;
+    if (await tryLocal()){
+      if (tab !== 'phone') return;
+      $('#phSt').textContent = '⚡ Direct (this Mac)'; $('#phSt2').textContent = '⚡ Direct';
+      $('#phOpen').href = 'http://localhost:8100/'; $('#phOpen').hidden = false;
+      frame.src = 'http://localhost:8100/'; frame.hidden = false; $('#phMsg').hidden = true; return;
+    }
+    $('#phSt2').textContent = '';
     let r;
     try { r = await sb.functions.invoke('phone-pass', { method:'POST', body:{} }); } catch(e){ r = { error:e }; }
     if (tab !== 'phone') return;

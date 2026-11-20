@@ -38,9 +38,10 @@ fi
 say "1/6  Folders"
 mkdir -p "$TOOLS" "$HOME_DIR/public" "$HOME_DIR/logs" "$LA"
 if [ -f "$SRC/server.mjs" ] && [ -f "$SRC/public/index.html" ]; then
-  cp "$SRC/server.mjs" "$HOME_DIR/server.mjs" && cp -R "$SRC/public/." "$HOME_DIR/public/" || die "Could not copy the reader files"
+  cp "$SRC/server.mjs" "$SRC/webrtc.mjs" "$HOME_DIR/" && cp -R "$SRC/public/." "$HOME_DIR/public/" || die "Could not copy the reader files"
 else
   dl "$BASE_URL/server.mjs" "$HOME_DIR/server.mjs"
+  dl "$BASE_URL/webrtc.mjs" "$HOME_DIR/webrtc.mjs"
   dl "$BASE_URL/public/index.html" "$HOME_DIR/public/index.html"
 fi
 cp "$0" "$HOME_DIR/install.command" 2>/dev/null; chmod +x "$HOME_DIR/install.command" 2>/dev/null
@@ -55,6 +56,11 @@ if [ ! -x "$TOOLS/node/bin/node" ]; then
 fi
 "$TOOLS/node/bin/node" -v >/dev/null 2>&1 || die "Node did not install"
 ok "Node $("$TOOLS/node/bin/node" -v)"
+# WebRTC library (faster video). If it fails, the reader still works with the normal video link.
+if [ ! -d "$HOME_DIR/node_modules/werift" ]; then
+  ( cd "$HOME_DIR" && PATH="$TOOLS/node/bin:$PATH" "$TOOLS/node/bin/npm" install --no-audit --no-fund --silent --prefix "$HOME_DIR" werift@0.28.0 >/dev/null 2>&1 ) \
+    && ok "WebRTC (fast video) ready" || printf "  ! WebRTC could not install, using the normal video link\n"
+else ok "WebRTC (fast video) ready"; fi
 
 say "3/6  adb (Google's official Android tool)"
 if [ ! -x "$TOOLS/platform-tools/adb" ]; then

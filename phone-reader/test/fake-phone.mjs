@@ -15,7 +15,7 @@ net.createServer(sock => {
   sock.write(Buffer.from([0])); const name = Buffer.alloc(64); name.write('Fake Galaxy'); sock.write(name);
   const c = Buffer.alloc(4); c.writeUInt32BE(0x68323634); sock.write(c);
   const sess = Buffer.alloc(12); sess.writeUInt32BE(0x80000000,0); sess.writeUInt32BE(360,4); sess.writeUInt32BE(640,8); sock.write(sess);
-  const hdr = (flagsHi, size) => { const h = Buffer.alloc(12); h.writeUInt32BE(flagsHi,0); h.writeUInt32BE(size,8); return h; };
+  let fno = 0; const hdr = (flagsHi, size) => { const h = Buffer.alloc(12); const pts = flagsHi & 0x40000000 ? 0n : BigInt(++fno * 33333); h.writeBigUInt64BE((BigInt(flagsHi >>> 0) << 32n) | pts, 0); h.writeUInt32BE(size,8); return h; };
   const cfg = Buffer.concat(nals.filter(n=>type(n)===7||type(n)===8)); sock.write(hdr(0x40000000, cfg.length)); sock.write(cfg);
   const vcl = nals.filter(n=>type(n)===5||type(n)===1); let i=0;
   const t = setInterval(()=>{ const n = vcl[i++%vcl.length]; sock.write(hdr(type(n)===5?0x20000000:0, n.length)); sock.write(n); }, 33);

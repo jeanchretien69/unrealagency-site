@@ -15,6 +15,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.
 .frame:before{display:none}
 .screen{position:relative;border-radius:29px;overflow:hidden;background:#000;line-height:0}
 canvas{display:block;touch-action:none;cursor:pointer;outline:none;background:#000}
+#rv{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:fill;pointer-events:none;opacity:0;background:#000}
+#rv.on{opacity:1}
 .ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;line-height:1.4;color:#fff;background:radial-gradient(circle at 50% 35%,rgba(255,79,163,.18),#07070b 70%);transition:opacity .35s}
 .ov.hide{opacity:0;pointer-events:none}
 .ov b{font-size:16px}.ov span{color:#b9b9cc;font-size:13px;max-width:240px}
@@ -47,6 +49,7 @@ button.pri{background:linear-gradient(135deg,var(--pink),var(--pink2));border-co
 <div class="stage" id="stage">
   <div class="dev"><div class="frame" id="frame"><div class="screen" id="screen">
     <canvas id="cv" tabindex="0" width="360" height="760"></canvas>
+    <video id="rv" muted playsinline autoplay></video>
     <div class="ov" id="ov"><div class="spin" id="spin"></div><b id="ovT">Connecting…</b><span id="ovS">Opening the phone</span><button class="pri" id="ovB" hidden>Try again</button></div>
   </div></div></div>
   <div class="side" id="side">
@@ -92,7 +95,7 @@ function findSps(data) { for (let i = 0; i + 4 < data.length; i++) if (data[i] =
 function makeDecoder() {
   try { dec?.close(); } catch {}
   dec = new VideoDecoder({
-    output: f => { if (cv.width !== f.displayWidth || cv.height !== f.displayHeight) { cv.width = f.displayWidth; cv.height = f.displayHeight; } ctx.drawImage(f, 0, 0); f.close(); lastFrame = performance.now(); if (state !== 'live') ui('live'); },
+    output: f => { if (cv.width !== f.displayWidth || cv.height !== f.displayHeight) { cv.width = f.displayWidth; cv.height = f.displayHeight; } if (!rtcOn) ctx.drawImage(f, 0, 0); f.close(); lastFrame = performance.now(); if (state !== 'live') ui('live'); rtcStart(); },
     error: () => { needKey = true; askKey(); },
   });
 }
@@ -111,7 +114,7 @@ function onBinary(buf) {
     if (key && hadConfig) { chunkData = new Uint8Array(hadConfig.length + body.length); chunkData.set(hadConfig); chunkData.set(body, hadConfig.length); }
     needKey = false;
     try { dec.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: performance.now() * 1000, data: chunkData })); } catch { needKey = true; }
-    $('#lat').textContent = lag > 250 ? 'Behind ' + Math.round(lag) + ' ms' : '';
+    if (!rtcOn) $('#lat').textContent = lag > 250 ? 'Behind ' + Math.round(lag) + ' ms' : '';
   }
 }
 function connect() {
@@ -123,13 +126,14 @@ function connect() {
     lastMsg = performance.now();
     if (typeof e.data === 'string') {
       const m = JSON.parse(e.data); if (m.ping) return;
+      if (m.webrtc) { if (m.webrtc === 'offer') rtcOffer(m.sdp); else if (m.webrtc === 'failed') rtcStop(false); return; }
       if (m.state === 'error') ui('error', 'Phone not reachable', m.error || 'Reconnecting…', false);
       else if (m.state === 'starting' || m.state === 'idle') ui('connecting', 'Waking the phone…', m.name || 'This takes a few seconds');
       return;
     }
     onBinary(e.data);
   };
-  ws.onclose = () => { base = Infinity; if (state === 'live') ui('connecting', 'Reconnecting…', 'Connection dropped'); retryT = setTimeout(connect, 2000); };
+  ws.onclose = () => { base = Infinity; rtcStop(false); if (state === 'live') ui('connecting', 'Reconnecting…', 'Connection dropped'); retryT = setTimeout(connect, 2000); };
   ws.onerror = () => {};
 }
 // frozen image? ask for a fresh one; nothing for a while? reconnect on its own
@@ -184,5 +188,29 @@ addEventListener('message', e => {
   }
 });
 try { parent !== window && PARENTS.forEach(o => parent.postMessage({ type:'unreal-phone', ready:true }, o)); } catch {}
+// ---------- WebRTC video (falls back to the WebSocket picture on its own) ----------
+const rv = $('#rv'); let pc = null, rtcOn = false, rtcTried = 0;
+function rtcStart() { if (!('RTCPeerConnection' in window) || pc || !ws || ws.readyState !== 1 || Date.now() - rtcTried < 20000) return; rtcTried = Date.now(); ws.send(JSON.stringify({ webrtc: 'start' })); }
+function rtcStop(tell) {
+  const was = rtcOn; rtcOn = false; rv.classList.remove('on'); try { pc && pc.close(); } catch {} pc = null; rv.srcObject = null;
+  if (tell && ws && ws.readyState === 1) ws.send(JSON.stringify({ webrtc: 'stop' }));
+  if (was) { needKey = true; askKey(); }
+}
+async function rtcOffer(sdp) {
+  try {
+    pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }, { urls: 'stun:stun.l.google.com:19302' }] });
+    pc.ontrack = e => {
+      try { e.receiver.jitterBufferTarget = 0; } catch {} try { e.receiver.playoutDelayHint = 0; } catch {}
+      rv.srcObject = e.streams && e.streams[0] ? e.streams[0] : new MediaStream([e.track]); rv.play().catch(() => {});
+      const tick = () => { if (!pc) return; lastFrame = performance.now(); if (!rtcOn) { rtcOn = true; rv.classList.add('on'); $('#lat').textContent = ''; if (state !== 'live') ui('live'); } rv.requestVideoFrameCallback(tick); };
+      if (rv.requestVideoFrameCallback) rv.requestVideoFrameCallback(tick); else rv.onplaying = () => { rtcOn = true; rv.classList.add('on'); };
+    };
+    pc.onconnectionstatechange = () => { if (pc && ['failed', 'closed'].includes(pc.connectionState)) rtcStop(true); };
+    await pc.setRemoteDescription({ type: 'offer', sdp });
+    await pc.setLocalDescription(await pc.createAnswer());
+    await new Promise(r => { if (pc.iceGatheringState === 'complete') return r(); const t = setTimeout(r, 2000); pc.onicegatheringstatechange = () => { if (pc && pc.iceGatheringState === 'complete') { clearTimeout(t); r(); } }; });
+    if (pc && ws && ws.readyState === 1) ws.send(JSON.stringify({ webrtc: 'answer', sdp: pc.localDescription.sdp }));
+  } catch { rtcStop(true); }
+}
 connect();
 </script></body></html>

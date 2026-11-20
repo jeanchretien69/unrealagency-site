@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn, execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import * as RTC from './webrtc.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const env = (k, d) => process.env[k] ?? d;
@@ -49,6 +50,9 @@ async function gateOk(pass) {
   if (gateCache.size > 500) for (const [k, v] of gateCache) if (v.until < Date.now()) gateCache.delete(k);
   return ok;
 }
+const isLocal = req => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress) && !req.headers['cf-connecting-ip'] && !req.headers['cf-ray'];
+const LOCAL_ORIGINS = () => [`http://localhost:${CFG.PORT}`, `http://127.0.0.1:${CFG.PORT}`];
+const SITE_ORIGINS = ['https://unrealagency.ai', 'https://www.unrealagency.ai'];
 const cookieOf = req => {
   const m = /(?:^|;\s*)vb_pass=([^;]+)/.exec(req.headers.cookie || '');
   return m ? m[1] : '';
@@ -172,12 +176,22 @@ function readVideo(sock, fail) {
         if (buf.length < 12 + size) return;
         const flagsHi = hi, config = !!(flagsHi & 0x40000000), key = !!(flagsHi & 0x20000000);
         // pts is the low 61 bits; we only need relative time, so we stamp our own send time
-        const data = buf.subarray(12, 12 + size); buf = buf.subarray(12 + size);
-        if (config) { S.config = Buffer.concat([Buffer.from([2]), data]); sendAll(S.config); }
+        const ptsUs = Number(buf.readBigUInt64BE(0) & 0x1fffffffffffffffn);
+        const data = Buffer.from(buf.subarray(12, 12 + size)); buf = buf.subarray(12 + size);
+        if (config) { S.configRaw = data; S.config = Buffer.concat([Buffer.from([2]), data]); sendAll(S.config); }
         else {
-          const h = Buffer.alloc(10); h[0] = 3; h[1] = key ? 1 : 0; h.writeDoubleBE(Date.now(), 2);
           if (key) S.haveKey = true;
-          sendAll(Buffer.concat([h, data]));
+          let wsMsg = null;
+          for (const v of viewers) {
+            if (!v.ready) continue;
+            if (v.rtc && v.rtc.connected) { v.rtc.frame(data, key, ptsUs, S.configRaw); continue; }
+            // too far behind? drop old frames and jump to the next key frame instead of queuing them
+            if (v.waitKey && !key) continue;
+            if (v.bufferedAmount() > 600000) { v.waitKey = true; requestKeyFrame(); continue; }
+            if (key) v.waitKey = false;
+            if (!wsMsg) { const h = Buffer.alloc(10); h[0] = 3; h[1] = key ? 1 : 0; h.writeDoubleBE(Date.now(), 2); wsMsg = Buffer.concat([h, data]); }
+            v.send(wsMsg);
+          }
         }
         if (S.state !== 'live') setState('live');
       }
@@ -225,7 +239,7 @@ function wsAccept(req, socket) {
     send(b) { frame(socket, 2, b); },
     sendText(s) { frame(socket, 1, Buffer.from(s)); },
   };
-  let buf = Buffer.alloc(0), frag = [];
+  let buf = Buffer.alloc(0), frag = [], firstOp = 2;
   socket.on('data', d => {
     buf = Buffer.concat([buf, d]);
     for (;;) {
@@ -243,17 +257,18 @@ function wsAccept(req, socket) {
       if (op === 8) { socket.end(); return; }
       if (op === 9) { frame(socket, 10, p); continue; }
       if (op === 0 || op === 1 || op === 2) {
+        if (op !== 0) firstOp = op;
         frag.push(p); if (!fin) continue;
         const msg = Buffer.concat(frag); frag = [];
-        if (op === 1 || (op === 0 && false)) continue;
+        if (firstOp === 1) { onViewerText(v, msg.toString()); continue; }
         onViewerMessage(v, msg);
       }
     }
   });
-  const gone = () => { if (v.closed) return; v.closed = true; viewers.delete(v); log('viewer left,', viewers.size, 'watching'); if (!viewers.size) { clearTimeout(S.idleTimer); S.idleTimer = setTimeout(() => { if (!viewers.size) stopCapture(); }, CFG.IDLE_STOP_MS); } };
+  const gone = () => { if (v.closed) return; v.closed = true; try { v.rtc?.close(); } catch {} viewers.delete(v); log('viewer left,', viewers.size, 'watching'); if (!viewers.size) { clearTimeout(S.idleTimer); S.idleTimer = setTimeout(() => { if (!viewers.size) stopCapture(); }, CFG.IDLE_STOP_MS); } };
   socket.on('close', gone); socket.on('error', gone);
   clearTimeout(S.idleTimer);
-  viewers.add(v); v.ready = true;
+  viewers.add(v); v.ready = true; v.waitKey = true;
   log('viewer joined,', viewers.size, 'watching');
   v.sendText(JSON.stringify({ state: S.state, error: S.error, name: S.name }));
   if (S.state === 'live') { if (S.sess) v.send(S.sess); if (S.config) v.send(S.config); requestKeyFrame(); }
@@ -268,6 +283,17 @@ function frame(socket, op, payload) {
   else if (n < 65536) { h = Buffer.alloc(4); h[0] = 0x80 | op; h[1] = 126; h.writeUInt16BE(n, 2); }
   else { h = Buffer.alloc(10); h[0] = 0x80 | op; h[1] = 127; h.writeBigUInt64BE(BigInt(n), 2); }
   socket.write(Buffer.concat([h, payload]));
+}
+async function onViewerText(v, text) {
+  let m; try { m = JSON.parse(text); } catch { return; }
+  if (m.webrtc === 'start' && RTC.available && !v.rtc) {
+    try {
+      v.rtc = new RTC.RtcViewer({ send: o => v.sendText(JSON.stringify(o)), onKeyRequest: requestKeyFrame, log });
+      await v.rtc.start();
+    } catch (e) { log('webrtc start failed', e.message); v.rtc = null; v.sendText('{"webrtc":"failed"}'); }
+  } else if (m.webrtc === 'answer' && v.rtc && typeof m.sdp === 'string') {
+    try { await v.rtc.answer(m.sdp); } catch (e) { log('webrtc answer failed', e.message); v.rtc.close(); v.rtc = null; v.sendText('{"webrtc":"failed"}'); }
+  } else if (m.webrtc === 'stop' && v.rtc) { v.rtc.close(); v.rtc = null; v.waitKey = true; requestKeyFrame(); }
 }
 function onViewerMessage(v, msg) {
   if (msg.length === 1 && msg[0] === 0xff) return requestKeyFrame();      // page asked for a key frame
@@ -292,11 +318,13 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(303, { 'Set-Cookie': `vb_pass=${q}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=43200`, Location: u.pathname + (u.search || ''), 'Cache-Control': 'no-store', ...SEC_HEADERS() });
       return res.end();
     }
-    if (u.pathname === '/health' && (req.socket.remoteAddress === '127.0.0.1' || req.socket.remoteAddress === '::1') && !req.headers['cf-connecting-ip'] && !req.headers['cf-ray']) {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+    if (u.pathname === '/health' && isLocal(req)) {
+      const o = req.headers.origin, cors = SITE_ORIGINS.includes(o) ? { 'Access-Control-Allow-Origin': o, 'Access-Control-Allow-Private-Network': 'true', 'Access-Control-Allow-Methods': 'GET', 'Vary': 'Origin' } : {};
+      if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end(); }
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...cors });
       return res.end(JSON.stringify({ ok: true, state: S.state, name: S.name, viewers: viewers.size, w: S.w, h: S.h, error: S.error }));
     }
-    if (!(await gateOk(cookieOf(req)))) return deny(res);
+    if (!isLocal(req) && !(await gateOk(cookieOf(req)))) return deny(res);
     let p = u.pathname === '/' ? '/index.html' : decodeURIComponent(u.pathname);
     const f = path.normalize(path.join(CFG.PUBLIC_DIR, p));
     if (!f.startsWith(CFG.PUBLIC_DIR + path.sep) || !fs.existsSync(f) || !fs.statSync(f).isFile()) { res.writeHead(404, SEC_HEADERS()); return res.end('Not found'); }
@@ -307,12 +335,13 @@ const server = http.createServer(async (req, res) => {
 server.on('upgrade', async (req, socket) => {
   try {
     if (new URL(req.url, 'http://x').pathname !== '/ws') return socket.destroy();
-    if (!(await gateOk(cookieOf(req)))) { socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n'); return socket.destroy(); }
     const origin = req.headers.origin;
+    if (isLocal(req)) { if (!LOCAL_ORIGINS().includes(origin)) { socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); return socket.destroy(); } return wsAccept(req, socket); }
+    if (!(await gateOk(cookieOf(req)))) { socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n'); return socket.destroy(); }
     if (origin && CFG.PHONE_HOST && new URL(origin).host !== CFG.PHONE_HOST) { socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); return socket.destroy(); }
     wsAccept(req, socket);
   } catch { socket.destroy(); }
 });
-server.listen(CFG.PORT, CFG.HOST, () => log(`phone reader on http://${CFG.HOST}:${CFG.PORT}`, CFG.GATE_URL ? '(gate on)' : '(NO GATE: local test only)', CFG.FAKE_DEVICE_PORT ? '(fake phone)' : ''));
+server.listen(CFG.PORT, CFG.HOST, () => log(`phone reader on http://${CFG.HOST}:${CFG.PORT}`, RTC.available ? '(webrtc on)' : '(webrtc off)', CFG.GATE_URL ? '(gate on)' : '(NO GATE: local test only)', CFG.FAKE_DEVICE_PORT ? '(fake phone)' : ''));
 process.on('SIGTERM', () => { teardown(); process.exit(0); });
 process.on('SIGINT', () => { teardown(); process.exit(0); });

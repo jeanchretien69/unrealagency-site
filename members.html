@@ -707,7 +707,13 @@
   body.phmax-on{overflow:hidden}
   body.phmax-on .askbtn{display:none}
   @media (max-width:640px){.phonecard{padding:10px}.phwrap{flex-direction:column;height:auto;min-height:0}.phscreen{height:calc(100vh - 190px);min-height:480px;flex:none}.phnote{width:auto}.phnote textarea{min-height:140px}
-    .phonecard.phmax{overflow-y:auto}.phonecard.phmax .phwrap{height:auto}.phonecard.phmax .phscreen{height:calc(100vh - 20px)}}
+    .phonecard.phmax{overflow-y:auto;padding:0;padding-top:env(safe-area-inset-top)}.phonecard.phmax .phwrap{height:auto;gap:0}
+    .phonecard.phmax .phscreen{height:calc(100vh - env(safe-area-inset-top));height:calc(100dvh - env(safe-area-inset-top));border-radius:0}
+    .phonecard.phmax .phnote{border-radius:0;border-left:0;border-right:0;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+    .phonecard.phmax .phnote-top{display:none}
+    .phonecard.phmax .phfloat{display:flex}}
+  .phfloat{display:none;position:absolute;top:8px;left:8px;z-index:5;gap:6px}
+  .phfloat button{width:34px;height:34px;border-radius:50%;border:0;background:rgba(20,20,28,.72);color:#fff;font-size:15px;line-height:34px;padding:0;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 </style>
 </head>
 <body>
@@ -2576,7 +2582,7 @@ async function phoneView(){
     <div class="phonebar"><div><b>Model phone</b> <span class="muted" style="font-size:12px" id="phSt">Getting your access…</span></div>
     <div class="phbtns"><button class="btn ghost sm" id="phMax" type="button">⛶ Max size</button><button class="btn ghost sm" id="phReload" type="button">Reload</button><a class="btn sm" id="phOpen" target="_blank" rel="noopener" hidden>New tab ↗</a></div></div>
     <div class="phwrap">
-      <div class="phscreen"><iframe id="phFrame" title="Phone" allow="autoplay; clipboard-read; clipboard-write; fullscreen; local-network-access" referrerpolicy="no-referrer" hidden></iframe>
+      <div class="phscreen"><div class="phfloat"><button type="button" id="phX" aria-label="Exit">✕</button><button type="button" id="phR" aria-label="Reload">⟳</button></div><iframe id="phFrame" title="Phone" allow="autoplay; clipboard-read; clipboard-write; fullscreen; local-network-access" referrerpolicy="no-referrer" hidden></iframe>
         <div class="phmsg" id="phMsg"><div class="phspin"></div></div></div>
       <div class="phnote">
         <div class="phnote-top"><button class="btn ghost sm" id="phMax2" type="button">✕ Exit max</button><button class="btn ghost sm" id="phReload2" type="button">⟳ Reload</button><span class="phst" id="phSt2"></span></div>
@@ -2621,15 +2627,15 @@ async function phoneView(){
   frame.addEventListener('load', () => { try { frame.contentWindow.postMessage({ type:'unreal-phone', action:'ping' }, PHONE_ORIGIN); } catch(e){} });
   const note = $('#phNote');
   let saveT; note.oninput = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem('unreal-phone-notes', note.value); $('#phNSaved').textContent = 'saved'; setTimeout(() => $('#phNSaved').textContent = '', 1200); } catch(e){} }, 400); };
-  $('#phReload').onclick = load; $('#phReload2').onclick = load;
+  $('#phReload').onclick = load; $('#phReload2').onclick = load; $('#phR').onclick = load;
   const card = v.querySelector('.phonecard');
   const setMax = on => { card.classList.toggle('phmax', on); document.body.classList.toggle('phmax-on', on); $('#phMax').textContent = on ? '✕ Exit max' : '⛶ Max size'; $('#phMax2').hidden = !on; };
-  $('#phMax').onclick = () => setMax(!card.classList.contains('phmax')); $('#phMax2').onclick = () => setMax(false);
+  $('#phMax').onclick = () => setMax(!card.classList.contains('phmax')); $('#phMax2').onclick = () => setMax(false); $('#phX').onclick = () => setMax(false);
   const escKey = e => { if (e.key === 'Escape' && card.classList.contains('phmax') && document.activeElement !== note) setMax(false); };
   document.addEventListener('keydown', escKey);
   new MutationObserver((m, o) => { if (!document.body.contains(card)) { document.removeEventListener('keydown', escKey); removeEventListener('message', onMsg); document.body.classList.remove('phmax-on'); o.disconnect(); } }).observe(v, { childList:true });
   // opens straight at max size on a computer
-  if (innerWidth > 640) setMax(true);
+  setMax(true); // opens at max size, on computer and phone
   load();
 }
 

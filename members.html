@@ -678,15 +678,18 @@
   }
 
   /* phone control */
-  .phonecard{padding:16px}
-  .phonebar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .phonecard{padding:12px 14px 14px;scroll-margin-top:66px}
+  .phonebar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
   .phbtns{display:flex;gap:8px;align-items:center}
-  .phwrap{position:relative;height:calc(100vh - 230px);min-height:560px;border-radius:16px;overflow:hidden;background:#0b0b10}
+  .phwrap{position:relative;height:calc(100vh - 136px);min-height:560px;border-radius:16px;overflow:hidden;background:#0b0b10}
   .phwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0b0b10}
   .phmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#cfcfe0}
   .phspin{width:30px;height:30px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--pink);animation:phs .9s linear infinite}
   @keyframes phs{to{transform:rotate(360deg)}}
-  @media (max-width:640px){.phonecard{padding:10px}.phwrap{height:calc(100vh - 190px);min-height:480px}}
+  .phonecard.phmax{position:fixed;inset:0;z-index:300;margin:0;border-radius:0;padding:8px 10px 10px;background:#08080b}
+  .phonecard.phmax .phwrap{height:calc(100vh - 62px);min-height:0}
+  body.phmax-on{overflow:hidden}
+  @media (max-width:640px){.phonecard{padding:10px}.phwrap{height:calc(100vh - 190px);min-height:480px}.phonecard.phmax .phwrap{height:calc(100vh - 62px)}}
 </style>
 </head>
 <body>
@@ -2552,7 +2555,7 @@ async function phoneView(){
   const v = $('#view');
   v.innerHTML = `<div class="card phonecard">
     <div class="phonebar"><div><b>Model phone</b><div class="muted" style="font-size:13px" id="phSt">Getting your access…</div></div>
-    <div class="phbtns"><button class="btn ghost sm" id="phReload" type="button">Reload</button><a class="btn sm" id="phOpen" target="_blank" rel="noopener" hidden>Open in new tab ↗</a></div></div>
+    <div class="phbtns"><button class="btn ghost sm" id="phMax" type="button">⛶ Max size</button><button class="btn ghost sm" id="phReload" type="button">Reload</button><a class="btn sm" id="phOpen" target="_blank" rel="noopener" hidden>Open in new tab ↗</a></div></div>
     <div class="phwrap"><iframe id="phFrame" title="Phone" allow="clipboard-read; clipboard-write; fullscreen" referrerpolicy="no-referrer" hidden></iframe>
     <div class="phmsg" id="phMsg"><div class="phspin"></div></div></div></div>`;
   const load = async () => {
@@ -2566,11 +2569,19 @@ async function phoneView(){
       try { const j = await r.error?.context?.json?.(); if (j?.error === 'no access') why = 'Your account does not have the Phone control box ticked.'; else if (j?.error === 'not_set_up') why = 'The phone access is not set up on the server yet.'; } catch(e){}
       $('#phSt').textContent = 'Not available'; $('#phMsg').innerHTML = `<p class="muted" style="text-align:center;max-width:340px">${esc(why)}</p>`; return;
     }
-    $('#phSt').textContent = 'Live view: click the screen to tap, drag to swipe, type to write. Right-click = Back.';
+    $('#phSt').textContent = 'Click = tap · drag = swipe · type to write · right-click = Back';
     $('#phOpen').href = url; $('#phOpen').hidden = false;
     const f = $('#phFrame'); f.src = url; f.hidden = false; $('#phMsg').hidden = true;
   };
   $('#phReload').onclick = load;
+  const card = v.querySelector('.phonecard');
+  const setMax = on => { card.classList.toggle('phmax', on); document.body.classList.toggle('phmax-on', on); $('#phMax').textContent = on ? '✕ Exit max' : '⛶ Max size'; };
+  $('#phMax').onclick = () => setMax(!card.classList.contains('phmax'));
+  const esc = e => { if (e.key === 'Escape' && card.classList.contains('phmax')) setMax(false); };
+  document.addEventListener('keydown', esc);
+  new MutationObserver((m, o) => { if (!document.body.contains(card)) { document.removeEventListener('keydown', esc); document.body.classList.remove('phmax-on'); o.disconnect(); } }).observe(v, { childList:true });
+  // put the phone right under the top bar so it uses the whole screen height
+  setTimeout(() => { if (innerWidth > 640 && document.body.contains(card)) card.scrollIntoView({ block:'start', behavior:'smooth' }); }, 300);
   load();
 }
 

@@ -189,7 +189,7 @@ function readVideo(sock, fail) {
 
 function requestKeyFrame() {
   const now = Date.now();
-  if (now - S.lastKeyReq < 2500 || !S.control) return;
+  if (now - S.lastKeyReq < 3000 || !S.control) return;
   S.lastKeyReq = now; S.control.write(Buffer.from([17])); // RESET_VIDEO
 }
 
@@ -257,8 +257,8 @@ function wsAccept(req, socket) {
   v.sendText(JSON.stringify({ state: S.state, error: S.error, name: S.name }));
   if (S.state === 'live') { if (S.sess) v.send(S.sess); if (S.config) v.send(S.config); requestKeyFrame(); }
   else startCapture();
-  // watchdog: keep video alive for this viewer
-  const wd = setInterval(() => { if (v.closed) return clearInterval(wd); if (S.state === 'live' && !S.haveKey) requestKeyFrame(); }, 1000);
+  // heartbeat so the page knows the link is alive even when the screen is still (no pictures)
+  const hb = setInterval(() => { if (v.closed) return clearInterval(hb); v.sendText('{"ping":1}'); }, 10000);
 }
 function frame(socket, op, payload) {
   if (socket.destroyed) return;

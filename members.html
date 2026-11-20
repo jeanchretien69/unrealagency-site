@@ -695,14 +695,18 @@
   .phnote-r{display:flex;gap:8px}.phnote-r .btn{flex:1;color:#f5f5fa;border-color:#2e2e3d}
   .phnote-r .btn:hover{background:#22222d}
   .phnote-tip{margin:0;font-size:11px;color:#9a9ab0}
-  .phonecard.phmax{position:fixed;inset:0;z-index:300;margin:0;border-radius:0;padding:8px 10px 10px;background:#08080b;color:#f5f5fa}
+  .phnote-top{display:none;gap:6px;align-items:center}.phnote-top .btn{color:#f5f5fa;border-color:#2e2e3d;padding:6px 10px;font-size:12px}
+  .phonecard.phmax .phnote-top{display:flex}
+  .phonecard.phmax .phonebar{display:none}
+  .phonecard.phmax{position:fixed;inset:0;z-index:300;margin:0;border-radius:0;padding:6px;background:#08080b;color:#f5f5fa}
   .phonecard.phmax .phonebar .btn.ghost{color:#f5f5fa;border-color:#2e2e3d}
   .phonecard.phmax .phonebar .muted{color:#9a9ab0}
-  .phonecard.phmax .phwrap{height:calc(100vh - 58px);min-height:0}
+  .phonecard.phmax .phwrap{height:calc(100vh - 12px);min-height:0;gap:8px}
+  .phonecard.phmax .phscreen{background:#08080b}
   body.phmax-on{overflow:hidden}
   body.phmax-on .askbtn{display:none}
   @media (max-width:640px){.phonecard{padding:10px}.phwrap{flex-direction:column;height:auto;min-height:0}.phscreen{height:calc(100vh - 190px);min-height:480px;flex:none}.phnote{width:auto}.phnote textarea{min-height:140px}
-    .phonecard.phmax{overflow-y:auto}.phonecard.phmax .phwrap{height:auto}.phonecard.phmax .phscreen{height:calc(100vh - 70px)}}
+    .phonecard.phmax{overflow-y:auto}.phonecard.phmax .phwrap{height:auto}.phonecard.phmax .phscreen{height:calc(100vh - 20px)}}
 </style>
 </head>
 <body>
@@ -2574,11 +2578,12 @@ async function phoneView(){
       <div class="phscreen"><iframe id="phFrame" title="Phone" allow="clipboard-read; clipboard-write; fullscreen" referrerpolicy="no-referrer" hidden></iframe>
         <div class="phmsg" id="phMsg"><div class="phspin"></div></div></div>
       <div class="phnote">
-        <div class="phnote-h"><b>📝 Text for the phone</b><span id="phNSaved"></span></div>
-        <textarea id="phNote" placeholder="Write or paste your text here (captions, replies, links)…&#10;&#10;On the phone, tap the field where it should go, then press Send to phone.">${esc(notes)}</textarea>
+        <div class="phnote-top"><button class="btn ghost sm" id="phMax2" type="button">✕ Exit max</button><button class="btn ghost sm" id="phReload2" type="button">⟳ Reload</button><span class="phst" id="phSt2"></span></div>
+        <div class="phnote-h"><b>📝 Text box</b><span id="phNSaved"></span></div>
+        <textarea id="phNote" placeholder="Type or paste text here…">${esc(notes)}</textarea>
         <button class="btn" id="phSend" type="button">📲 Send to phone</button>
         <div class="phnote-r"><button class="btn ghost sm" id="phCopy" type="button">Copy</button><button class="btn ghost sm" id="phClear" type="button">Clear</button></div>
-        <p class="phnote-tip">Tip: select part of the text to send only that part. Saved on this computer.</p>
+        <p class="phnote-tip">Tap a text field on the phone → Send to phone. Select part of the text to send only that part.</p>
       </div>
     </div></div>`;
   const PHONE_ORIGIN = 'https://phone.unrealagency.ai';
@@ -2614,10 +2619,10 @@ async function phoneView(){
   };
   $('#phCopy').onclick = async () => { const t = pick(); if (t && await copy(t)) toast('Copied'); };
   $('#phClear').onclick = () => { if (!note.value || confirm('Clear the text box?')) { note.value = ''; note.oninput(); } };
-  $('#phReload').onclick = load;
+  $('#phReload').onclick = load; $('#phReload2').onclick = load;
   const card = v.querySelector('.phonecard');
-  const setMax = on => { card.classList.toggle('phmax', on); document.body.classList.toggle('phmax-on', on); $('#phMax').textContent = on ? '✕ Exit max' : '⛶ Max size'; };
-  $('#phMax').onclick = () => setMax(!card.classList.contains('phmax'));
+  const setMax = on => { card.classList.toggle('phmax', on); document.body.classList.toggle('phmax-on', on); $('#phMax').textContent = on ? '✕ Exit max' : '⛶ Max size'; $('#phMax2').hidden = !on; };
+  $('#phMax').onclick = () => setMax(!card.classList.contains('phmax')); $('#phMax2').onclick = () => setMax(false);
   const escKey = e => { if (e.key === 'Escape' && card.classList.contains('phmax') && document.activeElement !== note) setMax(false); };
   document.addEventListener('keydown', escKey);
   new MutationObserver((m, o) => { if (!document.body.contains(card)) { document.removeEventListener('keydown', escKey); removeEventListener('message', onMsg); document.body.classList.remove('phmax-on'); o.disconnect(); } }).observe(v, { childList:true });

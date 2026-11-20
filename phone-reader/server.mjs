@@ -195,16 +195,17 @@ function requestKeyFrame() {
 
 // ---------------- control messages from the browser ----------------
 // Only exact sizes are forwarded: one malformed message would shift the whole stream.
+const BLOCKED_KEYS = new Set([24, 25, 164, 91, 280, 281, 282, 283]); // volume up/down, mute, mic mute, notification swipe keys
 function validControl(b) {
   if (!b.length) return false;
   const t = b[0], n = b.length;
   switch (t) {
-    case 0: return n === 14;
+    case 0: return n === 14 && !BLOCKED_KEYS.has(b.readInt32BE(2)); // never volume / mute
     case 1: { if (n < 5) return false; const len = b.readUInt32BE(1); return len <= 300 && n === 5 + len; }
     case 2: return n === 32;
     case 3: return n === 21;
     case 4: return n === 2;
-    case 5: case 6: case 7: case 11: case 17: return n === 1;
+    case 7: case 17: return n === 1;          // no notification panel (5, 6), no rotate (11)
     case 9: { if (n < 14) return false; const len = b.readUInt32BE(10); return len <= 200000 && n === 14 + len; }
     case 10: return n === 2;
     default: return false;

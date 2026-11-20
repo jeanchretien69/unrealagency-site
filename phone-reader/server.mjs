@@ -85,6 +85,7 @@ async function startCapture() {
     } else {
       const a = adbArgs(CFG.PHONE_SERIAL);
       const devs = await sh(CFG.ADB, ['devices']);
+      sh(CFG.ADB, [...a, 'shell', 'input', 'keyevent', '224']).catch(() => {});
       const line = devs.split('\n').slice(1).find(l => l.trim() && (CFG.PHONE_SERIAL === 'usb' || l.startsWith(CFG.PHONE_SERIAL)));
       if (!line) throw new Error('No phone found on USB. Plug it in, unlock it.');
       if (/unauthorized/.test(line)) throw new Error('Phone says unauthorized: on the phone tap "Always allow this computer" then Allow.');
@@ -148,7 +149,8 @@ function teardown() {
   try { S.proc?.kill(); } catch {} S.proc = null;
   S.config = null; S.sess = null; S.haveKey = false; S.w = 0; S.h = 0; S.state = 'idle';
 }
-function stopCapture() { clearTimeout(S.retry); S.gen++; teardown(); setState('idle'); log('capture stopped (nobody watching)'); }
+function stopCapture() { clearTimeout(S.retry); S.gen++; teardown(); setState('idle'); log('capture stopped (nobody watching)');
+  if (!CFG.FAKE_DEVICE_PORT) sh(CFG.ADB, [...adbArgs(CFG.PHONE_SERIAL), 'shell', 'input', 'keyevent', '223']).then(() => log('phone screen off')).catch(() => {}); }
 
 function readVideo(sock, fail) {
   let buf = sock.first || Buffer.alloc(0), stage = 0; sock.first = null; // 0: dummy byte, 1: device name (64), 2: codec id (4), 3: packets

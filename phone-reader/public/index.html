@@ -8,7 +8,7 @@
 @media (prefers-color-scheme:light){:root{--bg:#f6f3f7;--card:#fff;--line:#e6dfe9;--tx:#1a1a22;--mu:#6c6c80}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}[hidden]{display:none!important}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;overflow:hidden}
-.stage{height:100%;display:flex;align-items:center;justify-content:center;gap:22px;padding:14px;position:relative}
+.stage{height:100%;display:flex;align-items:center;justify-content:center;gap:14px;padding:6px;position:relative}
 .dev{position:relative;display:flex;align-items:center;justify-content:center;height:100%;max-height:100%}
 .frame{position:relative;padding:12px;border-radius:44px;background:linear-gradient(145deg,#2a2a36,#0c0c12);box-shadow:0 0 0 2px #3a3a48,0 0 0 5px rgba(255,79,163,.18),0 30px 80px rgba(255,79,163,.18),0 20px 50px rgba(0,0,0,.45);transition:box-shadow .3s}
 .frame.live{box-shadow:0 0 0 2px #3a3a48,0 0 0 5px rgba(255,79,163,.45),0 30px 90px rgba(255,79,163,.3),0 20px 50px rgba(0,0,0,.45)}
@@ -84,7 +84,7 @@ function ui(st, title, sub, retry) {
 function fit() {
   if (!vw) return;
   const side = $('#side'), narrow = innerWidth <= 640, fs = document.body.classList.contains('fs');
-  const aw = innerWidth - (narrow || fs ? 16 : side.offsetWidth + 70), ah = innerHeight - (narrow ? side.offsetHeight + 40 : fs ? 0 : 56);
+  const aw = innerWidth - (narrow || fs ? 16 : side.offsetWidth + 46), ah = innerHeight - (narrow ? side.offsetHeight + 28 : fs ? 0 : 12);
   const pad = fs ? 0 : narrow ? 16 : 24, r = vw / vh;
   let h = Math.min(ah - pad, (aw - pad) / r); h = Math.max(h, 120);
   cv.style.height = h + 'px'; cv.style.width = h * r + 'px';
@@ -176,12 +176,23 @@ cv.addEventListener('keydown', e => {
   else if (KEYS[e.key]) { tap(KEYS[e.key]); e.preventDefault(); }
 });
 cv.addEventListener('paste', e => { const t = e.clipboardData?.getData('text'); if (t) { clip(t); e.preventDefault(); } });
-function clip(t) { const e = new TextEncoder().encode(t.slice(0, 5000)); const b = new DataView(new ArrayBuffer(14 + e.length)); b.setUint8(0, 9); b.setBigInt64(1, 0n); b.setUint8(9, 1); b.setUint32(10, e.length); new Uint8Array(b.buffer, 14).set(e); send(b.buffer); toast('Pasted'); }
+function clip(t) { const e = new TextEncoder().encode(t.slice(0, 20000)); const b = new DataView(new ArrayBuffer(14 + e.length)); b.setUint8(0, 9); b.setBigInt64(1, 0n); b.setUint8(9, 1); b.setUint32(10, e.length); new Uint8Array(b.buffer, 14).set(e); send(b.buffer); toast('Pasted'); }
 document.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { tap(+b.dataset.k); cv.focus(); });
 document.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { simple(+b.dataset.m); cv.focus(); });
 $('#bBack').onclick = () => { send(new Uint8Array([4, 0]).buffer); send(new Uint8Array([4, 1]).buffer); cv.focus(); };
 $('#bPaste').onclick = async () => { try { const t = await navigator.clipboard.readText(); if (t) clip(t); else toast('Clipboard is empty'); } catch { toast('Click the phone, then press Cmd+V'); } };
 $('#bFs').onclick = () => { const on = document.body.classList.toggle('fs'); try { if (on) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); } catch {} setTimeout(fit, 50); };
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('fs'); setTimeout(fit, 50); });
+// text sent from the notepad next to the phone on unrealagency.ai
+const PARENTS = ['https://unrealagency.ai', 'https://www.unrealagency.ai'];
+addEventListener('message', e => {
+  if (!PARENTS.includes(e.origin) || e.data?.type !== 'unreal-phone') return;
+  if (e.data.action === 'ping') e.source.postMessage({ type:'unreal-phone', ready:true }, e.origin);
+  if (e.data.action === 'paste' && typeof e.data.text === 'string' && e.data.text) {
+    if (state !== 'live') return toast('Phone not connected yet');
+    clip(e.data.text); e.source.postMessage({ type:'unreal-phone', sent:true }, e.origin);
+  }
+});
+try { parent !== window && PARENTS.forEach(o => parent.postMessage({ type:'unreal-phone', ready:true }, o)); } catch {}
 connect();
 </script></body></html>

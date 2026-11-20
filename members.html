@@ -681,15 +681,28 @@
   .phonecard{padding:12px 14px 14px;scroll-margin-top:66px}
   .phonebar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
   .phbtns{display:flex;gap:8px;align-items:center}
-  .phwrap{position:relative;height:calc(100vh - 136px);min-height:560px;border-radius:16px;overflow:hidden;background:#0b0b10}
-  .phwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0b0b10}
+  .phwrap{display:flex;gap:12px;height:calc(100vh - 136px);min-height:560px}
+  .phscreen{position:relative;flex:1;min-width:0;border-radius:16px;overflow:hidden;background:#0b0b10}
+  .phscreen iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0b0b10}
   .phmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#cfcfe0}
   .phspin{width:30px;height:30px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--pink);animation:phs .9s linear infinite}
   @keyframes phs{to{transform:rotate(360deg)}}
-  .phonecard.phmax{position:fixed;inset:0;z-index:300;margin:0;border-radius:0;padding:8px 10px 10px;background:#08080b}
-  .phonecard.phmax .phwrap{height:calc(100vh - 62px);min-height:0}
+  .phnote{width:min(380px,32vw);display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:#15151d;border:1px solid #262633;color:#f5f5fa}
+  .phnote-h{display:flex;justify-content:space-between;align-items:center;font-size:14px}.phnote-h span{font-size:11px;color:#9a9ab0}
+  .phnote textarea{flex:1;min-height:160px;resize:none;width:100%;border-radius:12px;border:1px solid #2e2e3d;background:#0b0b10;color:#f5f5fa;padding:12px;font:15px/1.5 inherit;font-family:inherit}
+  .phnote textarea:focus{outline:none;border-color:var(--pink)}
+  .phnote .btn{width:100%}
+  .phnote-r{display:flex;gap:8px}.phnote-r .btn{flex:1;color:#f5f5fa;border-color:#2e2e3d}
+  .phnote-r .btn:hover{background:#22222d}
+  .phnote-tip{margin:0;font-size:11px;color:#9a9ab0}
+  .phonecard.phmax{position:fixed;inset:0;z-index:300;margin:0;border-radius:0;padding:8px 10px 10px;background:#08080b;color:#f5f5fa}
+  .phonecard.phmax .phonebar .btn.ghost{color:#f5f5fa;border-color:#2e2e3d}
+  .phonecard.phmax .phonebar .muted{color:#9a9ab0}
+  .phonecard.phmax .phwrap{height:calc(100vh - 58px);min-height:0}
   body.phmax-on{overflow:hidden}
-  @media (max-width:640px){.phonecard{padding:10px}.phwrap{height:calc(100vh - 190px);min-height:480px}.phonecard.phmax .phwrap{height:calc(100vh - 62px)}}
+  body.phmax-on .askbtn{display:none}
+  @media (max-width:640px){.phonecard{padding:10px}.phwrap{flex-direction:column;height:auto;min-height:0}.phscreen{height:calc(100vh - 190px);min-height:480px;flex:none}.phnote{width:auto}.phnote textarea{min-height:140px}
+    .phonecard.phmax{overflow-y:auto}.phonecard.phmax .phwrap{height:auto}.phonecard.phmax .phscreen{height:calc(100vh - 70px)}}
 </style>
 </head>
 <body>
@@ -2553,13 +2566,26 @@ async function editView(selected){
 // ---------- phone control ----------
 async function phoneView(){
   const v = $('#view');
+  let notes = ''; try { notes = localStorage.getItem('unreal-phone-notes') || ''; } catch(e){}
   v.innerHTML = `<div class="card phonecard">
-    <div class="phonebar"><div><b>Model phone</b><div class="muted" style="font-size:13px" id="phSt">Getting your access…</div></div>
-    <div class="phbtns"><button class="btn ghost sm" id="phMax" type="button">⛶ Max size</button><button class="btn ghost sm" id="phReload" type="button">Reload</button><a class="btn sm" id="phOpen" target="_blank" rel="noopener" hidden>Open in new tab ↗</a></div></div>
-    <div class="phwrap"><iframe id="phFrame" title="Phone" allow="clipboard-read; clipboard-write; fullscreen" referrerpolicy="no-referrer" hidden></iframe>
-    <div class="phmsg" id="phMsg"><div class="phspin"></div></div></div></div>`;
+    <div class="phonebar"><div><b>Model phone</b> <span class="muted" style="font-size:12px" id="phSt">Getting your access…</span></div>
+    <div class="phbtns"><button class="btn ghost sm" id="phMax" type="button">⛶ Max size</button><button class="btn ghost sm" id="phReload" type="button">Reload</button><a class="btn sm" id="phOpen" target="_blank" rel="noopener" hidden>New tab ↗</a></div></div>
+    <div class="phwrap">
+      <div class="phscreen"><iframe id="phFrame" title="Phone" allow="clipboard-read; clipboard-write; fullscreen" referrerpolicy="no-referrer" hidden></iframe>
+        <div class="phmsg" id="phMsg"><div class="phspin"></div></div></div>
+      <div class="phnote">
+        <div class="phnote-h"><b>📝 Text for the phone</b><span id="phNSaved"></span></div>
+        <textarea id="phNote" placeholder="Write or paste your text here (captions, replies, links)…&#10;&#10;On the phone, tap the field where it should go, then press Send to phone.">${esc(notes)}</textarea>
+        <button class="btn" id="phSend" type="button">📲 Send to phone</button>
+        <div class="phnote-r"><button class="btn ghost sm" id="phCopy" type="button">Copy</button><button class="btn ghost sm" id="phClear" type="button">Clear</button></div>
+        <p class="phnote-tip">Tip: select part of the text to send only that part. Saved on this computer.</p>
+      </div>
+    </div></div>`;
+  const PHONE_ORIGIN = 'https://phone.unrealagency.ai';
+  const frame = $('#phFrame'); let ready = false;
   const load = async () => {
-    $('#phSt').textContent = 'Getting your access…'; $('#phMsg').hidden = false; $('#phMsg').innerHTML = '<div class="phspin"></div>'; $('#phFrame').hidden = true;
+    ready = false;
+    $('#phSt').textContent = 'Getting your access…'; $('#phMsg').hidden = false; $('#phMsg').innerHTML = '<div class="phspin"></div>'; frame.hidden = true;
     let r;
     try { r = await sb.functions.invoke('phone-pass', { method:'POST', body:{} }); } catch(e){ r = { error:e }; }
     if (tab !== 'phone') return;
@@ -2569,19 +2595,34 @@ async function phoneView(){
       try { const j = await r.error?.context?.json?.(); if (j?.error === 'no access') why = 'Your account does not have the Phone control box ticked.'; else if (j?.error === 'not_set_up') why = 'The phone access is not set up on the server yet.'; } catch(e){}
       $('#phSt').textContent = 'Not available'; $('#phMsg').innerHTML = `<p class="muted" style="text-align:center;max-width:340px">${esc(why)}</p>`; return;
     }
-    $('#phSt').textContent = 'Click = tap · drag = swipe · type to write · right-click = Back';
+    $('#phSt').textContent = 'click = tap · drag = swipe · right-click = Back';
     $('#phOpen').href = url; $('#phOpen').hidden = false;
-    const f = $('#phFrame'); f.src = url; f.hidden = false; $('#phMsg').hidden = true;
+    frame.src = url; frame.hidden = false; $('#phMsg').hidden = true;
   };
+  // the phone page answers "ready" once it can take text
+  const onMsg = e => { if (e.origin === PHONE_ORIGIN && e.data?.type === 'unreal-phone') { if (e.data.ready) ready = true; if (e.data.sent) toast('Sent to the phone ✓'); } };
+  addEventListener('message', onMsg);
+  frame.addEventListener('load', () => { try { frame.contentWindow.postMessage({ type:'unreal-phone', action:'ping' }, PHONE_ORIGIN); } catch(e){} });
+  const note = $('#phNote');
+  const pick = () => { const a = note.selectionStart, b = note.selectionEnd; return (b > a ? note.value.slice(a, b) : note.value).trim(); };
+  let saveT; note.oninput = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem('unreal-phone-notes', note.value); $('#phNSaved').textContent = 'saved'; setTimeout(() => $('#phNSaved').textContent = '', 1200); } catch(e){} }, 400); };
+  const copy = async t => { try { await navigator.clipboard.writeText(t); return true; } catch(e){ return false; } };
+  $('#phSend').onclick = async () => {
+    const t = pick(); if (!t) return toast('Write some text first');
+    if (ready){ frame.contentWindow.postMessage({ type:'unreal-phone', action:'paste', text:t }, PHONE_ORIGIN); return; }
+    const ok = await copy(t); toast(ok ? 'Copied: click the phone screen, then press Cmd+V' : 'Select the text and copy it');
+  };
+  $('#phCopy').onclick = async () => { const t = pick(); if (t && await copy(t)) toast('Copied'); };
+  $('#phClear').onclick = () => { if (!note.value || confirm('Clear the text box?')) { note.value = ''; note.oninput(); } };
   $('#phReload').onclick = load;
   const card = v.querySelector('.phonecard');
   const setMax = on => { card.classList.toggle('phmax', on); document.body.classList.toggle('phmax-on', on); $('#phMax').textContent = on ? '✕ Exit max' : '⛶ Max size'; };
   $('#phMax').onclick = () => setMax(!card.classList.contains('phmax'));
-  const esc = e => { if (e.key === 'Escape' && card.classList.contains('phmax')) setMax(false); };
-  document.addEventListener('keydown', esc);
-  new MutationObserver((m, o) => { if (!document.body.contains(card)) { document.removeEventListener('keydown', esc); document.body.classList.remove('phmax-on'); o.disconnect(); } }).observe(v, { childList:true });
-  // put the phone right under the top bar so it uses the whole screen height
-  setTimeout(() => { if (innerWidth > 640 && document.body.contains(card)) card.scrollIntoView({ block:'start', behavior:'smooth' }); }, 300);
+  const escKey = e => { if (e.key === 'Escape' && card.classList.contains('phmax') && document.activeElement !== note) setMax(false); };
+  document.addEventListener('keydown', escKey);
+  new MutationObserver((m, o) => { if (!document.body.contains(card)) { document.removeEventListener('keydown', escKey); removeEventListener('message', onMsg); document.body.classList.remove('phmax-on'); o.disconnect(); } }).observe(v, { childList:true });
+  // opens straight at max size on a computer
+  if (innerWidth > 640) setMax(true);
   load();
 }
 

@@ -42,7 +42,7 @@ button.pri{background:linear-gradient(135deg,var(--pink),var(--pink2));border-co
   .stage{flex-direction:column;gap:6px;padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
   .side{flex-direction:row;flex-wrap:nowrap;min-width:0;width:100%;justify-content:space-around;padding:6px;border-radius:16px;gap:4px}
   .side h4,.sp,.st,.hideM,#bFs{display:none}
-  .side button{flex:1;justify-content:center;padding:10px 0;font-size:16px;border-radius:12px}
+  .side button{flex:1;justify-content:center;padding:8px 0;font-size:16px;border-radius:12px}
   .frame{padding:3px;border-radius:26px;box-shadow:0 0 0 1px #3a3a48,0 0 0 3px rgba(255,79,163,.25)}.screen{border-radius:23px}
 }
 </style></head><body>
@@ -91,6 +91,10 @@ function fit() {
 addEventListener('resize', fit); window.visualViewport && visualViewport.addEventListener('resize', fit);
 
 // ---------- video ----------
+function nals(b) { const o = []; let i = 0, st = -1; while (i + 3 <= b.length) { if (b[i] === 0 && b[i + 1] === 0 && (b[i + 2] === 1 || (b[i + 2] === 0 && i + 3 < b.length && b[i + 3] === 1))) { if (st >= 0) o.push(b.subarray(st, i)); i += b[i + 2] === 1 ? 3 : 4; st = i; } else i++; } if (st >= 0 && st < b.length) o.push(b.subarray(st)); return o.map(n => { let e = n.length; while (e > 1 && n[e - 1] === 0) e--; return n.subarray(0, e); }).filter(n => n.length); }
+function toAvcc(b) { const list = nals(b).filter(n => { const t = n[0] & 31; return t !== 7 && t !== 8 && t !== 9; }); let len = 0; list.forEach(n => len += 4 + n.length); const out = new Uint8Array(len); const dv = new DataView(out.buffer); let o = 0; list.forEach(n => { dv.setUint32(o, n.length); out.set(n, o + 4); o += 4 + n.length; }); return out; }
+function avcC(sps, pps) { const a = new Uint8Array(11 + sps.length + pps.length); a.set([1, sps[1], sps[2], sps[3], 0xff, 0xe1, sps.length >> 8, sps.length & 255]); a.set(sps, 8); let o = 8 + sps.length; a.set([1, pps.length >> 8, pps.length & 255], o); a.set(pps, o + 3); return a; }
+let lastErr = '', codecStr = '';
 function codecString(sps) { const b = [sps[1], sps[2], sps[3]].map(x => x.toString(16).padStart(2, '0')).join(''); return 'avc1.' + b; }
 function findSps(data) { for (let i = 0; i + 4 < data.length; i++) if (data[i] === 0 && data[i + 1] === 0 && (data[i + 2] === 1 || (data[i + 2] === 0 && data[i + 3] === 1))) { const o = data[i + 2] === 1 ? i + 3 : i + 4; if ((data[o] & 31) === 7) return data.subarray(o); } return null; }
 const SAFARI = /Apple/.test(navigator.vendor || '');
@@ -99,13 +103,18 @@ function makeDecoder() { pending = 0;
   try { dec?.close(); } catch {}
   dec = new VideoDecoder({
     output: f => { pending = Math.max(0, pending - 1); if (cv.width !== f.displayWidth || cv.height !== f.displayHeight) { cv.width = f.displayWidth; cv.height = f.displayHeight; } if (!rtcOn) ctx.drawImage(f, 0, 0); f.close(); lastFrame = performance.now(); if (state !== 'live') ui('live'); rtcStart(); },
-    error: () => { needKey = true; askKey(); },
+    error: e => { lastErr = 'decode: ' + (e && e.message || e); needKey = true; askKey(); },
   });
 }
 function onBinary(buf) {
   const u = new Uint8Array(buf), t = u[0];
   if (t === 1) { const dv = new DataView(buf); const w = dv.getUint32(1), h = dv.getUint32(5); if (w !== vw || h !== vh) { vw = w; vh = h; cv.width = vw; cv.height = vh; fit(); } needKey = true; return; }
-  if (t === 2) { const c = u.slice(1); if (hadConfig && dec && dec.state === 'configured' && c.length === hadConfig.length && c.every((x, i) => x === hadConfig[i])) return; hadConfig = c; const sps = findSps(hadConfig); if (sps) { makeDecoder(); dec.configure({ codec: codecString(sps), optimizeForLatency: true }); needKey = true; } return; }
+  if (t === 2) {
+    const c = u.slice(1); if (hadConfig && dec && dec.state === 'configured' && c.length === hadConfig.length && c.every((x, i) => x === hadConfig[i])) return;
+    hadConfig = c; const list = nals(c), sps = list.find(n => (n[0] & 31) === 7), pps = list.find(n => (n[0] & 31) === 8);
+    if (sps && pps) { makeDecoder(); codecStr = codecString(sps); try { dec.configure({ codec: codecStr, description: avcC(sps, pps), optimizeForLatency: true }); } catch (e) { lastErr = 'configure: ' + e.message; } needKey = true; }
+    return;
+  }
   if (t === 3) {
     if (!dec || dec.state !== 'configured') return;
     const key = u[1] === 1, sent = new DataView(buf, 2, 8).getFloat64(0), body = u.subarray(10);
@@ -113,8 +122,7 @@ function onBinary(buf) {
     // too far behind live? ask for a fresh image instead of showing old ones
     const raw = Date.now() - sent; base = Math.min(base, raw); const lag = raw - base; lagBad = lag > 1500 ? lagBad + 1 : 0;
     if (lagBad > 90) { lagBad = 0; base = Infinity; needKey = true; askKey(); return; }
-    let chunkData = body;
-    if (key && hadConfig) { chunkData = new Uint8Array(hadConfig.length + body.length); chunkData.set(hadConfig); chunkData.set(body, hadConfig.length); }
+    const chunkData = toAvcc(body); if (!chunkData.length) return;
     needKey = false;
     try { dec.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: performance.now() * 1000, data: chunkData })); pending++; } catch { needKey = true; }
     if (SAFARI) { clearTimeout(flushT); flushT = setTimeout(() => { if (pending > 0 && dec && dec.state === 'configured' && !rtcOn) dec.flush().then(() => { needKey = true; askKey(); }).catch(() => {}); }, 120); }
@@ -194,6 +202,12 @@ addEventListener('message', e => {
 try { parent !== window && PARENTS.forEach(o => parent.postMessage({ type:'unreal-phone', ready:true }, o)); } catch {}
 // ---------- WebRTC video (falls back to the WebSocket picture on its own) ----------
 const rv = $('#rv'); let pc = null, rtcOn = false, rtcTried = 0;
+let liveSince = 0;
+setInterval(() => {
+  if (state !== 'live') { liveSince = 0; return; } if (!liveSince) liveSince = performance.now();
+  if (!lastFrame && performance.now() - liveSince > 6000) { $('#ov').classList.remove('hide'); $('#spin').hidden = true; $('#ovT').textContent = 'Picture not showing'; $('#ovS').textContent = (rtcOn ? 'fast' : 'normal') + ' · ' + (codecStr || 'no codec') + ' · ' + (dec ? dec.state : 'no decoder') + (lastErr ? ' · ' + lastErr : '') + ' — send me this line'; $('#ovB').hidden = false; }
+  else if (lastFrame && !$('#ov').classList.contains('hide') && state === 'live') $('#ov').classList.add('hide');
+}, 1500);
 setInterval(() => { if (rtcOn && rv.paused) rv.play().catch(() => rtcStop(true)); }, 1000);
 function rtcStart() { if (!('RTCPeerConnection' in window) || pc || !ws || ws.readyState !== 1 || Date.now() - rtcTried < 20000) return; rtcTried = Date.now(); ws.send(JSON.stringify({ webrtc: 'start' })); }
 function rtcStop(tell) {

@@ -676,6 +676,17 @@
     .td-kpis{gap:8px}
     .askp{right:8px;left:8px;width:auto;bottom:calc(66px + env(safe-area-inset-bottom));height:min(560px,calc(100dvh - 140px))}
   }
+
+  /* phone control */
+  .phonecard{padding:16px}
+  .phonebar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .phbtns{display:flex;gap:8px;align-items:center}
+  .phwrap{position:relative;height:calc(100vh - 230px);min-height:560px;border-radius:16px;overflow:hidden;background:#0b0b10}
+  .phwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0b0b10}
+  .phmsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#cfcfe0}
+  .phspin{width:30px;height:30px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--pink);animation:phs .9s linear infinite}
+  @keyframes phs{to{transform:rotate(360deg)}}
+  @media (max-width:640px){.phonecard{padding:10px}.phwrap{height:calc(100vh - 190px);min-height:480px}}
 </style>
 </head>
 <body>
@@ -738,6 +749,7 @@
           <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
           <button data-tab="twitter" data-perm="twitter" hidden>🐦 Twitter</button>
           <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone<span class="nb" id="nbSms" hidden></span></button>
+          <button data-tab="phone" data-perm="phone" hidden>🕹 Phone control</button>
           <button data-tab="dropp" data-perm="dropp" hidden>💸 Dropp</button>
         </div></div>
         <div class="grp" data-g="content"><div class="gh" role="button" tabindex="0" aria-expanded="true">Content<i>▾</i></div><div class="gb">
@@ -852,6 +864,7 @@ const PERMS = [
   { k:'team', l:'✅ Team to-do', sub:[['team:Before posting','Before posting'],['team:Daily posting','Daily posting'],['team:Rules','Rules']] },
   { k:'twitter', l:'🐦 Twitter', sub:[] },
   { k:'sms', l:'📱 SMS phone', sub:[] },
+  { k:'phone', l:'🕹 Phone control', sub:[] },
   { k:'dropp', l:'💸 Dropp', sub:[['dropp.links','Links'],['dropp.content','Content'],['dropp.sales','Sales'],['dropp.wallet','Wallet'],['dropp.extras','Tips & wishlists']] },
   { k:'quotes', l:'💬 Quotes', sub:[] },
   { k:'photos', l:'📸 Photos', sub:[] },
@@ -989,7 +1002,7 @@ document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.datas
     h.onclick = flip; h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
   });
 })();
-const titles = { core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function mnavClose(){ document.body.classList.remove('mopen'); $('#mnav').setAttribute('aria-expanded', 'false'); }
 $('#mnav').onclick = () => { const o = document.body.classList.toggle('mopen'); $('#mnav').setAttribute('aria-expanded', String(o)); };
@@ -999,13 +1012,13 @@ function show(t){
   if (t !== 'core') document.body.classList.remove('core-open');
   if (t !== 'time') timeStop();
   tab = t; history.replaceState(null, '', '#' + t); badges();
-  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'core');
+  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'phone' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'core');
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   { const sb = document.querySelector(`#side button[data-tab="${t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }
   mnavClose(); window.scrollTo(0, 0);
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ core:coreView, photos:photosView, quotes:quotesView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
@@ -2531,6 +2544,34 @@ async function editView(selected){
     toast('Saved'); editView(res.data.id);
   };
   $('#eDel') && ($('#eDel').onclick = async () => { if (!confirm('Delete this doc?')) return; const { error } = await sb.from('docs').delete().eq('id', d.id); toast(error ? error.message : 'Deleted'); editView(null); });
+}
+
+
+// ---------- phone control ----------
+async function phoneView(){
+  const v = $('#view');
+  v.innerHTML = `<div class="card phonecard">
+    <div class="phonebar"><div><b>Model phone</b><div class="muted" style="font-size:13px" id="phSt">Getting your access…</div></div>
+    <div class="phbtns"><button class="btn ghost sm" id="phReload" type="button">Reload</button><a class="btn sm" id="phOpen" target="_blank" rel="noopener" hidden>Open in new tab ↗</a></div></div>
+    <div class="phwrap"><iframe id="phFrame" title="Phone" allow="clipboard-read; clipboard-write; fullscreen" referrerpolicy="no-referrer" hidden></iframe>
+    <div class="phmsg" id="phMsg"><div class="phspin"></div></div></div></div>`;
+  const load = async () => {
+    $('#phSt').textContent = 'Getting your access…'; $('#phMsg').hidden = false; $('#phMsg').innerHTML = '<div class="phspin"></div>'; $('#phFrame').hidden = true;
+    let r;
+    try { r = await sb.functions.invoke('phone-pass', { method:'POST', body:{} }); } catch(e){ r = { error:e }; }
+    if (tab !== 'phone') return;
+    const url = r?.data?.url;
+    if (!url){
+      let why = 'Could not open the phone. Try again in a minute.';
+      try { const j = await r.error?.context?.json?.(); if (j?.error === 'no access') why = 'Your account does not have the Phone control box ticked.'; else if (j?.error === 'not_set_up') why = 'The phone access is not set up on the server yet.'; } catch(e){}
+      $('#phSt').textContent = 'Not available'; $('#phMsg').innerHTML = `<p class="muted" style="text-align:center;max-width:340px">${esc(why)}</p>`; return;
+    }
+    $('#phSt').textContent = 'Live view: click the screen to tap, drag to swipe, type to write. Right-click = Back.';
+    $('#phOpen').href = url; $('#phOpen').hidden = false;
+    const f = $('#phFrame'); f.src = url; f.hidden = false; $('#phMsg').hidden = true;
+  };
+  $('#phReload').onclick = load;
+  load();
 }
 
 function settingsView(){

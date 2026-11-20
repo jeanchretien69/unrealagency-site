@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Phone</title>
+<style>
+:root{--pink:#ff4fa3;--pink2:#ff86c1;--bg:#0b0b10;--card:#15151d;--line:#262633;--tx:#f5f5fa;--mu:#9a9ab0}
+@media (prefers-color-scheme:light){:root{--bg:#f6f3f7;--card:#fff;--line:#e6dfe9;--tx:#1a1a22;--mu:#6c6c80}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}[hidden]{display:none!important}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;overflow:hidden}
+.stage{height:100%;display:flex;align-items:center;justify-content:center;gap:22px;padding:14px;position:relative}
+.dev{position:relative;display:flex;align-items:center;justify-content:center;height:100%;max-height:100%}
+.frame{position:relative;padding:12px;border-radius:44px;background:linear-gradient(145deg,#2a2a36,#0c0c12);box-shadow:0 0 0 2px #3a3a48,0 0 0 5px rgba(255,79,163,.18),0 30px 80px rgba(255,79,163,.18),0 20px 50px rgba(0,0,0,.45);transition:box-shadow .3s}
+.frame.live{box-shadow:0 0 0 2px #3a3a48,0 0 0 5px rgba(255,79,163,.45),0 30px 90px rgba(255,79,163,.3),0 20px 50px rgba(0,0,0,.45)}
+.frame:before{content:"";position:absolute;top:5px;left:50%;width:58px;height:5px;margin-left:-29px;border-radius:5px;background:#050508}
+.screen{position:relative;border-radius:30px;overflow:hidden;background:#000;line-height:0}
+canvas{display:block;touch-action:none;cursor:pointer;outline:none;background:#000}
+.ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;line-height:1.4;color:#fff;background:radial-gradient(circle at 50% 35%,rgba(255,79,163,.18),#07070b 70%);transition:opacity .35s}
+.ov.hide{opacity:0;pointer-events:none}
+.ov b{font-size:16px}.ov span{color:#b9b9cc;font-size:13px;max-width:240px}
+.spin{width:30px;height:30px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--pink);animation:s 0.9s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+.ov button{margin-top:6px}
+.side{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:20px;background:var(--card);border:1px solid var(--line);min-width:128px}
+.side h4{margin:0 0 2px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);font-weight:600}
+button{font:inherit;color:var(--tx);background:transparent;border:1px solid var(--line);border-radius:12px;padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s;text-align:left}
+button:hover{border-color:var(--pink);background:rgba(255,79,163,.08)}
+button:active{transform:scale(.97)}
+button.pri{background:linear-gradient(135deg,var(--pink),var(--pink2));border-color:transparent;color:#fff;font-weight:600;justify-content:center}
+.st{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu);padding:2px 2px 6px}
+.dot{width:8px;height:8px;border-radius:50%;background:#777}
+.dot.live{background:#34d399;box-shadow:0 0 8px #34d399}.dot.err{background:#f87171}.dot.starting{background:#fbbf24;animation:b 1s infinite}
+@keyframes b{50%{opacity:.3}}
+.sp{height:1px;background:var(--line);margin:4px 0}
+.row2{display:flex;gap:8px}.row2 button{flex:1;justify-content:center;padding:9px 0}
+.toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:#000c;color:#fff;padding:8px 14px;border-radius:20px;font-size:12px;opacity:0;transition:.25s;pointer-events:none}
+.toast.on{opacity:1}
+.fs .stage{padding:0}.fs .side{display:none}
+@media (max-width:640px){
+  .stage{flex-direction:column;gap:10px;padding:8px}
+  .side{flex-direction:row;flex-wrap:wrap;min-width:0;width:100%;justify-content:center;padding:8px}
+  .side h4,.sp,.st span.t,.hideM{display:none}
+  .side button{padding:9px 11px}
+  .frame{padding:8px;border-radius:34px}.screen{border-radius:26px}
+}
+</style></head><body>
+<div class="stage" id="stage">
+  <div class="dev"><div class="frame" id="frame"><div class="screen" id="screen">
+    <canvas id="cv" tabindex="0" width="360" height="760"></canvas>
+    <div class="ov" id="ov"><div class="spin" id="spin"></div><b id="ovT">Connecting…</b><span id="ovS">Opening the phone</span><button class="pri" id="ovB" hidden>Try again</button></div>
+  </div></div></div>
+  <div class="side" id="side">
+    <div class="st"><i class="dot" id="dot"></i><span class="t" id="stT">Connecting</span></div>
+    <h4>Phone</h4>
+    <button data-k="3" title="Home">⬤ <span class="hideM">Home</span></button>
+    <button id="bBack" title="Back">◀ <span class="hideM">Back</span></button>
+    <button data-k="187" title="Recent apps">▣ <span class="hideM">Recent</span></button>
+    <div class="sp"></div>
+    <h4 class="hideM">Buttons</h4>
+    <button data-k="26" title="Power / screen on-off">⏻ <span class="hideM">Power</span></button>
+    <div class="row2"><button data-k="25" title="Volume down">🔉</button><button data-k="24" title="Volume up">🔊</button></div>
+    <div class="sp"></div>
+    <button data-m="5" title="Notifications">🔔 <span class="hideM">Notifications</span></button>
+    <button data-m="11" title="Rotate">⟳ <span class="hideM">Rotate</span></button>
+    <button id="bPaste" title="Paste your clipboard text into the phone">📋 <span class="hideM">Paste text</span></button>
+    <div class="sp"></div>
+    <button class="pri" id="bFs">⛶ <span class="hideM">Full screen</span></button>
+    <div class="st hideM" style="padding-top:8px"><span id="lat">&nbsp;</span></div>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const cv = $('#cv'), ctx = cv.getContext('2d');
+let ws, dec, vw = 0, vh = 0, needKey = true, hadConfig = null, state = 'connecting', lastFrame = 0, retryT = null, lagBad = 0;
+const toast = t => { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 1600); };
+function ui(st, title, sub, retry) {
+  state = st; $('#dot').className = 'dot ' + (st === 'live' ? 'live' : st === 'error' ? 'err' : 'starting');
+  $('#stT').textContent = st === 'live' ? 'Live' : st === 'error' ? 'Problem' : 'Connecting';
+  $('#frame').classList.toggle('live', st === 'live');
+  const ov = $('#ov'); ov.classList.toggle('hide', st === 'live');
+  $('#ovT').textContent = title || ''; $('#ovS').textContent = sub || ''; $('#spin').hidden = st === 'error'; $('#ovB').hidden = !retry;
+}
+function fit() {
+  if (!vw) return;
+  const side = $('#side'), narrow = innerWidth <= 640, fs = document.body.classList.contains('fs');
+  const aw = innerWidth - (narrow || fs ? 16 : side.offsetWidth + 70), ah = innerHeight - (narrow ? side.offsetHeight + 40 : fs ? 0 : 56);
+  const pad = fs ? 0 : narrow ? 16 : 24, r = vw / vh;
+  let h = Math.min(ah - pad, (aw - pad) / r); h = Math.max(h, 120);
+  cv.style.height = h + 'px'; cv.style.width = h * r + 'px';
+}
+addEventListener('resize', fit);
+
+// ---------- video ----------
+function codecString(sps) { const b = [sps[1], sps[2], sps[3]].map(x => x.toString(16).padStart(2, '0')).join(''); return 'avc1.' + b; }
+function findSps(data) { for (let i = 0; i + 4 < data.length; i++) if (data[i] === 0 && data[i + 1] === 0 && (data[i + 2] === 1 || (data[i + 2] === 0 && data[i + 3] === 1))) { const o = data[i + 2] === 1 ? i + 3 : i + 4; if ((data[o] & 31) === 7) return data.subarray(o); } return null; }
+function makeDecoder() {
+  try { dec?.close(); } catch {}
+  dec = new VideoDecoder({
+    output: f => { if (cv.width !== f.displayWidth || cv.height !== f.displayHeight) { cv.width = f.displayWidth; cv.height = f.displayHeight; } ctx.drawImage(f, 0, 0); f.close(); lastFrame = performance.now(); if (state !== 'live') ui('live'); },
+    error: () => { needKey = true; if (ws?.readyState === 1) ws.send(new Uint8Array([0xff])); },
+  });
+}
+function onBinary(buf) {
+  const u = new Uint8Array(buf), t = u[0];
+  if (t === 1) { const dv = new DataView(buf); vw = dv.getUint32(1); vh = dv.getUint32(5); cv.width = vw; cv.height = vh; needKey = true; fit(); return; }
+  if (t === 2) { hadConfig = u.slice(1); const sps = findSps(hadConfig); if (sps) { makeDecoder(); dec.configure({ codec: codecString(sps), optimizeForLatency: true }); needKey = true; } return; }
+  if (t === 3) {
+    if (!dec || dec.state !== 'configured') return;
+    const key = u[1] === 1, sent = new DataView(buf, 2, 8).getFloat64(0), body = u.subarray(10);
+    if (needKey && !key) { if (ws.readyState === 1) ws.send(new Uint8Array([0xff])); return; }
+    // too far behind live? ask for a fresh image instead of showing old ones
+    const lag = Date.now() - sent; lagBad = lag > 600 ? lagBad + 1 : 0;
+    if (lagBad > 45) { lagBad = 0; needKey = true; dec.reset?.(); ws.send(new Uint8Array([0xff])); return; }
+    let chunkData = body;
+    if (key && hadConfig) { chunkData = new Uint8Array(hadConfig.length + body.length); chunkData.set(hadConfig); chunkData.set(body, hadConfig.length); }
+    needKey = false;
+    try { dec.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: performance.now() * 1000, data: chunkData })); } catch { needKey = true; }
+    $('#lat').textContent = lag < 2000 ? 'Delay ' + Math.max(0, Math.round(lag)) + ' ms' : '';
+  }
+}
+function connect() {
+  clearTimeout(retryT);
+  if (!('VideoDecoder' in window)) return ui('error', 'Use Chrome or Edge', 'This browser cannot show the phone video. Open it in an up-to-date Chrome or Edge.', false);
+  ui('connecting', 'Connecting…', 'Opening the phone');
+  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'); ws.binaryType = 'arraybuffer';
+  ws.onmessage = e => {
+    if (typeof e.data === 'string') {
+      const m = JSON.parse(e.data);
+      if (m.state === 'error') ui('error', 'Phone not reachable', m.error || 'Reconnecting…', false);
+      else if (m.state === 'starting' || m.state === 'idle') ui('connecting', 'Waking the phone…', m.name || 'This takes a few seconds');
+      return;
+    }
+    onBinary(e.data);
+  };
+  ws.onclose = () => { if (state === 'live') ui('connecting', 'Reconnecting…', 'Connection dropped'); retryT = setTimeout(connect, 2000); };
+  ws.onerror = () => {};
+}
+// frozen image? ask for a fresh one; nothing for a while? reconnect on its own
+setInterval(() => {
+  if (state !== 'live' || !ws || ws.readyState !== 1) return;
+  const idle = performance.now() - lastFrame;
+  if (idle > 1000 && idle < 4000) ws.send(new Uint8Array([0xff]));
+  if (idle > 40000) ws.close();
+}, 1000);
+$('#ovB').onclick = connect;
+
+// ---------- sending to the phone (scrcpy binary messages) ----------
+const send = b => { if (ws && ws.readyState === 1 && state === 'live') ws.send(b); };
+function keycode(code, action) { const b = new DataView(new ArrayBuffer(14)); b.setUint8(0, 0); b.setUint8(1, action); b.setInt32(2, code); b.setInt32(6, 0); b.setInt32(10, 0); return b.buffer; }
+function tap(code) { send(keycode(code, 0)); setTimeout(() => send(keycode(code, 1)), 40); }
+function touch(action, x, y, down) {
+  const b = new DataView(new ArrayBuffer(32)); b.setUint8(0, 2); b.setUint8(1, action); b.setBigInt64(2, 0n);
+  b.setInt32(10, Math.round(x)); b.setInt32(14, Math.round(y)); b.setUint16(18, vw); b.setUint16(20, vh);
+  b.setUint16(22, down ? 0xffff : 0); b.setInt32(24, action === 2 ? 0 : 1); b.setInt32(28, down ? 1 : 0); send(b.buffer);
+}
+function text(s) { const e = new TextEncoder().encode(s.slice(0, 100)); const b = new DataView(new ArrayBuffer(5 + e.length)); b.setUint8(0, 1); b.setUint32(1, e.length); new Uint8Array(b.buffer, 5).set(e); send(b.buffer); }
+function simple(t) { send(new Uint8Array([t]).buffer); }
+function pos(e) { const r = cv.getBoundingClientRect(); return [Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) * vw, Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) * vh]; }
+let isDown = false;
+cv.addEventListener('pointerdown', e => { if (!vw) return; cv.focus(); cv.setPointerCapture(e.pointerId); isDown = true; touch(0, ...pos(e), true); e.preventDefault(); });
+cv.addEventListener('pointermove', e => { if (isDown) { touch(2, ...pos(e), true); e.preventDefault(); } });
+const up = e => { if (!isDown) return; isDown = false; touch(1, ...pos(e), false); };
+cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+cv.addEventListener('contextmenu', e => { e.preventDefault(); send(new Uint8Array([4, 0]).buffer); send(new Uint8Array([4, 1]).buffer); }); // right click = Back
+cv.addEventListener('wheel', e => {
+  e.preventDefault(); const [x, y] = pos(e); const b = new DataView(new ArrayBuffer(21)); b.setUint8(0, 3);
+  b.setInt32(1, Math.round(x)); b.setInt32(5, Math.round(y)); b.setUint16(9, vw); b.setUint16(11, vh);
+  const f = d => Math.max(-32768, Math.min(32767, Math.round(-d / 100 * 32768 / 16 * 3)));
+  b.setInt16(13, f(e.deltaX)); b.setInt16(15, f(e.deltaY)); b.setInt32(17, 0); send(b.buffer);
+}, { passive: false });
+const KEYS = { Enter: 66, Backspace: 67, Tab: 61, Escape: 4, Delete: 112, ArrowUp: 19, ArrowDown: 20, ArrowLeft: 21, ArrowRight: 22, Home: 122, End: 123, PageUp: 92, PageDown: 93, ' ': 62 };
+cv.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey) return;               // Cmd+V is handled by the paste event
+  if (e.key.length === 1 && e.key !== ' ') { text(e.key); e.preventDefault(); }
+  else if (KEYS[e.key]) { tap(KEYS[e.key]); e.preventDefault(); }
+});
+cv.addEventListener('paste', e => { const t = e.clipboardData?.getData('text'); if (t) { clip(t); e.preventDefault(); } });
+function clip(t) { const e = new TextEncoder().encode(t.slice(0, 5000)); const b = new DataView(new ArrayBuffer(14 + e.length)); b.setUint8(0, 9); b.setBigInt64(1, 0n); b.setUint8(9, 1); b.setUint32(10, e.length); new Uint8Array(b.buffer, 14).set(e); send(b.buffer); toast('Pasted'); }
+document.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { tap(+b.dataset.k); cv.focus(); });
+document.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { simple(+b.dataset.m); cv.focus(); });
+$('#bBack').onclick = () => { send(new Uint8Array([4, 0]).buffer); send(new Uint8Array([4, 1]).buffer); cv.focus(); };
+$('#bPaste').onclick = async () => { try { const t = await navigator.clipboard.readText(); if (t) clip(t); else toast('Clipboard is empty'); } catch { toast('Click the phone, then press Cmd+V'); } };
+$('#bFs').onclick = () => { const on = document.body.classList.toggle('fs'); try { if (on) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); } catch {} setTimeout(fit, 50); };
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('fs'); setTimeout(fit, 50); });
+connect();
+</script></body></html>

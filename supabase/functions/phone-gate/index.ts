@@ -17,9 +17,9 @@ Deno.serve(async (req: Request) => {
   if (p.length !== 4 || host !== HOST) return no();
   const [uid, end, phone, sig] = p;
   if (phone !== host || !(Number(end) > Date.now())) return no();
-  const { data: s } = await admin.from("app_secrets").select("value").eq("key", "phone_secret").maybeSingle();
-  if (!s?.value) return no();
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(s.value), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const secret = Deno.env.get("PHONE_SECRET") || "";
+  if (secret.length < 24) return no();
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const want = b64u(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${uid}~${end}~${phone}`)));
   if (!same(want, sig)) return no();
   // access can be taken away any time: check the person today

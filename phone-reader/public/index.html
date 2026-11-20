@@ -121,7 +121,7 @@ function onBinary(buf) {
 }
 function connect() {
   clearTimeout(retryT);
-  if (!('VideoDecoder' in window)) return ui('error', 'Use Chrome or Edge', 'This browser cannot show the phone video. Open it in an up-to-date Chrome or Edge.', false);
+  if (!('VideoDecoder' in window)) return ui('error', 'Update your browser', 'This browser cannot show the phone video. Use an up-to-date Chrome, Edge or Safari.', false);
   ui('connecting', 'Connecting…', 'Opening the phone');
   ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'); ws.binaryType = 'arraybuffer';
   ws.onmessage = e => {
@@ -150,9 +150,9 @@ const send = b => { if (ws && ws.readyState === 1 && state === 'live') ws.send(b
 function keycode(code, action) { const b = new DataView(new ArrayBuffer(14)); b.setUint8(0, 0); b.setUint8(1, action); b.setInt32(2, code); b.setInt32(6, 0); b.setInt32(10, 0); return b.buffer; }
 function tap(code) { send(keycode(code, 0)); setTimeout(() => send(keycode(code, 1)), 40); }
 function touch(action, x, y, down) {
-  const b = new DataView(new ArrayBuffer(32)); b.setUint8(0, 2); b.setUint8(1, action); b.setBigInt64(2, 0n);
+  const b = new DataView(new ArrayBuffer(32)); b.setUint8(0, 2); b.setUint8(1, action); b.setBigInt64(2, -2n);
   b.setInt32(10, Math.round(x)); b.setInt32(14, Math.round(y)); b.setUint16(18, vw); b.setUint16(20, vh);
-  b.setUint16(22, down ? 0xffff : 0); b.setInt32(24, action === 2 ? 0 : 1); b.setInt32(28, down ? 1 : 0); send(b.buffer);
+  b.setUint16(22, down ? 0xffff : 0); b.setInt32(24, 0); b.setInt32(28, 0); send(b.buffer);
 }
 function text(s) { const e = new TextEncoder().encode(s.slice(0, 100)); const b = new DataView(new ArrayBuffer(5 + e.length)); b.setUint8(0, 1); b.setUint32(1, e.length); new Uint8Array(b.buffer, 5).set(e); send(b.buffer); }
 function simple(t) { send(new Uint8Array([t]).buffer); }

@@ -13,10 +13,11 @@ PHONE_HOST="phone.unrealagency.ai"
 SCRCPY_VERSION="5.0.1"
 CLOUDFLARED_VERSION="2026.10.4"
 NODE_LINE="latest-v22.x"
+BASE_URL="https://unrealagency.ai/phone-reader"
 
 say()  { printf "\n\033[1;35m▸ %s\033[0m\n" "$*"; }
 ok()   { printf "  \033[32m✓\033[0m %s\n" "$*"; }
-die()  { printf "\n\033[1;31m✗ %s\033[0m\n\n" "$*"; read -r -p "Press Enter to close" _; exit 1; }
+die()  { printf "\n\033[1;31m✗ %s\033[0m\n\n" "$*"; exit 1; }
 dl()   { # dl URL FILE
   curl -fL --retry 3 --connect-timeout 20 -o "$2" "$1" || die "Download failed: $1"
   [ -s "$2" ] || die "Downloaded file is empty: $2"
@@ -36,8 +37,13 @@ fi
 
 say "1/6  Folders"
 mkdir -p "$TOOLS" "$HOME_DIR/public" "$HOME_DIR/logs" "$LA"
-cp "$SRC/server.mjs" "$HOME_DIR/server.mjs" || die "server.mjs is missing next to this installer"
-cp -R "$SRC/public/." "$HOME_DIR/public/" || die "public folder is missing next to this installer"
+if [ -f "$SRC/server.mjs" ] && [ -f "$SRC/public/index.html" ]; then
+  cp "$SRC/server.mjs" "$HOME_DIR/server.mjs" && cp -R "$SRC/public/." "$HOME_DIR/public/" || die "Could not copy the reader files"
+else
+  dl "$BASE_URL/server.mjs" "$HOME_DIR/server.mjs"
+  dl "$BASE_URL/public/index.html" "$HOME_DIR/public/index.html"
+fi
+cp "$0" "$HOME_DIR/install.command" 2>/dev/null; chmod +x "$HOME_DIR/install.command" 2>/dev/null
 ok "Reader files copied to $HOME_DIR"
 
 say "2/6  Node (portable, nothing is installed on your Mac)"
@@ -87,7 +93,7 @@ if [ ! -s "$HOME_DIR/tunnel.token" ]; then
   echo "  In Cloudflare: Networking > Tunnels > Create a tunnel > choose macOS > copy the command shown."
   echo "  Add a route: subdomain 'phone', domain unrealagency.ai, service http://localhost:8100"
   echo "  Then paste the whole command here (it stays hidden) and press Enter:"
-  read -r -s -p "  > " CMD; echo
+  read -r -s -p "  > " CMD </dev/tty; echo
   TOKEN="$(printf "%s" "$CMD" | grep -oE 'eyJ[A-Za-z0-9=_-]{40,}' | head -1)"
   [ -n "$TOKEN" ] || die "I could not find the tunnel token in what you pasted. Copy the full command from Cloudflare."
   umask 077; printf "%s" "$TOKEN" > "$HOME_DIR/tunnel.token"; chmod 600 "$HOME_DIR/tunnel.token"
@@ -146,5 +152,4 @@ ok "Tunnel started (log: $HOME_DIR/logs/tunnel.log)"
 
 printf "\n\033[1;32mDone.\033[0m Open unrealagency.ai/members > Phone control.\n"
 printf "It starts by itself when this Mac starts. Keep the Mac plugged in and the phone on USB.\n"
-printf "Check anytime:  bash \"%s/install.command\" status\n\n" "$SRC"
-read -r -p "Press Enter to close" _
+printf "Check anytime:  bash ~/UnrealPhone/install.command status\n\n"

@@ -61,7 +61,7 @@ const SEC_HEADERS = () => {
 
 // ---------------- phone session (one shared capture) ----------------
 const viewers = new Set();
-const S = { state: 'idle', name: '', w: 0, h: 0, config: null, haveKey: false, lastKeyReq: 0, video: null, control: null, proc: null, idleTimer: null, retry: null, error: '' };
+const S = { gen: 0, sess: null, state: 'idle', name: '', w: 0, h: 0, config: null, haveKey: false, lastKeyReq: 0, video: null, control: null, proc: null, idleTimer: null, retry: null, error: '' };
 
 const sh = (cmd, args, t = 20000) => new Promise((res, rej) => execFile(cmd, args, { timeout: t }, (e, so, se) => e ? rej(new Error((se || e.message).trim())) : res(so)));
 const adbArgs = serial => serial === 'usb' ? ['-d'] : ['-s', serial];
@@ -72,6 +72,7 @@ function setState(st, error = '') { S.state = st; S.error = error; const m = Buf
 async function startCapture() {
   if (S.state === 'starting' || S.state === 'live') return;
   clearTimeout(S.retry);
+  const gen = ++S.gen; const failG = m => { if (gen === S.gen) fail(m); };
   setState('starting');
   try {
     let video, control;
@@ -93,16 +94,17 @@ async function startCapture() {
       S.proc = spawn(CFG.ADB, [...a, 'shell', cmd], { stdio: ['ignore', 'pipe', 'pipe'] });
       let out = ''; const keep = d => { out = (out + d).slice(-2000); };
       S.proc.stdout.on('data', keep); S.proc.stderr.on('data', keep);
-      S.proc.on('exit', () => { if (S.state !== 'idle') { log('scrcpy server exited', out.slice(-300)); fail(out.includes('stack corruption') ? 'Phone video encoder crashed (command too long).' : 'Phone stopped sharing.'); } });
+      S.proc.on('exit', () => { if (S.state !== 'idle') { log('scrcpy server exited', out.slice(-300)); failG(out.includes('stack corruption') ? 'Phone video encoder crashed (command too long).' : 'Phone stopped sharing.'); } });
       video = await connectRetry(CFG.TUNNEL_PORT, 100);
       control = await connectRetry(CFG.TUNNEL_PORT, 100);
       sh(CFG.ADB, [...a, 'forward', '--remove', 'tcp:' + CFG.TUNNEL_PORT]).catch(() => {});
     }
+    if (gen !== S.gen) { video.destroy(); control.destroy(); return; }
     S.video = video; S.control = control;
-    control.on('error', () => {}); control.on('close', () => fail('Control link closed.'));
-    video.on('error', e => fail('Video link error.')); video.on('close', () => fail('Phone stopped sharing.'));
-    readVideo(video);
-  } catch (e) { fail(e.message); }
+    control.on('error', () => {}); control.on('close', () => failG('Control link closed.'));
+    video.on('error', () => {}); video.on('close', () => failG('Phone stopped sharing.'));
+    readVideo(video, failG);
+  } catch (e) { failG(e.message); }
 }
 
 function connectRetry(port, tries, fake = false) {
@@ -118,20 +120,20 @@ function connectRetry(port, tries, fake = false) {
 }
 
 function fail(msg) {
-  if (S.state === 'idle' && !msg) return;
+  S.gen++; // ignore later events from this dead attempt
   log('capture stopped:', msg);
   teardown();
   setState('error', msg);
-  if (viewers.size) S.retry = setTimeout(() => { S.state = 'idle'; startCapture(); }, 3000); // reconnect on its own
+  if (viewers.size) S.retry = setTimeout(() => { if (viewers.size) startCapture(); }, 3000); // reconnect on its own
 }
 function teardown() {
   for (const k of ['video', 'control']) { try { S[k]?.destroy(); } catch {} S[k] = null; }
   try { S.proc?.kill(); } catch {} S.proc = null;
-  S.config = null; S.haveKey = false; S.w = 0; S.h = 0; S.state = 'idle';
+  S.config = null; S.sess = null; S.haveKey = false; S.w = 0; S.h = 0; S.state = 'idle';
 }
-function stopCapture() { clearTimeout(S.retry); teardown(); setState('idle'); log('capture stopped (nobody watching)'); }
+function stopCapture() { clearTimeout(S.retry); S.gen++; teardown(); setState('idle'); log('capture stopped (nobody watching)'); }
 
-function readVideo(sock) {
+function readVideo(sock, fail) {
   let buf = Buffer.alloc(0), stage = 0; // 0: dummy byte, 1: device name (64), 2: codec id (4), 3: packets
   sock.on('data', d => {
     buf = buf.length ? Buffer.concat([buf, d]) : d;

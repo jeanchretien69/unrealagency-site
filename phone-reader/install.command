@@ -141,12 +141,27 @@ cat > "$LA/ai.unrealagency.phone-tunnel.plist" <<PLIST
   <key>StandardErrorPath</key><string>$HOME_DIR/logs/tunnel.log</string>
 </dict></plist>
 PLIST
-for L in ai.unrealagency.phone-reader ai.unrealagency.phone-tunnel; do
+start_job() { # macOS sometimes answers "Bootstrap failed: 5" (job still unloading, or old style): retry, then use the old loader
+  local L="$1" P="$LA/$1.plist"
+  plutil -lint "$P" >/dev/null || die "Bad settings file: $P"
+  chmod 644 "$P"
   launchctl bootout "gui/$UID_N/$L" >/dev/null 2>&1
-  launchctl bootstrap "gui/$UID_N" "$LA/$L.plist" || die "Could not start $L"
+  launchctl unload "$P" >/dev/null 2>&1
+  sleep 1
+  for t in 1 2 3; do
+    launchctl bootstrap "gui/$UID_N" "$P" 2>/dev/null && return 0
+    launchctl print "gui/$UID_N/$L" >/dev/null 2>&1 && return 0
+    sleep 2
+  done
+  launchctl load -w "$P" 2>/dev/null
+  launchctl print "gui/$UID_N/$L" >/dev/null 2>&1 && return 0
+  launchctl list | grep -q "$L" && return 0
+  die "Could not start $L (send me a screenshot of this window)"
+}
+for L in ai.unrealagency.phone-reader ai.unrealagency.phone-tunnel; do
+  start_job "$L"; ok "$L started"
 done
-sleep 3
-H="$(curl -s --max-time 5 http://127.0.0.1:8100/health)"
+for i in 1 2 3 4 5 6; do H="$(curl -s --max-time 5 http://127.0.0.1:8100/health)"; [ -n "$H" ] && break; sleep 2; done
 [ -n "$H" ] && ok "Reader running: $H" || die "Reader did not start. See $HOME_DIR/logs/reader.log"
 ok "Tunnel started (log: $HOME_DIR/logs/tunnel.log)"
 

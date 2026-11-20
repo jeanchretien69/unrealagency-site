@@ -57,7 +57,6 @@ button.pri{background:linear-gradient(135deg,var(--pink),var(--pink2));border-co
     <button data-k="187" title="Recent apps">▣ <span class="hideM">Recent</span></button>
     <div class="sp"></div>
     <button data-k="26" title="Power / screen on-off">⏻ <span class="hideM">Power</span></button>
-    <button id="bPaste" title="Paste your clipboard text into the phone">📋 <span class="hideM">Paste text</span></button>
     <div class="sp"></div>
     <button class="pri" id="bFs">⛶ <span class="hideM">Full screen</span></button>
     <div class="st hideM" style="padding-top:8px"><span id="lat">&nbsp;</span></div>
@@ -172,7 +171,6 @@ cv.addEventListener('paste', e => { const t = e.clipboardData?.getData('text'); 
 function clip(t) { const e = new TextEncoder().encode(t.slice(0, 20000)); const b = new DataView(new ArrayBuffer(14 + e.length)); b.setUint8(0, 9); b.setBigInt64(1, 0n); b.setUint8(9, 1); b.setUint32(10, e.length); new Uint8Array(b.buffer, 14).set(e); send(b.buffer); toast('Pasted'); }
 document.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { tap(+b.dataset.k); cv.focus(); });
 $('#bBack').onclick = () => { send(new Uint8Array([4, 0]).buffer); send(new Uint8Array([4, 1]).buffer); cv.focus(); };
-$('#bPaste').onclick = async () => { try { const t = await navigator.clipboard.readText(); if (t) clip(t); else toast('Clipboard is empty'); } catch { toast('Click the phone, then press Cmd+V'); } };
 $('#bFs').onclick = () => { const on = document.body.classList.toggle('fs'); try { if (on) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); } catch {} setTimeout(fit, 50); };
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('fs'); setTimeout(fit, 50); });
 // text sent from the notepad next to the phone on unrealagency.ai

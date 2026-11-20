@@ -2581,9 +2581,6 @@ async function phoneView(){
         <div class="phnote-top"><button class="btn ghost sm" id="phMax2" type="button">✕ Exit max</button><button class="btn ghost sm" id="phReload2" type="button">⟳ Reload</button><span class="phst" id="phSt2"></span></div>
         <div class="phnote-h"><b>📝 Text box</b><span id="phNSaved"></span></div>
         <textarea id="phNote" placeholder="Type or paste text here…">${esc(notes)}</textarea>
-        <button class="btn" id="phSend" type="button">📲 Send to phone</button>
-        <div class="phnote-r"><button class="btn ghost sm" id="phCopy" type="button">Copy</button><button class="btn ghost sm" id="phClear" type="button">Clear</button></div>
-        <p class="phnote-tip">Tap a text field on the phone → Send to phone. Select part of the text to send only that part.</p>
       </div>
     </div></div>`;
   const PHONE_ORIGIN = 'https://phone.unrealagency.ai';
@@ -2609,16 +2606,7 @@ async function phoneView(){
   addEventListener('message', onMsg);
   frame.addEventListener('load', () => { try { frame.contentWindow.postMessage({ type:'unreal-phone', action:'ping' }, PHONE_ORIGIN); } catch(e){} });
   const note = $('#phNote');
-  const pick = () => { const a = note.selectionStart, b = note.selectionEnd; return (b > a ? note.value.slice(a, b) : note.value).trim(); };
   let saveT; note.oninput = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem('unreal-phone-notes', note.value); $('#phNSaved').textContent = 'saved'; setTimeout(() => $('#phNSaved').textContent = '', 1200); } catch(e){} }, 400); };
-  const copy = async t => { try { await navigator.clipboard.writeText(t); return true; } catch(e){ return false; } };
-  $('#phSend').onclick = async () => {
-    const t = pick(); if (!t) return toast('Write some text first');
-    if (ready){ frame.contentWindow.postMessage({ type:'unreal-phone', action:'paste', text:t }, PHONE_ORIGIN); return; }
-    const ok = await copy(t); toast(ok ? 'Copied: click the phone screen, then press Cmd+V' : 'Select the text and copy it');
-  };
-  $('#phCopy').onclick = async () => { const t = pick(); if (t && await copy(t)) toast('Copied'); };
-  $('#phClear').onclick = () => { if (!note.value || confirm('Clear the text box?')) { note.value = ''; note.oninput(); } };
   $('#phReload').onclick = load; $('#phReload2').onclick = load;
   const card = v.querySelector('.phonecard');
   const setMax = on => { card.classList.toggle('phmax', on); document.body.classList.toggle('phmax-on', on); $('#phMax').textContent = on ? '✕ Exit max' : '⛶ Max size'; $('#phMax2').hidden = !on; };

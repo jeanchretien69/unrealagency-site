@@ -2576,7 +2576,7 @@ async function phoneView(){
     <div class="phonebar"><div><b>Model phone</b> <span class="muted" style="font-size:12px" id="phSt">Getting your access…</span></div>
     <div class="phbtns"><button class="btn ghost sm" id="phMax" type="button">⛶ Max size</button><button class="btn ghost sm" id="phReload" type="button">Reload</button><a class="btn sm" id="phOpen" target="_blank" rel="noopener" hidden>New tab ↗</a></div></div>
     <div class="phwrap">
-      <div class="phscreen"><iframe id="phFrame" title="Phone" allow="clipboard-read; clipboard-write; fullscreen" referrerpolicy="no-referrer" hidden></iframe>
+      <div class="phscreen"><iframe id="phFrame" title="Phone" allow="autoplay; clipboard-read; clipboard-write; fullscreen; local-network-access" referrerpolicy="no-referrer" hidden></iframe>
         <div class="phmsg" id="phMsg"><div class="phspin"></div></div></div>
       <div class="phnote">
         <div class="phnote-top"><button class="btn ghost sm" id="phMax2" type="button">✕ Exit max</button><button class="btn ghost sm" id="phReload2" type="button">⟳ Reload</button><span class="phst" id="phSt2"></span></div>
@@ -2589,7 +2589,8 @@ async function phoneView(){
   // on the phone's own Mac: connect straight to it (no trip through Cloudflare)
   const tryLocal = async () => {
     if (me?.role !== 'admin' || innerWidth <= 640) return false;
-    try { const r = await fetch('http://localhost:8100/health', { signal: AbortSignal.timeout(900), cache: 'no-store' }); const j = await r.json(); return !!j.ok; } catch(e){ return false; }
+    const ask = (async () => { try { const r = await fetch('http://localhost:8100/health', { signal: AbortSignal.timeout(900), cache: 'no-store' }); const j = await r.json(); return !!j.ok; } catch(e){ return false; } })();
+    return Promise.race([ask, new Promise(r => setTimeout(() => r(false), 1200))]); // never wait on a permission popup
   };
   const load = async () => {
     ready = false;

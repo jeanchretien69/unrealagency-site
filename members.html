@@ -1403,14 +1403,15 @@ function smsSuggWire(p){
       ? [body.slice(0, body.indexOf(email)).trim(), email, body.slice(body.indexOf(email) + email.length).trim()].filter(Boolean)
       : [body];
     if (settings.sms_ai_profile === 'kaya-sms' && pieces.length > 1) {
-      smsKayaPending[p] = pieces.slice(1);
+      smsKayaPending[p] = { current: pieces[0], remaining: pieces.slice(1) };
       t.value = pieces[0];
       toast('Kaya SMS: send this text, then the next SMS will be ready separately');
     } else t.value = body;
     t.focus();
   };
-  if (no) no.onclick = () => { delete smsSugg[p]; sb.from('sms_suggestions').delete().eq('phone', p).then(() => {}); smsThread(); };
+  if (no) no.onclick = () => { delete smsKayaPending[p]; delete smsSugg[p]; sb.from('sms_suggestions').delete().eq('phone', p).then(() => {}); smsThread(); };
   if (ask) ask.onclick = async () => {
+    delete smsKayaPending[p];
     ask.disabled = true; toast('Kaya is writing…');
     const r = await smsAi({ action:'suggest', phone:p });
     if (r.error) toast(r.error); else smsSugg[p] = { phone:p, kind:r.kind, body:r.body };
@@ -1585,14 +1586,29 @@ function smsThread(first){
     t.value = ''; const { data: row, error } = await sb.from('sms_messages').insert({ phone:p, direction:'out', body, media, status:'queued', is_read:true, is_test:a.some(x => x.is_test) }).select().single();
     if (error){ t.value = body; return toast(error.message); }
     if (smsSugg[p]){ delete smsSugg[p]; sb.from('sms_suggestions').delete().eq('phone', p).then(() => {}); }
-    // Fill the next approved Kaya SMS part only after the previous part was submitted.
-    if (settings.sms_ai_profile === 'kaya-sms' && smsKayaPending[p]?.length) {
-      t.value = smsKayaPending[p].shift();
-      if (!smsKayaPending[p].length) delete smsKayaPending[p];
-      toast('Next separate Kaya SMS is ready to send');
-    }
+    // Kaya SMS: advance a multi-SMS suggestion only after its exact preceding
+    // message has been submitted successfully. Editing it cancels the rest.
+    let gateFailed = false;
     $('#ptext')?.focus();
-    if (row && !row.is_test){ const r = await smsGate({ action:'send', id:row.id }); if (r.error) toast(r.error); }
+    if (row && !row.is_test){
+      const r = await smsGate({ action:'send', id:row.id });
+      if (r.error){ gateFailed = true; toast(r.error); }
+    }
+    if (settings.sms_ai_profile === 'kaya-sms' && smsKayaPending[p]){
+      const pending = smsKayaPending[p];
+      if (body !== pending.current){
+        delete smsKayaPending[p];
+        toast('Edited Kaya SMS: remaining suggested messages cleared');
+      } else if (!gateFailed){
+        const next = pending.remaining.shift();
+        if (next){
+          pending.current = next;
+          const box = $('#ptext');
+          if (box && smsOpen === p) box.value = next;
+          toast('Next separate Kaya SMS is ready to send');
+        } else delete smsKayaPending[p];
+      }
+    }
     $('#ptext')?.focus();
   };
   const unread = a.filter(x => x.direction === 'in' && !x.is_read).map(x => x.id);

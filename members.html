@@ -3663,6 +3663,8 @@ async function trainView(){
   const model = trainModel, st = tLoad(model) || {};
   let session = st.session || 'train-' + Math.random().toString(36).slice(2); let hist = Array.isArray(st.hist) ? st.hist : [];
   let msgs = Array.isArray(st.msgs) ? st.msgs : [], archive = Array.isArray(st.archive) ? st.archive : [], started = st.started || null;
+  // Kaya SMS only: cancel a running timed test when a new conversation starts.
+  let kayaTestRun = 0;
   trainSecs = st.dirty && Array.isArray(st.secs) ? st.secs : trainSplit(c.system_prompt);
   let examples = st.dirty && typeof st.examples === 'string' ? st.examples : (c.examples || ''), dirty = !!st.dirty;
   if (typeof st.sel === 'number') trainSel = st.sel;
@@ -3781,10 +3783,22 @@ async function trainView(){
     const a = document.createElement('a'); a.href = url; a.download = `${model}-test-convos-${new Date().toISOString().slice(0,10)}.txt`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
     toast(`Exported ${all.length} conversation${all.length > 1 ? 's' : ''}`);
   };
-  $('#tReset').onclick = () => { if (msgs.length){ archive.push({ at:started, msgs }); if (archive.length > 200) archive = archive.slice(-200); } started = null; session = 'train-' + Math.random().toString(36).slice(2); hist = []; msgs = []; persist(); $('#tMsgs').innerHTML = '<p class="muted tempty">New convo. Text her like a client would.</p>'; };
+  $('#tReset').onclick = () => { ++kayaTestRun; $('#tChat button').disabled = false; if (msgs.length){ archive.push({ at:started, msgs }); if (archive.length > 200) archive = archive.slice(-200); } started = null; session = 'train-' + Math.random().toString(36).slice(2); hist = []; msgs = []; persist(); $('#tMsgs').innerHTML = '<p class="muted tempty">New convo. Text her like a client would.</p>'; };
   const addB = (cls, text) => { const m = $('#tMsgs'); m.querySelector('.tempty')?.remove(); const b = document.createElement('div'); b.className = 'bub ' + cls; b.textContent = text; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; };
-  const showReply = (wait, m) => {
-    wait.textContent = m.out; if (m.out.includes('[HANDOFF]')) wait.classList.add('handoff');
+  const showReply = (wait, m, alreadyRenderedTail = null) => {
+    const parts = model === 'kaya-sms' && Array.isArray(m.parts) && m.parts.length > 1 ? m.parts : [m.out];
+    let tail = alreadyRenderedTail || wait;
+    if (!alreadyRenderedTail) {
+      wait.textContent = parts[0];
+      for (const part of parts.slice(1)) {
+        const bubble = document.createElement('div');
+        bubble.className = 'bub bot';
+        bubble.textContent = part;
+        tail.after(bubble);
+        tail = bubble;
+      }
+    }
+    if (m.out.includes('[HANDOFF]')) wait.classList.add('handoff');
     const fix = document.createElement('button');
     fix.className = 'fix'; fix.type = 'button'; fix.textContent = m.learned ? '✓ Learned' : '✏️ Fix this reply';
     fix.onclick = async () => {
@@ -3795,7 +3809,7 @@ async function trainView(){
       const dot = document.querySelector(`#tNav [data-s="${trainSecs.length}"] .tdot`); if (dot) dot.classList.add('ok');
       toast(error ? error.message : 'Added to her good examples'); fix.textContent = '✓ Learned'; if (!error){ m.learned = true; persist(); }
     };
-    wait.after(fix); if (m.by){ const t = document.createElement('div'); t.className = 'bby'; t.textContent = m.by; wait.after(t); }
+    tail.after(fix); if (m.by){ const t = document.createElement('div'); t.className = 'bby'; t.textContent = m.by; tail.after(t); }
   };
   msgs.forEach(m => { addB('fan', m.fan); showReply(addB('bot', ''), m); });
   if (st.draft) $('#trIn').value = st.draft;
@@ -3803,25 +3817,58 @@ async function trainView(){
   $('#trIn').onkeydown = e => { if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey && !e.isComposing){ e.preventDefault(); $('#tChat').requestSubmit(); } };
   $('#tChat').onsubmit = async e => {
     e.preventDefault();
-    const text = $('#trIn').value.trim(); if (!text) return;
+    const text = $('#trIn').value.trim(); if (!text || $('#tChat button').disabled) return;
+    const run = ++kayaTestRun;
+    const sentAt = Date.now();
+    $('#tChat button').disabled = true;
     $('#trIn').value = ''; addB('fan', text); lastFan = text; if (!started) started = Date.now(); persist();
     const wait = addB('bot', '…');
     hist.push({ role:'user', content:text });
     try {
-      let out = '', by = '';
+      let out = '', by = '', parts = null, delays = [];
       if (hasKey){
         const r = await smsAi({ action:'chat', channel: trainModel === ofProf && trainModel !== smsProf ? 'of' : 'sms', profile:trainModel, history:hist });
         if (r.error) throw new Error(r.error);
         out = (r.output || '').trim(); by = r.by ? `${brainInfo(r.by).ico} ${brainInfo(r.by).name}${r.backup ? ' · backup' : ''}` : '';
+        if (model === 'kaya-sms' && Array.isArray(r.messages) && r.messages.length === 3) {
+          parts = r.messages.map(p => String(p));
+          delays = Array.isArray(r.delays_ms) ? r.delays_ms : [20000,5000,5000];
+          out = parts.join('\n\n');
+        }
       } else {
         const r = await fetch(BOT_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:'sendMessage', sessionId:session, chatInput:text, model:trainModel }) });
         const d = await r.json();
         out = (d.output || d.text || '').trim();
       }
+      if (run !== kayaTestRun || trainModel !== model) return;
       out = out || '(no reply — the AI engine may be busy, try again)';
-      hist.push({ role:'assistant', content:out });
-      const m = { fan:text, out, by }; msgs.push(m); persist(); showReply(wait, m); $('#tMsgs').scrollTop = 1e9;
-    } catch(err){ hist.pop(); wait.textContent = 'Error: ' + err.message; wait.classList.add('handoff'); }
+      const m = { fan:text, out, by };
+      if (parts) {
+        m.parts = parts;
+        // Train AI mirrors Kaya SMS: first bubble around +20s, then +5s, +5s.
+        // No messages leave the test chat; the delays are only for visual testing.
+        let tail = wait;
+        for (let i = 0; i < parts.length; i++) {
+          const delayMs = i === 0 ? Math.max(0, Number(delays[0] ?? 20000) - (Date.now() - sentAt)) : Number(delays[i] ?? 5000);
+          await new Promise(resolve => setTimeout(resolve, Math.max(0, delayMs)));
+          if (run !== kayaTestRun || trainModel !== model) return;
+          if (i === 0) wait.textContent = parts[i];
+          else {
+            tail = addB('bot', parts[i]);
+          }
+        }
+        hist.push({ role:'assistant', content:out }); msgs.push(m); persist(); showReply(wait, m, tail);
+      } else {
+        hist.push({ role:'assistant', content:out }); msgs.push(m); persist(); showReply(wait, m);
+      }
+      $('#tMsgs').scrollTop = 1e9;
+    } catch(err){
+      if (run === kayaTestRun && trainModel === model) {
+        hist.pop(); wait.textContent = 'Error: ' + err.message; wait.classList.add('handoff');
+      }
+    } finally {
+      if (run === kayaTestRun && trainModel === model) $('#tChat button').disabled = false;
+    }
   };
   if (!owner) return;
   $('#aKeySave').onclick = async () => {

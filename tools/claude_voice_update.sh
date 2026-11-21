@@ -40,3 +40,7 @@ else
 fi
 killall Hammerspoon 2>/dev/null; sleep 1; open -a Hammerspoon
 echo "✅ Claude Voice updated. Mouse front button = talk · again = text in Claude · again = send."
+
+# reload Hammerspoon so the new buttons work right away
+osascript -e 'tell application "Hammerspoon" to quit' 2>/dev/null; sleep 1; open -g -a Hammerspoon
+echo "✅ Buttons updated: FRONT = record / stop / send (Claude Voice) · BACK = Claude's own mic: start / stop + send"   # reload Hammerspoon

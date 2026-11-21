@@ -1,4 +1,6 @@
--- Claude Voice: Ctrl+Option+Cmd+D (your mouse front button) = start talking, press again = your text goes into Claude to check, Enter sends.
+-- Claude Voice
+-- FRONT thumb button (Ctrl+Option+Cmd+D): press = record, press = stop (text goes into Claude), press = send.
+-- BACK thumb button (Ctrl+Option+Cmd+S): Claude's own dictation (faster): press = start, press again = stop and send.
 -- Click the pink bubble while talking = cancel.
 local M = {}
 local HOME = os.getenv("HOME")
@@ -76,8 +78,8 @@ function M.review()
   if reviewTap then reviewTap:stop() end
   if reviewFollow then reviewFollow:stop() end
   state = "review"
-  -- the green bubble only shows for a few seconds, then hides; the back button still sends for 2 minutes
-  show("✏️  Fix your text · back button = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 })
+  -- the green bubble only shows for a few seconds, then hides; the front button still sends for 2 minutes
+  show("✏️  Fix your text · front button again = SEND · click = close", { red = 0.12, green = 0.5, blue = 0.32, alpha = 0.95 })
   reviewFollow = hs.timer.doAfter(6, function() if state == "review" then hide() end end)
   reviewTimer = hs.timer.doAfter(120, endReview)
   -- you pressed Enter yourself in Claude: done, the next button press starts a new message
@@ -113,7 +115,7 @@ function M.start()
   hs.sound.getByName("Tink"):play()
   local function upd()
     local s = os.time() - t0
-    show(string.format("🎙  %d:%02d   ·   press again to send   ·   click = cancel", s // 60, s % 60))
+    show(string.format("🎙  %d:%02d   ·   press again = stop   ·   click = cancel", s // 60, s % 60))
   end
   upd(); tick = hs.timer.doEvery(1, upd)
 end
@@ -149,13 +151,40 @@ end
 function M.toggle() if state == "idle" then M.start() elseif state == "rec" then M.stop() elseif state == "review" then M.send() end end
 
 M.key = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "d", M.toggle)
--- the mouse back button (Mac Mouse Fix sends Ctrl+Option+Cmd+S) is a smart Enter:
--- a voice message waiting in Claude -> send it from wherever you are; otherwise -> a normal Enter in the app you are in
-function M.smartEnter()
-  if state == "review" then M.send()
-  else hs.timer.doAfter(0.05, function() hs.eventtap.keyStroke({}, "return", 0) end) end
+-- BACK thumb button (Mac Mouse Fix sends Ctrl+Option+Cmd+S): Claude's own dictation, inside the Claude chat.
+-- press 1 = bring Claude forward + start its mic (Cmd+D) · press 2 = stop its mic (Cmd+D), wait for the text, send (Enter), go back.
+local nState, nPrev, nTimer = "idle", nil, nil
+local function claudeFront(after)
+  local c = hs.application.get(CLAUDE)
+  if c then c:activate() else hs.application.launchOrFocusByBundleID(CLAUDE) end
+  local tries = 0
+  hs.timer.waitUntil(function() tries = tries + 1; local f = hs.application.frontmostApplication(); return tries > 40 or (f and f:bundleID() == CLAUDE) end,
+    function() hs.timer.doAfter(0.15, after) end, 0.05)
 end
-M.enterKey = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "s", M.smartEnter)
+function M.native()
+  if state ~= "idle" then return end -- the front-button recorder is busy: don't mix the two
+  if nState == "idle" then
+    nPrev = hs.application.frontmostApplication()
+    claudeFront(function()
+      hs.eventtap.keyStroke({ "cmd" }, "d", 0)
+      nState = "on"; hs.sound.getByName("Tink"):play()
+      show("🎙  Claude dictation   ·   back button again = SEND", { red = 0.2, green = 0.45, blue = 0.9, alpha = 0.95 })
+      nTimer = hs.timer.doAfter(300, function() if nState == "on" then nState = "idle"; hide() end end)
+    end)
+  elseif nState == "on" then
+    nState = "busy"; if nTimer then nTimer:stop(); nTimer = nil end
+    claudeFront(function()
+      hs.eventtap.keyStroke({ "cmd" }, "d", 0)
+      show("✍️  Sending…", { red = 0.4, green = 0.3, blue = 0.65, alpha = 0.95 })
+      hs.timer.doAfter(1.4, function()
+        hs.eventtap.keyStroke({}, "return", 0)
+        hs.sound.getByName("Pop"):play(); hide(); nState = "idle"
+        hs.timer.doAfter(0.4, function() if nPrev and nPrev:bundleID() ~= CLAUDE then nPrev:activate() end end)
+      end)
+    end)
+  end
+end
+M.enterKey = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "s", M.native)
 hs.autoLaunch(true)
 hs.accessibilityState(true)
 return M

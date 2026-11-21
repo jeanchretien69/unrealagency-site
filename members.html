@@ -1570,7 +1570,7 @@ function smsThread(first){
   main.querySelectorAll('img.mm').forEach(i => i.onclick = () => { if (i.src) window.open(i.src, '_blank', 'noopener'); });
   $('#pclip').onclick = () => $('#pfile').click();
   smsSuggWire(p);
-  $('#pfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; toast('Preparing the photo…'); const b = await smsShrink(f); if (!b) return toast('This file cannot be sent as a picture message'); if (smsPend) URL.revokeObjectURL(smsPend.url); smsPend = { p, blob:b, url:URL.createObjectURL(b) }; smsThread(); };
+  $('#pfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; if (isHfFile(f)) return toast(HF_BLOCK); toast('Preparing the photo…'); const b = await smsShrink(f); if (!b) return toast('This file cannot be sent as a picture message'); if (smsPend) URL.revokeObjectURL(smsPend.url); smsPend = { p, blob:b, url:URL.createObjectURL(b) }; smsThread(); };
   if ($('#pdrop')) $('#pdrop').onclick = () => { URL.revokeObjectURL(smsPend.url); smsPend = null; smsThread(); };
   const t = $('#ptext'); t.value = keep; if (first || hadFocus){ t.focus(); try { if (sel) t.setSelectionRange(sel[0], sel[1]); else t.setSelectionRange(keep.length, keep.length); } catch(e){} }
   if (first || atEnd) $('#cthread').scrollTop = 1e9;
@@ -1898,8 +1898,9 @@ async function drContent(){
     }
     drLib();
   };
-  $('#drFiles').onchange = e => { const f = [...e.target.files]; e.target.value = ''; send(f); };
-  const dz = $('#drDrop'); dz.ondragover = e => { e.preventDefault(); dz.style.background = 'var(--blush)'; }; dz.ondragleave = () => dz.style.background = ''; dz.ondrop = e => { e.preventDefault(); dz.style.background = ''; send([...e.dataTransfer.files].filter(f => /^(image|video)\//.test(f.type))); };
+  const noHf = f => { const bad = f.filter(isHfFile); if (bad.length) toast(HF_BLOCK); return f.filter(x => !isHfFile(x)); };
+  $('#drFiles').onchange = e => { const f = noHf([...e.target.files]); e.target.value = ''; if (f.length) send(f); };
+  const dz = $('#drDrop'); dz.ondragover = e => { e.preventDefault(); dz.style.background = 'var(--blush)'; }; dz.ondragleave = () => dz.style.background = ''; dz.ondrop = e => { e.preventDefault(); dz.style.background = ''; { const f = noHf([...e.dataTransfer.files].filter(f => /^(image|video)\//.test(f.type))); if (f.length) send(f); } };
   $('#drRef').onclick = drLib; $('#drFold').onchange = drLib; $('#drType').onchange = drLib;
   const picked = () => [...document.querySelectorAll('#drLib input:checked')].map(i => i.value);
   $('#drSelAll').onclick = () => { const all = [...document.querySelectorAll('#drLib input[type=checkbox]')], on = all.some(i => !i.checked); all.forEach(i => i.checked = on); drSel(); };

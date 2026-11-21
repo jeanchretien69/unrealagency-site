@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Samsung">
+<meta name="robots" content="noindex">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png">
+<title>Samsung · Unreal</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#000;color:#f5f5fa;font:15px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;overflow:hidden}
+  #wrap{position:fixed;inset:0;padding-top:env(safe-area-inset-top);background:#000}
+  iframe{display:block;width:100%;height:100%;border:0;background:#000}
+  .msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center}
+  .spin{width:30px;height:30px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:#ff4fa3;animation:s .9s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  form{display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px}
+  input{font:inherit;font-size:16px;padding:12px 14px;border-radius:12px;border:1px solid #2e2e3d;background:#111117;color:#fff}
+  button.pri{font:inherit;font-weight:600;padding:12px;border:0;border-radius:12px;color:#fff;background:linear-gradient(135deg,#ff4fa3,#ff86c1)}
+  .mu{color:#9a9ab0;font-size:13px}
+  #rl{position:absolute;top:calc(env(safe-area-inset-top) + 6px);left:6px;z-index:5;width:30px;height:30px;border-radius:50%;border:0;background:rgba(20,20,28,.72);color:#fff;font-size:15px;opacity:.75}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <iframe id="f" title="Phone" allow="autoplay; clipboard-read; clipboard-write; fullscreen" referrerpolicy="no-referrer" hidden></iframe>
+  <button id="rl" aria-label="Reload" hidden>⟳</button>
+  <div class="msg" id="m"><div class="spin"></div></div>
+</div>
+<script type="module">
+// The phone, full screen, nothing else. Made to be added to the iPhone Home Screen.
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+const sb = createClient('https://ljhpdqttcxwgufcejfor.supabase.co', 'sb_publishable_Nu7S4SnvuTFRg1ODn4VVrA_hCH5X1wY');
+const $ = s => document.querySelector(s);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const show = html => { $('#m').innerHTML = html; $('#m').hidden = false; };
+
+function loginForm(err) {
+  show(`<form id="lf"><b>Sign in to see the phone</b>
+    <input id="em" type="email" autocomplete="username" placeholder="Email" required>
+    <input id="pw" type="password" autocomplete="current-password" placeholder="Password" required>
+    <button class="pri" type="submit">Sign in</button>${err ? `<span class="mu">${esc(err)}</span>` : ''}</form>`);
+  $('#lf').onsubmit = async e => {
+    e.preventDefault();
+    const { error } = await sb.auth.signInWithPassword({ email: $('#em').value.trim(), password: $('#pw').value });
+    if (error) loginForm('Wrong email or password'); else open();
+  };
+}
+
+async function open() {
+  $('#f').hidden = true; $('#rl').hidden = true; show('<div class="spin"></div>');
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return loginForm();
+  let r; try { r = await sb.functions.invoke('phone-pass', { method: 'POST', body: {} }); } catch (e) { r = { error: e }; }
+  const url = r?.data?.url;
+  if (!url) {
+    let why = 'Could not open the phone. Try again in a minute.';
+    try { const j = await r.error?.context?.json?.(); if (j?.error === 'no access') why = 'Your account does not have Phone control.'; } catch {}
+    show(`<span>${esc(why)}</span><button class="pri" id="again">Try again</button>`); $('#again').onclick = open; return;
+  }
+  $('#f').src = url; $('#f').hidden = false; $('#rl').hidden = false; $('#m').hidden = true;
+}
+$('#rl').onclick = open;
+// coming back to the app after a while: get a fresh connection
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else if (hiddenAt && Date.now() - hiddenAt > 60000) open(); });
+open();
+</script>
+</body>
+</html>

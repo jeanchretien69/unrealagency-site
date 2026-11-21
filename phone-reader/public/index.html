@@ -43,7 +43,9 @@ button.pri{background:linear-gradient(135deg,var(--pink),var(--pink2));border-co
   .side{flex-direction:row;flex-wrap:nowrap;min-width:0;width:100%;justify-content:space-around;padding:6px;border-radius:16px;gap:4px}
   .side h4,.sp,.st,.hideM,#bFs{display:none}
   .side button{flex:1;justify-content:center;padding:8px 0;font-size:16px;border-radius:12px}
-  .frame{padding:3px;border-radius:26px;box-shadow:0 0 0 1px #3a3a48,0 0 0 3px rgba(255,79,163,.25)}.screen{border-radius:23px}
+  .frame{padding:0;border-radius:18px;background:none;box-shadow:none}.frame.live{box-shadow:none}.screen{border-radius:18px}
+  html,body{background:#000}
+  .side{background:#111117;border-color:#22222c}.side button{color:#f2f2f7;border-color:#2a2a35;background:#17171f}
 }
 </style></head><body>
 <div class="stage" id="stage">
@@ -125,7 +127,7 @@ function onBinary(buf) {
     const chunkData = toAvcc(body); if (!chunkData.length) return;
     needKey = false;
     try { dec.decode(new EncodedVideoChunk({ type: key ? 'key' : 'delta', timestamp: performance.now() * 1000, data: chunkData })); pending++; } catch { needKey = true; }
-    if (SAFARI) { clearTimeout(flushT); flushT = setTimeout(() => { if (pending > 0 && dec && dec.state === 'configured' && !rtcOn) dec.flush().then(() => { needKey = true; askKey(); }).catch(() => {}); }, 120); }
+
     if (!rtcOn) $('#lat').textContent = lag > 250 ? 'Behind ' + Math.round(lag) + ' ms' : '';
   }
 }
@@ -166,7 +168,7 @@ function text(s) { const e = new TextEncoder().encode(s.slice(0, 100)); const b 
 function simple(t) { send(new Uint8Array([t]).buffer); }
 function pos(e) { const r = cv.getBoundingClientRect(); return [Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) * vw, Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1) * vh]; }
 let isDown = false;
-cv.addEventListener('pointerdown', e => { if (rtcOn && rv.paused) rv.play().catch(() => {}); if (!vw) return; cv.focus(); cv.setPointerCapture(e.pointerId); isDown = true; touch(0, ...pos(e), true); e.preventDefault(); });
+cv.addEventListener('pointerdown', e => { if (rv.srcObject && rv.paused) rv.play().catch(() => {}); if (!vw) return; cv.focus(); cv.setPointerCapture(e.pointerId); isDown = true; touch(0, ...pos(e), true); e.preventDefault(); });
 cv.addEventListener('pointermove', e => { if (isDown) { touch(2, ...pos(e), true); e.preventDefault(); } });
 const up = e => { if (!isDown) return; isDown = false; touch(1, ...pos(e), false); };
 cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
@@ -208,12 +210,12 @@ setInterval(() => {
   if (!lastFrame && performance.now() - liveSince > 6000) { $('#ov').classList.remove('hide'); $('#spin').hidden = true; $('#ovT').textContent = 'Picture not showing'; $('#ovS').textContent = (rtcOn ? 'fast' : 'normal') + ' · ' + (codecStr || 'no codec') + ' · ' + (dec ? dec.state : 'no decoder') + (lastErr ? ' · ' + lastErr : '') + ' — send me this line'; $('#ovB').hidden = false; }
   else if (lastFrame && !$('#ov').classList.contains('hide') && state === 'live') $('#ov').classList.add('hide');
 }, 1500);
-setInterval(() => { if (rtcOn && rv.paused) rv.play().catch(() => rtcStop(true)); }, 1000);
+setInterval(() => { if (rtcOn && rv.paused) rv.play().catch(() => rtcStop(true)); else if (pc && !rtcOn && rv.paused && rv.srcObject) rv.play().catch(() => {}); }, 1000);
 function rtcStart() { if (!('RTCPeerConnection' in window) || pc || !ws || ws.readyState !== 1 || Date.now() - rtcTried < 20000) return; rtcTried = Date.now(); ws.send(JSON.stringify({ webrtc: 'start' })); }
 function rtcStop(tell) {
   const was = rtcOn; rtcOn = false; rv.classList.remove('on'); if (state === 'live') $('#stT').textContent = 'Live'; try { pc && pc.close(); } catch {} pc = null; rv.srcObject = null;
   if (tell && ws && ws.readyState === 1) ws.send(JSON.stringify({ webrtc: 'stop' }));
-  if (was) { needKey = true; askKey(); }
+  needKey = true; askKey();
 }
 async function rtcOffer(sdp) {
   try {
@@ -221,8 +223,12 @@ async function rtcOffer(sdp) {
     pc.ontrack = e => {
       try { e.receiver.jitterBufferTarget = 0; } catch {} try { e.receiver.playoutDelayHint = 0; } catch {}
       rv.srcObject = e.streams && e.streams[0] ? e.streams[0] : new MediaStream([e.track]); rv.play().catch(() => {});
-      const tick = () => { if (!pc) return; lastFrame = performance.now(); if (!rtcOn) { rtcOn = true; rv.classList.add('on'); $('#lat').textContent = ''; ui('live'); } rv.requestVideoFrameCallback(tick); };
-      if (rv.requestVideoFrameCallback) rv.requestVideoFrameCallback(tick); else rv.onplaying = () => { rtcOn = true; rv.classList.add('on'); };
+      let frames = 0;
+      const go = () => { if (rtcOn || !pc) return; rtcOn = true; rv.classList.add('on'); $('#lat').textContent = ''; ui('live'); if (ws && ws.readyState === 1) ws.send(JSON.stringify({ webrtc: 'playing' })); };
+      const tick = () => { if (!pc) return; if (!rv.paused) { frames++; if (rtcOn) lastFrame = performance.now(); if (frames >= 8) go(); } rv.requestVideoFrameCallback(tick); };
+      if (rv.requestVideoFrameCallback) rv.requestVideoFrameCallback(tick); else rv.addEventListener('timeupdate', () => { if (!rv.paused && rv.currentTime > 0.3) go(); });
+      // Safari may refuse to play it: then stay on the normal picture
+      setTimeout(() => { if (pc && !rtcOn) rtcStop(true); }, 8000);
     };
     pc.onconnectionstatechange = () => { if (pc && ['failed', 'closed'].includes(pc.connectionState)) rtcStop(true); };
     await pc.setRemoteDescription({ type: 'offer', sdp });

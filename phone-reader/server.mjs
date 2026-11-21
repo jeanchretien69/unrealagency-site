@@ -186,7 +186,7 @@ function readVideo(sock, fail) {
           let wsMsg = null;
           for (const v of viewers) {
             if (!v.ready) continue;
-            if (v.rtc && v.rtc.connected) { v.rtc.frame(data, key, ptsUs, S.configRaw); continue; }
+            if (v.rtc && v.rtc.connected) { v.rtc.frame(data, key, ptsUs, S.configRaw); if (v.rtcPlaying) continue; }
             // too far behind? drop old frames and jump to the next key frame instead of queuing them
             if (v.waitKey && !key) continue;
             if (v.bufferedAmount() > 600000) { v.waitKey = true; requestKeyFrame(); continue; }
@@ -295,7 +295,8 @@ async function onViewerText(v, text) {
     } catch (e) { log('webrtc start failed', e.message); v.rtc = null; v.sendText('{"webrtc":"failed"}'); }
   } else if (m.webrtc === 'answer' && v.rtc && typeof m.sdp === 'string') {
     try { await v.rtc.answer(m.sdp); } catch (e) { log('webrtc answer failed', e.message); v.rtc.close(); v.rtc = null; v.sendText('{"webrtc":"failed"}'); }
-  } else if (m.webrtc === 'stop' && v.rtc) { v.rtc.close(); v.rtc = null; v.waitKey = true; requestKeyFrame(); }
+  } else if (m.webrtc === 'playing' && v.rtc) { v.rtcPlaying = true; log('viewer on webrtc');
+  } else if (m.webrtc === 'stop') { if (v.rtc) v.rtc.close(); v.rtc = null; v.rtcPlaying = false; v.waitKey = true; requestKeyFrame(); }
 }
 function onViewerMessage(v, msg) {
   if (msg.length === 1 && msg[0] === 0xff) return requestKeyFrame();      // page asked for a key frame

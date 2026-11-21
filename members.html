@@ -1579,6 +1579,7 @@ async function membersView(){
     sb.from('docs').select('id,title,category').order('sort'),
     sb.from('doc_grants').select('*'),
   ]);
+  let phs = []; try { const r = await sb.from('phone_devices').select('serial,name,sort,allow').order('sort'); phs = r.data || []; } catch(e){}
   const users = (p.data||[]).filter(u => u.role !== 'admin');
   const grants = new Set((g.data||[]).map(x => x.user_id + '|' + x.doc_id));
   const v = $('#view');
@@ -1594,7 +1595,11 @@ async function membersView(){
       <label class="check"><input type="checkbox" data-allu="${u.id}" ${u.all_access?'checked':''}> All docs & personas</label>
       <div class="gl">${(d.data||[]).map(x=>`<label><input type="checkbox" data-doc="${x.id}" data-du="${u.id}" ${grants.has(u.id+'|'+x.id)?'checked':''}>${esc(x.title)}</label>`).join('')}</div>
     </td></tr>`).join('')}</tbody></table></div>
-    <p class="muted" style="font-size:13px;margin-top:10px">New accounts start with nothing. Tick "Approved", then tick what they can see. Ticking a section opens all its points; untick single points to customise.</p>`;
+    <p class="muted" style="font-size:13px;margin-top:10px">New accounts start with nothing. Tick "Approved", then tick what they can see. Ticking a section opens all its points; untick single points to customise.</p>
+    ${phs.length ? `<div class="card tbl acc" style="margin-top:14px"><h2>📱 Phone access</h2><p class="muted" style="font-size:13px;margin:0 0 10px">You always have every phone. Tick who else can open each one. Leave a phone empty to keep it for you only.</p>
+      <table><thead><tr><th style="text-align:left">Phone</th>${users.map(u => `<th class="sub">${esc(u.full_name || u.email || 'Member')}</th>`).join('')}</tr></thead><tbody>
+      ${phs.map(ph => `<tr><td class="u"><b>${esc(ph.name || 'Phone')}</b><br><span class="muted" data-phwho="${esc(ph.serial)}">${(ph.allow||[]).length ? (ph.allow||[]).length + ' with access' : '🔒 Only you'}</span></td>${users.map(u => `<td><input type="checkbox" data-ph="${esc(ph.serial)}" data-phu="${u.id}" ${(ph.allow||[]).includes(u.id)?'checked':''} aria-label="${esc((u.full_name || 'Member') + ' on ' + (ph.name || 'phone'))}"></td>`).join('')}</tr>`).join('')}
+      </tbody></table></div>` : ''}`;
   const save = async (u, perms) => { u.perms = perms; const { error } = await sb.from('profiles').update({ perms }).eq('id', u.id); toast(error ? error.message : 'Saved'); };
   v.querySelectorAll('[data-k]').forEach(box => box.onchange = async () => {
     const u = users.find(x => x.id === box.dataset.u), k = box.dataset.k;
@@ -1607,6 +1612,18 @@ async function membersView(){
   });
   v.querySelectorAll('[data-appr]').forEach(box => box.onchange = async () => {
     const { error } = await sb.from('profiles').update({ approved: box.checked }).eq('id', box.dataset.appr); toast(error ? error.message : (box.checked ? 'Approved' : 'Access removed')); badges();
+  });
+  v.querySelectorAll('[data-ph]').forEach(box => box.onchange = async () => {
+    const ph = phs.find(x => x.serial === box.dataset.ph), u = users.find(x => x.id === box.dataset.phu);
+    const allow = new Set(ph.allow || []); box.checked ? allow.add(u.id) : allow.delete(u.id);
+    const { error } = await sb.from('phone_devices').update({ allow:[...allow], updated_at:new Date().toISOString() }).eq('serial', ph.serial);
+    if (error){ box.checked = !box.checked; return toast(error.message); }
+    ph.allow = [...allow];
+    const w = v.querySelector(`[data-phwho="${CSS.escape(ph.serial)}"]`); if (w) w.textContent = ph.allow.length ? ph.allow.length + ' with access' : '🔒 Only you';
+    // the Phone control tab shows for people who have at least one phone
+    const want = phs.some(x => (x.allow || []).includes(u.id)), has = (u.perms || []).includes('phone');
+    if (want !== has){ const perms = want ? [...(u.perms || []), 'phone'] : (u.perms || []).filter(x => x !== 'phone'); await save(u, perms); v.querySelectorAll(`[data-u="${u.id}"][data-k="phone"]`).forEach(c => c.checked = want); }
+    else toast('Saved');
   });
   v.querySelectorAll('[data-docs]').forEach(b => b.onclick = () => { const r = v.querySelector(`[data-docrow="${b.dataset.docs}"]`); r.hidden = !r.hidden; });
   v.querySelectorAll('[data-allu]').forEach(box => box.onchange = async () => { const { error } = await sb.from('profiles').update({ all_access: box.checked }).eq('id', box.dataset.allu); toast(error ? error.message : 'Saved'); });

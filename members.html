@@ -237,8 +237,8 @@
   .tprof b{font-size:14px} .tprof small{font-size:11.5px;color:var(--muted)}
   .tprof.on{border-color:var(--pink);background:var(--blush)} .tprof.add{border-style:dashed;justify-content:center;color:var(--muted);font-weight:700}
   .tact{display:flex;gap:8px}
-  .tlab{display:grid;grid-template-columns:230px minmax(0,1fr) minmax(360px,420px);gap:14px;align-items:start}
-  @media (max-width:1250px){.tlab{grid-template-columns:210px minmax(0,1fr)}.tchat{grid-column:1/-1;position:static!important;height:560px!important}}
+  .tlab{display:grid;grid-template-columns:220px minmax(0,1fr) minmax(340px,400px);gap:14px;align-items:start}
+  @media (max-width:1150px){.tlab{grid-template-columns:200px minmax(0,1fr)}.tchat{grid-column:1/-1;position:static!important;height:560px!important}}
   @media (max-width:760px){.tlab{grid-template-columns:1fr}.tnav{position:static!important}}
   .tnav{padding:10px;position:sticky;top:84px}
   .tnh{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:6px 8px 10px}
@@ -1066,7 +1066,7 @@ function show(t){
   if (t !== 'core') document.body.classList.remove('core-open');
   if (t !== 'time') timeStop();
   tab = t; history.replaceState(null, '', '#' + t); badges();
-  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'phone' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'core');
+  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'phone' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'core' || t === 'train');
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
   { const sb = document.querySelector(`#side button[data-tab="${t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }

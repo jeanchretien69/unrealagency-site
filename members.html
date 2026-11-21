@@ -3960,7 +3960,7 @@ async function trainView(){
     <section class="card tchat" aria-label="Test chat">
       <div class="tch"><div><b>Test ${esc(name)}</b><small>${esc(engine.ico)} ${esc(engine.name)}${hasKey ? '' : ' · free test engine'}</small></div><div class="tchb"><button type="button" class="btn ghost sm" id="tCopy" title="Copy this conversation">📋 Copy</button><button type="button" class="btn ghost sm" id="tExp" title="Download every test conversation of this profile">⬇️ Export all</button><button type="button" class="btn ghost sm" id="tReset">New convo</button></div></div>
       <div class="msgs" id="tMsgs"><p class="muted tempty">Text her like a client would.<br>Unsaved changes are not used, so press Save first.</p></div>
-      <form class="tcomp" id="tChat">${model === 'kaya-sms' && hasKey ? '<div class="tpic" id="tPicPrev" hidden></div><label class="tplus" title="Add a picture (or paste one with Ctrl+V)">＋<input type="file" id="tKayaImage" accept="image/*" aria-label="Add a picture" hidden></label>' : ''}<textarea id="trIn" rows="1" placeholder="Message ${esc(name)}… (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn">Send</button></form>
+      <form class="tcomp" id="tChat">${hasKey ? '<div class="tpic" id="tPicPrev" hidden></div><label class="tplus" title="Add a picture (or paste one with Ctrl+V)">＋<input type="file" id="tKayaImage" accept="image/*" aria-label="Add a picture" hidden></label>' : ''}<textarea id="trIn" rows="1" placeholder="Message ${esc(name)}… (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn">Send</button></form>
     </section>
   </div>
   <details class="card tguide" id="tGuide" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700">📖 How to train her</summary>
@@ -4092,7 +4092,7 @@ async function trainView(){
   $('#tChat').onsubmit = async e => {
     e.preventDefault();
     let text = $('#trIn').value.trim();
-    const image = model === 'kaya-sms' ? testImg : null;
+    const image = testImg;
     if (image && !image.type.startsWith('image/')) return toast('Select an image for the test chat.');
     if (image) text = [text, '[he sent a photo]'].filter(Boolean).join('\n');
     if (!text || (model === 'kaya-sms' && $('#tChat button').disabled)) return;

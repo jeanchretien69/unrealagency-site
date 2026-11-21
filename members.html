@@ -271,37 +271,24 @@
   .tcomp{display:flex;gap:8px;align-items:flex-end;padding:10px 64px 10px 10px;border-top:1px solid var(--line)}
   @media (max-width:760px){.tcomp{padding-right:10px;margin-bottom:56px}}
   .tcomp textarea{flex:1;min-height:44px;max-height:140px;resize:none;font-family:inherit;font-size:14px;border-radius:14px}
-  /* prompt studio */
-  .pstop{margin-bottom:14px}
-  .psmodels{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-  .pschip{border:1px solid var(--line);background:transparent;color:inherit;border-radius:999px;padding:8px 16px;font:inherit;font-weight:600;cursor:pointer}
-  .pschip.on{background:var(--pink,#ff4fa0);border-color:transparent;color:#fff}
-  .psform{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:12px;align-items:start}
-  .psform input{width:100%}
-  .psthemes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-  .pst{border:1px solid var(--line);background:transparent;color:inherit;border-radius:999px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
-  .psgo{display:flex;gap:8px;align-items:center;padding-top:22px}
-  .psgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:14px;align-items:start}
-  .psrh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-  .pscard{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;background:var(--card,#fff)}
-  .pshead{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;margin-bottom:8px}
-  .pshead small{color:var(--muted);font-size:12px}
-  .pstext{width:100%;min-height:90px;resize:vertical;font:inherit;font-size:14px;line-height:1.5}
-  .psact,.psfixb{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
-  .psfix{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
-  .psfix textarea{width:100%;font:inherit}
+  /* prompt studio chat */
+  .pschat{max-width:900px;margin:0 auto;display:flex;flex-direction:column;height:calc(100vh - 230px);min-height:460px;padding:0;overflow:hidden}
+  .pschat-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .pschat-h small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .pschat .msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .pschat .bub{max-width:88%}
+  .psb.bot{line-height:1.5}
+  .psp{margin:8px 0;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff);overflow:hidden}
+  .psp pre{margin:0;padding:10px 12px;white-space:pre-wrap;word-break:break-word;font:inherit;font-size:13.5px;line-height:1.5}
+  .psp-b{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}
+  .psimg{display:block;max-width:220px;max-height:260px;border-radius:10px;margin-bottom:6px}
+  .psup{font-size:12.5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .pspend{display:flex;align-items:center;gap:10px;padding:8px 16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+  .pspend img{height:40px;border-radius:6px}
+  .pscomp{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--line)}
+  .pscomp textarea{flex:1;resize:none;min-height:42px;max-height:160px;font:inherit}
   .psatt{cursor:pointer}
-  .psthumb{position:relative;display:inline-block}
-  .psthumb img{height:48px;border-radius:8px;display:block}
-  .psthumb button{position:absolute;top:-6px;right:-6px;border:0;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer}
-  .pswin{border-top:1px solid var(--line);padding:10px 0}
-  .pswin p{margin:0 0 6px;font-size:13px;line-height:1.5;max-height:6.2em;overflow:auto}
-  .psrule{margin-top:10px}.psrule textarea{width:100%;font:inherit;font-size:13px}
-  .psguide{margin:10px 0 0;padding-left:20px;line-height:1.7}
-  .psups{display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:12.5px}
-  .psups span{background:var(--blush);border-radius:8px;padding:4px 8px}
-  .psdrop.on{outline:2px dashed var(--pink)}
-  @media (max-width:900px){ .psgrid{grid-template-columns:1fr} .psform{grid-template-columns:1fr} .psgo{padding-top:0} }
+  @media (max-width:760px){ .pschat{height:calc(100vh - 170px);border-radius:0} .pschat .bub{max-width:96%} .pscomp{padding-bottom:64px} }
   .tguide ol{margin:10px 0 0;padding-left:20px;line-height:1.7}
   .tsec{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
   .tsec summary{cursor:pointer;font-weight:700}
@@ -1110,7 +1097,7 @@ document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.datas
     h.onclick = flip; h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
   });
 })();
-const titles = { shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], prompts:['Prompt studio','AI writes and fixes Higgsfield prompts for each model, following your rules.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function mnavClose(){ document.body.classList.remove('mopen'); $('#mnav').setAttribute('aria-expanded', 'false'); }
 $('#mnav').onclick = () => { const o = document.body.classList.toggle('mopen'); $('#mnav').setAttribute('aria-expanded', String(o)); };
@@ -1687,145 +1674,92 @@ async function membersView(){
   });
 }
 
-// ---------- 🎨 Prompt studio (AI writes + fixes Higgsfield prompts; key stays on the server) ----------
-const PS_KEY = 'ua_prompts_v1';
+// ---------- 🎨 Prompt studio: a simple chat that writes Kaya prompts + saves/schedules photos ----------
+const PS_KEY = 'ua_prompt_chat_v2';
 const psLoad = () => { try { return JSON.parse(localStorage.getItem(PS_KEY) || '{}') || {}; } catch { return {}; } };
 const psStore = s => { try { localStorage.setItem(PS_KEY, JSON.stringify(s)); } catch {} };
-const PS_THEMES = ['Bed selfie', 'Morning in bed', 'Bathroom', 'Kitchen', 'Hotel room', 'Night window', 'Getting ready', 'Cozy knit', 'Lace set', 'Gym / sporty'];
-async function psCall(body){
-  const { data, error } = await sb.functions.invoke('prompt-ai', { body });
-  if (error){ let m = error.message; try { m = (await error.context.json()).error || m; } catch(e){} throw new Error(m); }
-  if (data?.error) throw new Error(data.error);
-  return data;
-}
-function psShrink(file){
+function psShrink(file, max = 1280, q = 0.85){
   return new Promise((ok, bad) => {
     const img = new Image(), url = URL.createObjectURL(file);
-    img.onload = () => { const k = Math.min(1, 1280 / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', 0.85)); };
+    img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', q)); };
     img.onerror = () => { URL.revokeObjectURL(url); bad(new Error('Could not read that image')); };
     img.src = url;
   });
 }
-async function psUploadPlace(files, model, caption){
-  const ids = []; await photoUpload([...files], model, caption, ids);
-  const out = [];
-  for (const id of ids){
-    const { data, error } = await sb.rpc('x_place_photo', { p_photo: id });
-    if (error){ out.push({ num:null, where:'saved in 📸 Photos' }); continue; }
-    out.push({ num:data.num, where: data.account ? `𝕏 @${data.account} · ${xLabel(data.day)} · Picture ${data.slot}` : (data.full ? 'saved (Twitter plan is full for 2 weeks)' : 'saved in 📸 Photos') });
-  }
-  return out;
+async function psSavePlace(file){
+  const ids = []; await photoUpload([file], 'Kaya', 'Prompt studio', ids);
+  if (!ids.length) return { where:'Could not save this photo' };
+  const { data, error } = await sb.rpc('x_place_photo', { p_photo: ids[0] });
+  if (error) return { id:ids[0], where:'Saved in 📸 Photos' };
+  return { id:ids[0], num:data.num, where: data.account ? `𝕏 @${data.account} · ${xLabel(data.day)} · Picture ${data.slot}` : (data.full ? 'Saved (Twitter plan is full for 2 weeks)' : 'Saved in 📸 Photos') };
+}
+function psFormat(t){
+  return t.split(/```[a-zA-Z]*\n?/).map((part, i) => {
+    if (i % 2){ const p = part.trim(); return p ? `<div class="psp"><pre>${esc(p)}</pre><div class="psp-b"><button type="button" class="btn sm" data-pcopy>📋 Copy</button><button type="button" class="btn sm ghost" data-plike>⭐ Like</button></div></div>` : ''; }
+    return esc(part.trim()).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+  }).filter(Boolean).join('');
 }
 async function promptsView(){
-  const v = $('#view'), owner = me.role === 'admin';
-  const [{ data: models, error }, { data: wins }] = await Promise.all([
-    sb.from('prompt_models').select('*').order('sort'),
-    sb.from('prompt_winners').select('*').order('created_at', { ascending:false }).limit(300),
-  ]);
-  if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
-  const list = (models || []).filter(m => m.model !== '_rules');
-  if (!list.length) return v.innerHTML = '<div class="card empty">No models yet.</div>';
-  const st = psLoad();
-  if (!list.find(m => m.model === st.model)) st.model = list[0].model;
-  st.results = st.results || {}; st.n = st.n || 5;
-  let busy = false, usage = '';
-  if (owner){ try { const m0 = new Date(); m0.setDate(1); m0.setHours(0,0,0,0); const { data: lg } = await sb.from('prompt_log').select('cost').gte('created_at', m0.toISOString()); const c = (lg || []).reduce((s, x) => s + Number(x.cost || 0), 0); usage = `This month: ${(lg || []).length} requests · about $${c.toFixed(2)}`; } catch(e){} }
-  const res = () => st.results[st.model] || [];
-  const save = () => psStore(st);
-  const card = (r, i) => `<div class="pscard" data-i="${i}">
-      <div class="pshead"><b>${esc(r.title || 'Prompt ' + (i + 1))}</b>${r.changed ? `<small>✓ ${esc(r.changed)}</small>` : ''}</div>
-      <textarea class="pstext" data-txt aria-label="Prompt">${esc(r.prompt)}</textarea>
-      <div class="psact"><button type="button" class="btn sm" data-copy>📋 Copy</button><button type="button" class="btn sm ghost" data-fixo>🔧 Fix it</button><button type="button" class="btn sm ghost" data-win>${r.won ? '⭐ Saved' : '⭐ Winner'}</button>${can('photos') ? `<label class="btn sm ghost psatt">⬆️ Upload the photos<input type="file" accept="image/png,image/jpeg,image/webp" multiple data-up hidden></label>` : ''}<button type="button" class="btn sm ghost" data-rm aria-label="Remove">✕</button></div>
-      ${(r.ups || []).length ? `<div class="psups">${r.ups.map(u => `<span>${u.num ? `<b>#${u.num}</b> · ` : ''}${esc(u.where)}</span>`).join('')}</div>` : ''}
-      <div class="psfix" ${r.fixOpen ? '' : 'hidden'}>
-        <textarea data-fb rows="2" placeholder="What to change? e.g. remove the hat, make it sunset, tighter top, less AI-looking">${esc(r.fb || '')}</textarea>
-        <div class="psfixb"><label class="btn sm ghost psatt">📎 Add the photo Higgsfield made<input type="file" accept="image/*" data-img hidden></label>${r.img ? `<span class="psthumb"><img src="${r.img}" alt="Attached photo"><button type="button" data-imgx aria-label="Remove photo">✕</button></span>` : ''}<button type="button" class="btn sm" data-fix>✨ Fix the prompt</button></div>
-      </div></div>`;
-  const winList = () => { const w = (wins || []).filter(x => x.model === st.model); return w.length ? w.map(x => `<div class="pswin" data-w="${x.id}"><p>${esc(x.prompt)}</p><div><button type="button" class="btn sm ghost" data-wcopy>📋 Copy</button>${owner || x.created_by === me.id ? '<button type="button" class="btn sm ghost" data-wdel>Delete</button>' : ''}</div></div>`).join('') : '<p class="muted" style="font-size:13px">No winners yet. Press ⭐ Winner on prompts that made great photos. The AI copies their style.</p>'; };
-  const rulesHtml = () => (models || []).map(m => `<div class="psrule"><label>${m.model === '_rules' ? 'Rules for every model' : esc(m.model)}</label><textarea data-rule="${esc(m.model)}" rows="${m.model === '_rules' ? 12 : 5}" ${owner ? '' : 'readonly'}>${esc(m.look)}</textarea></div>`).join('');
-  v.innerHTML = `
-  <div class="card pstop">
-    <div class="psmodels" role="tablist" aria-label="Model">${list.map(m => `<button type="button" role="tab" class="pschip ${m.model === st.model ? 'on' : ''}" data-m="${esc(m.model)}" aria-selected="${m.model === st.model}">${esc(m.model)}</button>`).join('')}</div>
-    <div class="psform">
-      <div><label for="psTheme">Theme</label><input id="psTheme" maxlength="200" placeholder="e.g. cozy Sunday morning in bed" value="${esc(st.theme || '')}">
-        <div class="psthemes">${PS_THEMES.map(t => `<button type="button" class="pst" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>
-      <div><label for="psNotes">Extra notes (optional)</label><input id="psNotes" maxlength="400" placeholder="e.g. red lace, night light, no mirror" value="${esc(st.notes || '')}"></div>
-      <div class="psgo"><select id="psN" aria-label="How many">${[3,5,10].map(n => `<option value="${n}" ${n === st.n ? 'selected' : ''}>${n} prompts</option>`).join('')}</select><button type="button" class="btn" id="psGo">✨ Give me prompts</button></div>
-    </div>
-  </div>
-  <div class="psgrid">
-    <section><div class="psrh"><h2 style="margin:0">Prompts for ${esc(st.model)}</h2>${res().length ? '<button type="button" class="btn sm ghost" id="psClear">Clear all</button>' : ''}</div><div id="psRes">${res().length ? res().map(card).join('') : '<div class="card empty">Pick a theme and press ✨ Give me prompts.<br>Then copy one into Higgsfield, generate, and come back to 🔧 Fix it.</div>'}</div></section>
-    <aside>
-      ${can('photos') ? `<div class="card psdrop" id="psDrop" style="margin-bottom:14px"><h2>⬆️ Upload Higgsfield photos</h2><p class="muted" style="font-size:13px;margin:-4px 0 10px">Saved in 📸 Photos as ${esc(st.model)}, numbered automatically.${st.model.toLowerCase() === 'kaya' ? ' Each one goes on the next free picture of the 🐦 Twitter task.' : ''}</p><label class="btn psatt" style="width:100%;justify-content:center">Choose photos<input type="file" id="psUpAll" accept="image/png,image/jpeg,image/webp" multiple hidden></label><div id="psUpRes" class="psups"></div></div>` : ''}
-      <div class="card"><h2>⭐ Winners · ${esc(st.model)}</h2><div id="psWins">${winList()}</div></div>
-      <details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700">📖 How to use it</summary><ol class="psguide"><li>Pick the model and a theme, press <b>✨ Give me prompts</b>.</li><li><b>📋 Copy</b> one into Higgsfield with her reference photo. Launch a few at once.</li><li>Not right? <b>🔧 Fix it</b>: write what to change and add the photo it made.</li><li>Great photo? Press <b>⭐ Winner</b>, then <b>⬆️ Upload the photos</b>. They get a number and go on the next free picture of the 🐦 Twitter task.</li></ol></details>
-      <details class="card" style="margin-top:14px" ${owner ? '' : ''}><summary style="cursor:pointer;font-weight:700">⚙️ What the AI follows${owner ? '' : ' (read only)'}</summary>${rulesHtml()}${owner ? `<div class="row" style="margin-top:10px;gap:8px"><button type="button" class="btn sm" id="psRulesSave" style="flex:0">Save rules</button><button type="button" class="btn sm ghost" id="psAddModel" style="flex:0">+ Add a model</button></div>${usage ? `<p class="muted" style="font-size:12px;margin-top:10px">${esc(usage)}</p>` : ''}` : ''}</details>
-    </aside>
+  const v = $('#view'), st = psLoad();
+  st.msgs = Array.isArray(st.msgs) ? st.msgs : [];
+  let pendingImg = null, busy = false;
+  v.innerHTML = `<div class="card pschat">
+    <div class="pschat-h"><div><b>🎨 Kaya prompts</b><small>Ask for prompts, fix them, drop the Higgsfield photos here</small></div><button type="button" class="btn ghost sm" id="psNew">New chat</button></div>
+    <div class="msgs" id="psMsgs"></div>
+    <div class="pspend" id="psPend" hidden></div>
+    <form class="pscomp" id="psForm">${can('photos') ? '<label class="btn ghost psatt" title="Add Higgsfield photos" aria-label="Add photos">📎<input type="file" id="psFile" accept="image/png,image/jpeg,image/webp" multiple hidden></label>' : ''}<textarea id="psIn" rows="1" placeholder="e.g. give me 3 cozy bed selfie prompts (Enter to send)" aria-label="Message"></textarea><button class="btn" id="psSend">Send</button></form>
   </div>`;
-
-  const rerender = () => promptsView();
-  v.querySelectorAll('.pschip').forEach(b => b.onclick = () => { st.model = b.dataset.m; save(); rerender(); });
-  v.querySelectorAll('.pst').forEach(b => b.onclick = () => { $('#psTheme').value = b.dataset.t; st.theme = b.dataset.t; save(); });
-  $('#psTheme').oninput = e => { st.theme = e.target.value; save(); };
-  $('#psNotes').oninput = e => { st.notes = e.target.value; save(); };
-  $('#psN').onchange = e => { st.n = +e.target.value; save(); };
-  $('#psGo').onclick = async () => {
-    if (busy) return; busy = true; const b = $('#psGo'); b.disabled = true; b.textContent = 'Writing…';
+  const box = $('#psMsgs'), save = () => psStore(st);
+  const bubble = (m, idx) => {
+    const d = document.createElement('div'); d.className = 'bub ' + (m.role === 'user' ? 'fan' : 'bot') + ' psb'; d.dataset.i = idx;
+    if (m.photo){
+      d.innerHTML = `${m.thumb ? `<img class="psimg" src="${m.thumb}" alt="Uploaded photo">` : ''}<div class="psup">${m.undone ? 'Removed' : esc(m.where || 'Saving…')}${m.num && !m.undone ? ` <b>#${m.num}</b>` : ''}${m.id && !m.undone ? ' <button type="button" class="btn sm ghost" data-undo>Undo</button>' : ''}</div>`;
+    } else d.innerHTML = m.role === 'user' ? esc(m.text).replace(/\n/g, '<br>') : psFormat(m.text);
+    return d;
+  };
+  const wire = d => {
+    d.querySelectorAll('[data-pcopy]').forEach(b => b.onclick = () => { const t = b.closest('.psp').querySelector('pre').textContent; navigator.clipboard.writeText(t).then(() => toast('Copied. Paste it in Higgsfield'), () => prompt('Copy this prompt:', t)); });
+    d.querySelectorAll('[data-plike]').forEach(b => b.onclick = async () => { if (b.dataset.done) return; const t = b.closest('.psp').querySelector('pre').textContent; const { error } = await sb.from('prompt_winners').insert({ model:'Kaya', prompt:t }); if (error) return toast(error.message); b.dataset.done = 1; b.textContent = '⭐ Liked'; toast('Saved. The AI will make more like this'); });
+    const u = d.querySelector('[data-undo]'); if (u) u.onclick = async () => { const m = st.msgs[+d.dataset.i]; if (!confirm('Remove this photo from 📸 Photos and the Twitter task?')) return; const { error } = await sb.rpc('x_unplace_photo', { p_photo:m.id }); if (error) return toast(error.message); m.undone = true; save(); d.replaceWith(paint(m, +d.dataset.i)); toast('Removed'); };
+  };
+  const paint = (m, i) => { const d = bubble(m, i); wire(d); return d; };
+  const draw = () => { box.innerHTML = st.msgs.length ? '' : '<p class="muted tempty">Hi! Ask me for Kaya prompts, like "3 cozy bed selfies" or "a night window pic in red lace".<br>Made a photo on Higgsfield? Drop it with 📎: it\'s saved in 📸 Photos and put on the 🐦 Twitter task.</p>'; st.msgs.forEach((m, i) => box.appendChild(paint(m, i))); box.scrollTop = box.scrollHeight; };
+  const add = m => { st.msgs.push(m); if (st.msgs.length > 80) st.msgs = st.msgs.slice(-80); save(); box.querySelector('.tempty')?.remove(); const d = paint(m, st.msgs.length - 1); box.appendChild(d); box.scrollTop = box.scrollHeight; return d; };
+  const showPend = () => { const p = $('#psPend'); p.hidden = !pendingImg; p.innerHTML = pendingImg ? `<img src="${pendingImg}" alt=""><span>The AI will look at this photo with your next message</span><button type="button" class="btn sm ghost" id="psPendX">✕</button>` : ''; const x = $('#psPendX'); if (x) x.onclick = () => { pendingImg = null; showPend(); }; };
+  draw();
+  $('#psNew').onclick = () => { if (st.msgs.length && !confirm('Start a new chat? Photos already saved stay saved.')) return; st.msgs = []; save(); pendingImg = null; showPend(); draw(); };
+  const file = $('#psFile');
+  const takeFiles = async fs => {
+    fs = fs.filter(f => /^image\/(png|jpeg|webp)$/.test(f.type)); if (!fs.length) return;
+    for (const f of fs){
+      let thumb = ''; try { thumb = await psShrink(f, 320, .7); } catch(e){}
+      const m = { role:'user', photo:true, thumb, where:'Saving…' }; const d = add(m);
+      try { pendingImg = await psShrink(f); showPend(); } catch(e){}
+      const r = await psSavePlace(f); Object.assign(m, r); save(); d.replaceWith(paint(m, st.msgs.indexOf(m))); box.scrollTop = box.scrollHeight;
+    }
+  };
+  if (file) file.onchange = e => { takeFiles([...e.target.files]); e.target.value = ''; };
+  v.querySelector('.pschat').ondragover = e => e.preventDefault();
+  v.querySelector('.pschat').ondrop = e => { e.preventDefault(); if (can('photos')) takeFiles([...e.dataTransfer.files]); };
+  $('#psIn').onpaste = e => { const fs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/')); if (fs.length && can('photos')){ e.preventDefault(); takeFiles(fs); } };
+  const inp = $('#psIn'); inp.oninput = () => { inp.style.height = 'auto'; inp.style.height = Math.min(160, inp.scrollHeight) + 'px'; };
+  inp.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); $('#psForm').requestSubmit(); } };
+  $('#psForm').onsubmit = async e => {
+    e.preventDefault(); if (busy) return;
+    const q = inp.value.trim(); if (!q && !pendingImg) return;
+    const history = st.msgs.filter(m => !m.photo && m.text && !m.err).slice(-12).map(m => ({ role:m.role, content:m.text }));
+    if (q) add({ role:'user', text:q });
+    inp.value = ''; inp.oninput();
+    const img = pendingImg; pendingImg = null; showPend();
+    busy = true; $('#psSend').disabled = true;
+    const wait = document.createElement('div'); wait.className = 'bub bot'; wait.textContent = '…'; box.appendChild(wait); box.scrollTop = box.scrollHeight;
     try {
-      const d = await psCall({ action:'ideas', model:st.model, theme:st.theme || '', notes:st.notes || '', n:st.n });
-      st.results[st.model] = [...d.prompts.map(p => ({ title:p.title, prompt:p.prompt })), ...res()].slice(0, 40); save(); toast(`${d.prompts.length} prompts ready`); rerender();
-    } catch(e){ toast(e.message); b.disabled = false; b.textContent = '✨ Give me prompts'; }
-    busy = false;
-  };
-  const clr = $('#psClear'); if (clr) clr.onclick = () => { if (!confirm('Remove all prompts on this page? Winners stay saved.')) return; st.results[st.model] = []; save(); rerender(); };
-  v.querySelectorAll('.pscard').forEach(el => {
-    const i = +el.dataset.i, r = () => res()[i];
-    const ta = el.querySelector('[data-txt]'); const fit = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 2 + 'px'; }; fit();
-    ta.oninput = () => { r().prompt = ta.value; save(); fit(); };
-    el.querySelector('[data-copy]').onclick = () => navigator.clipboard.writeText(ta.value).then(() => toast('Copied. Paste it in Higgsfield'), () => prompt('Copy this prompt:', ta.value));
-    el.querySelector('[data-fixo]').onclick = () => { r().fixOpen = !r().fixOpen; save(); el.querySelector('.psfix').hidden = !r().fixOpen; if (r().fixOpen) el.querySelector('[data-fb]').focus(); };
-    el.querySelector('[data-rm]').onclick = () => { res().splice(i, 1); save(); rerender(); };
-    el.querySelector('[data-fb]').oninput = e => { r().fb = e.target.value; save(); };
-    el.querySelector('[data-img]').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { r().img = await psShrink(f); save(); rerender(); } catch(err){ toast(err.message); } };
-    const ix = el.querySelector('[data-imgx]'); if (ix) ix.onclick = () => { delete r().img; save(); rerender(); };
-    const up = el.querySelector('[data-up]'); if (up) up.onchange = async e => { const fs = [...e.target.files]; if (!fs.length) return; toast('Uploading ' + fs.length + '…'); const res2 = await psUploadPlace(fs, st.model, r().title || ''); r().ups = [...(r().ups || []), ...res2]; save(); toast(res2.length + ' photo' + (res2.length > 1 ? 's' : '') + ' saved'); rerender(); };
-    el.querySelector('[data-win]').onclick = async () => {
-      if (r().won) return toast('Already saved as a winner');
-      const { data, error } = await sb.from('prompt_winners').insert({ model:st.model, prompt:ta.value }).select().single();
-      if (error) return toast(error.message);
-      r().won = true; save(); (wins || []).unshift(data); toast('Saved. The AI will copy this style'); rerender();
-    };
-    el.querySelector('[data-fix]').onclick = async e => {
-      if (busy) return; const fb = el.querySelector('[data-fb]').value.trim();
-      if (!fb && !r().img) return toast('Write what to change, or add the photo');
-      busy = true; const b = e.target; b.disabled = true; b.textContent = 'Fixing…';
-      try {
-        const d = await psCall({ action:'fix', model:st.model, prompt:ta.value, feedback:fb, image:r().img || null });
-        Object.assign(r(), { prompt:d.prompt, changed:d.changed, fb:'', fixOpen:false, won:false }); delete r().img; save(); toast('Prompt fixed'); rerender();
-      } catch(err){ toast(err.message); b.disabled = false; b.textContent = '✨ Fix the prompt'; }
-      busy = false;
-    };
-  });
-  const upAll = $('#psUpAll');
-  const doUp = async fs => { fs = fs.filter(f => /^image\/(png|jpeg|webp)$/.test(f.type)); if (!fs.length) return; $('#psUpRes').innerHTML = `<span>Uploading ${fs.length}…</span>`; const r2 = await psUploadPlace(fs, st.model, ''); $('#psUpRes').innerHTML = r2.map(u => `<span>${u.num ? `<b>#${u.num}</b> · ` : ''}${esc(u.where)}</span>`).join('') || '<span>Nothing saved</span>'; toast(r2.length + ' photo' + (r2.length > 1 ? 's' : '') + ' saved'); };
-  if (upAll){ upAll.onchange = e => doUp([...e.target.files]); const dz = $('#psDrop'); dz.ondragover = e => { e.preventDefault(); dz.classList.add('on'); }; dz.ondragleave = () => dz.classList.remove('on'); dz.ondrop = e => { e.preventDefault(); dz.classList.remove('on'); doUp([...e.dataTransfer.files]); }; }
-  // paste a screenshot straight into an open fix box
-  v.onpaste = async e => { const f = [...(e.clipboardData?.files || [])].find(x => x.type.startsWith('image/')); const box = e.target.closest?.('.pscard'); if (!f || !box) return; e.preventDefault(); try { res()[+box.dataset.i].img = await psShrink(f); save(); rerender(); } catch(err){ toast(err.message); } };
-  v.querySelectorAll('.pswin').forEach(el => {
-    const w = (wins || []).find(x => x.id === el.dataset.w);
-    el.querySelector('[data-wcopy]').onclick = () => navigator.clipboard.writeText(w.prompt).then(() => toast('Copied'), () => prompt('Copy this prompt:', w.prompt));
-    const d = el.querySelector('[data-wdel]'); if (d) d.onclick = async () => { if (!confirm('Delete this winner?')) return; const { error } = await sb.from('prompt_winners').delete().eq('id', w.id); if (error) return toast(error.message); wins.splice(wins.indexOf(w), 1); rerender(); };
-  });
-  if (!owner) return;
-  $('#psRulesSave').onclick = async () => {
-    for (const ta of v.querySelectorAll('[data-rule]')){ const { error } = await sb.from('prompt_models').update({ look:ta.value, updated_at:new Date().toISOString() }).eq('model', ta.dataset.rule); if (error) return toast(error.message); }
-    toast('Rules saved. Used on the next prompt');
-  };
-  $('#psAddModel').onclick = async () => {
-    const n = (prompt('Model name (e.g. Coco):') || '').trim(); if (!n) return;
-    const look = prompt(`Describe ${n}'s look (hair, eyes, body, style):`) || '';
-    const { error } = await sb.from('prompt_models').insert({ model:n, look, sort:(models || []).length + 1 }); if (error) return toast(error.message);
-    st.model = n; save(); rerender();
+      const { data, error } = await sb.functions.invoke('prompt-ai', { body:{ q, image:img, history } });
+      let msg = data?.error; if (error){ msg = error.message; try { msg = (await error.context.json()).error || msg; } catch(_){} }
+      wait.remove();
+      if (msg) add({ role:'assistant', text:'⚠️ ' + msg, err:true }); else add({ role:'assistant', text:data.a });
+    } catch(err){ wait.remove(); add({ role:'assistant', text:'⚠️ ' + err.message, err:true }); }
+    busy = false; $('#psSend').disabled = false; inp.focus();
   };
 }
 

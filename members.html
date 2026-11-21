@@ -207,6 +207,14 @@
   .cinfo h3{font-size:15px;margin-bottom:6px} .cinfo label{font-size:12px;margin-top:10px}
   .ifacts{list-style:none;padding:0;margin:16px 0 0;font-size:13px} .ifacts li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line)} .ifacts span{color:var(--muted)}
   .tt-sec{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--pink);margin:18px 0 2px;font-weight:700}
+  .aim{display:grid;gap:10px}
+  .aim article{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card)}
+  .aim .aih{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+  .aim .aih b{color:var(--ink,inherit);font-size:13.5px}
+  .aim .aic{font-size:13.5px;color:var(--muted);margin:0 0 6px;white-space:pre-wrap}
+  .aim .aia{font-size:14.5px;white-space:pre-wrap;margin:0}
+  .aim .ais{font-size:13.5px;white-space:pre-wrap;margin:6px 0 0;padding-top:6px;border-top:1px dashed var(--line)}
+  .pill.wait{background:var(--warnbg);color:var(--warn)}.pill.gray{background:var(--line);color:var(--muted)}.pill.red{background:var(--badbg);color:var(--bad)}
   .pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
   .pill.pending{background:var(--warnbg);color:var(--warn)}
   .pill.confirmed,.pill.yes{background:var(--okbg);color:var(--ok)}
@@ -856,6 +864,7 @@
         </div></div>
         <div class="grp" data-g="money"><div class="gh" role="button" tabindex="0" aria-expanded="true">AI<i>▾</i></div><div class="gb">
           <button data-tab="aistudio" data-perm="personas" hidden>🧠 AI studio</button>
+          <button data-tab="aimsgs" class="adm" hidden>🤖 AI messages</button>
           <button data-href="/earnings" data-perm="earnings" hidden>📈 Statements</button>
         </div></div>
         <div class="grp" data-g="admin"><div class="gh" role="button" tabindex="0" aria-expanded="true">Admin<i>▾</i></div><div class="gb">
@@ -1097,7 +1106,7 @@ document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.datas
   });
 })();
 const AI_SUBS = [['train','🧠 Train AI',() => me?.role === 'admin'],['brains','⚡ AI brains',() => me?.role === 'admin'],['personas','🎀 Personas',() => can('personas')]];
-const titles = { shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], drafts:['Saved site work','Parts of the website we built and put aside. Only you can see this.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { aimsgs:['AI messages','Every message your AI wrote, with what the client said before. Sent ones and the ones waiting.'], shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], drafts:['Saved site work','Parts of the website we built and put aside. Only you can see this.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function mnavClose(){ document.body.classList.remove('mopen'); $('#mnav').setAttribute('aria-expanded', 'false'); }
 $('#mnav').onclick = () => { const o = document.body.classList.toggle('mopen'); $('#mnav').setAttribute('aria-expanded', String(o)); };
@@ -1108,7 +1117,7 @@ function show(t){
   if (t !== 'core') document.body.classList.remove('core-open');
   if (t !== 'time') timeStop();
   tab = t; history.replaceState(null, '', '#' + t); badges();
-  document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'phone' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'core' || t === 'train' || t === 'prompts');
+  document.querySelector('main.wrap').classList.toggle('wide', t === 'aimsgs' || t === 'sms' || t === 'phone' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'core' || t === 'train' || t === 'prompts');
   const inAi = AI_SUBS.some(x => x[0] === t);
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t || (inAi && b.dataset.tab === 'aistudio')));
   { const sub = $('#aisub'); sub.hidden = !inAi; sub.innerHTML = inAi ? AI_SUBS.filter(x => x[2]()).map(x => `<button type="button" data-ai="${x[0]}" class="${x[0] === t ? 'on' : ''}">${x[1]}</button>`).join('') : ''; if (inAi) { try { localStorage.setItem('unreal-ai-sub', t); } catch(e){} sub.querySelectorAll('button').forEach(b => b.onclick = () => show(b.dataset.ai)); } }
@@ -1116,10 +1125,60 @@ function show(t){
   { const sb = document.querySelector(`#side button[data-tab="${inAi ? 'aistudio' : t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }
   mnavClose(); window.scrollTo(0, 0);
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ aimsgs:aiMsgsView, shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
+
+// ---------- 🤖 AI messages (admin): every message the AI wrote ----------
+let aimF = { who:'real', st:'all', q:'' }, aimTimer = null;
+const AIM_ST = { sent_ai:['✅ Sent by AI','yes'], sent_team:['✅ Sent as written','yes'], sent_edited:['✏️ Sent, edited','wait'], suggested:['💡 Waiting, not sent','wait'], replaced:['⏭ Not sent','gray'] };
+async function aiMsgsView(){
+  const v = $('#view');
+  const [{ data: rows, error }, { data: cs }] = await Promise.all([
+    sb.from('ai_messages').select('*').order('created_at', { ascending:false }).limit(500),
+    sb.from('sms_contacts').select('phone,name') ]);
+  if (error) { v.innerHTML = `<div class="card empty">${esc(error.message)}</div>`; return; }
+  const names = Object.fromEntries((cs||[]).map(c => [c.phone, c.name]));
+  const all = rows || [];
+  const sent = x => /^sent/.test(x.status);
+  const day = new Date(Date.now() - 864e5).toISOString();
+  const real = all.filter(x => !x.is_test);
+  v.innerHTML = `<div class="kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">
+      <div class="card" style="margin:0"><div class="muted" style="font-size:12px">Written by the AI · 24 h</div><b style="font-size:22px">${real.filter(x => x.created_at >= day).length}</b></div>
+      <div class="card" style="margin:0"><div class="muted" style="font-size:12px">Sent to real clients · 24 h</div><b style="font-size:22px">${real.filter(x => sent(x) && (x.sent_at || x.created_at) >= day).length}</b></div>
+      <div class="card" style="margin:0"><div class="muted" style="font-size:12px">Sent as written / edited</div><b style="font-size:22px">${real.filter(x => x.status==='sent_team' || x.status==='sent_ai').length} / ${real.filter(x => x.status==='sent_edited').length}</b></div>
+    </div>
+    <div class="smstop" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div class="cfilt" id="aimWho" style="padding:0;border:0"><button data-v="real">Real clients</button><button data-v="test">Tests</button><button data-v="all">Both</button></div>
+      <div class="cfilt" id="aimSt" style="padding:0;border:0"><button data-v="all">All</button><button data-v="sent">Sent</button><button data-v="not">Not sent</button><button data-v="human">Needed a human</button></div>
+      <input id="aimQ" type="search" placeholder="Search a word or a number" value="${esc(aimF.q)}" style="width:220px;margin:0">
+    </div>
+    <div class="aim" id="aimList"></div>
+    <p class="muted" style="font-size:12px;margin-top:10px">SMS phone for now. OnlyFans replies will show here too once they are logged. Updates every 30 seconds.</p>`;
+  const draw = () => {
+    document.querySelectorAll('#aimWho button').forEach(b => b.classList.toggle('on', b.dataset.v === aimF.who));
+    document.querySelectorAll('#aimSt button').forEach(b => b.classList.toggle('on', b.dataset.v === aimF.st));
+    const q = aimF.q.trim().toLowerCase();
+    const list = all.filter(x => aimF.who === 'all' || (aimF.who === 'test') === !!x.is_test)
+      .filter(x => aimF.st === 'all' || (aimF.st === 'sent' ? sent(x) : aimF.st === 'not' ? !sent(x) && x.kind === 'reply' : x.kind !== 'reply'))
+      .filter(x => !q || [x.body, x.client_text, x.sent_body, x.phone, names[x.phone]].some(t => (t || '').toLowerCase().includes(q)));
+    $('#aimList').innerHTML = list.length ? list.map(x => {
+      const st = x.kind === 'handoff' ? ['🙋 Needed a human','red'] : x.kind === 'stop' ? ['🛑 Stopped (client said stop)','red'] : x.kind === 'error' ? ['⚠️ AI error','red'] : (AIM_ST[x.status] || [x.status,'gray']);
+      const when = new Date(x.sent_at || x.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' });
+      const who = names[x.phone] ? `${esc(names[x.phone])} <span>${esc(x.phone || '')}</span>` : esc(x.phone || '');
+      return `<article><div class="aih"><b>${who}</b><span>· ${x.channel === 'of' ? 'OnlyFans' : 'SMS'} · ${when}</span><span class="pill ${st[1]}">${st[0]}</span>${x.is_test ? '<span class="pill gray">test</span>' : ''}</div>
+        ${x.client_text ? `<p class="aic">👤 ${esc(x.client_text)}</p>` : ''}
+        <p class="aia">🤖 ${esc(x.body || (x.kind === 'handoff' ? 'The AI asked for a person to answer this one.' : ''))}</p>
+        ${x.status === 'sent_edited' && x.sent_body ? `<p class="ais">✏️ Really sent: ${esc(x.sent_body)}</p>` : ''}</article>`;
+    }).join('') : '<div class="card empty">Nothing here yet.</div>';
+  };
+  draw();
+  document.querySelectorAll('#aimWho button').forEach(b => b.onclick = () => { aimF.who = b.dataset.v; draw(); });
+  document.querySelectorAll('#aimSt button').forEach(b => b.onclick = () => { aimF.st = b.dataset.v; draw(); });
+  $('#aimQ').oninput = e => { aimF.q = e.target.value; draw(); };
+  clearTimeout(aimTimer); aimTimer = setTimeout(() => { if (tab === 'aimsgs' && document.activeElement?.id !== 'aimQ') aiMsgsView(); }, 30000);
+}
 
 // ---------- My to-do (admin): personal + business, ticks itself ----------
 const TD_B = [['now','🔥 Now'],['today','☀️ Today'],['week','📅 This week'],['later','🗂 Later']];

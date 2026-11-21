@@ -280,7 +280,7 @@
   .tch small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
   .tchb{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
   .tempty{font-size:13px;text-align:center;margin:auto}
-  .tcomp{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:10px 64px 10px 10px;border-top:1px solid var(--line)}
+  .tcomp{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:10px;border-top:1px solid var(--line)}
   .tcomp .tplus{flex:0 0 40px;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;cursor:pointer;color:var(--muted);margin:0 0 2px;user-select:none}
   .tcomp .tplus:hover{border-color:var(--pink);color:var(--pink)}
   .tcomp .tpic{flex:0 0 100%;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
@@ -290,7 +290,7 @@
   .tcomp textarea{min-width:0}
   .tcomp .btn{flex:0 0 auto}
   @media (max-width:760px){.tcomp{padding-right:10px;margin-bottom:56px}}
-  .tcomp textarea{flex:1;min-height:44px;max-height:140px;resize:none;font-family:inherit;font-size:14px;border-radius:14px}
+  .tcomp textarea{flex:1 1 120px;min-height:42px;max-height:140px;resize:none;overflow-y:auto;scrollbar-width:none;font-family:inherit;font-size:14px;border-radius:14px;padding:10px 12px}
   /* prompt studio chat */
   .pschat{max-width:900px;margin:0 auto;display:flex;flex-direction:column;height:calc(100vh - 230px);min-height:460px;padding:0;overflow:hidden}
   .pschat-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
@@ -3960,7 +3960,7 @@ async function trainView(){
     <section class="card tchat" aria-label="Test chat">
       <div class="tch"><div><b>Test ${esc(name)}</b><small>${esc(engine.ico)} ${esc(engine.name)}${hasKey ? '' : ' · free test engine'}</small></div><div class="tchb"><button type="button" class="btn ghost sm" id="tCopy" title="Copy this conversation">📋 Copy</button><button type="button" class="btn ghost sm" id="tExp" title="Download every test conversation of this profile">⬇️ Export all</button><button type="button" class="btn ghost sm" id="tReset">New convo</button></div></div>
       <div class="msgs" id="tMsgs"><p class="muted tempty">Text her like a client would.<br>Unsaved changes are not used, so press Save first.</p></div>
-      <form class="tcomp" id="tChat">${hasKey ? '<div class="tpic" id="tPicPrev" hidden></div><label class="tplus" title="Add a picture (or paste one with Ctrl+V)">＋<input type="file" id="tKayaImage" accept="image/*" aria-label="Add a picture" hidden></label>' : ''}<textarea id="trIn" rows="1" placeholder="Message ${esc(name)}… (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn">Send</button></form>
+      <form class="tcomp" id="tChat">${hasKey ? '<div class="tpic" id="tPicPrev" hidden></div><label class="tplus" title="Add a picture (or paste one with Ctrl+V)">＋<input type="file" id="tKayaImage" accept="image/*" aria-label="Add a picture" hidden></label>' : ''}<textarea id="trIn" rows="1" placeholder="Message ${esc(name)}… (Ctrl+V for a pic)" aria-label="Message"></textarea><button class="btn">Send</button></form>
     </section>
   </div>
   <details class="card tguide" id="tGuide" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700">📖 How to train her</summary>
@@ -4092,7 +4092,7 @@ async function trainView(){
     $('#tKayaImage').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f && f.type.startsWith('image/')) { testImg = f; showPic(); $('#trIn').focus(); } };
     $('#trIn').onpaste = e => { const f = [...(e.clipboardData?.files || [])].find(x => x.type.startsWith('image/')); if (f) { e.preventDefault(); testImg = f; showPic(); } };
   }
-  $('#trIn').oninput = persist;
+  $('#trIn').oninput = () => { const t = $('#trIn'); t.style.height = 'auto'; t.style.height = Math.min(140, t.scrollHeight) + 'px'; persist(); };
   $('#trIn').onkeydown = e => { if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey && !e.isComposing){ e.preventDefault(); $('#tChat').requestSubmit(); } };
   $('#tChat').onsubmit = async e => {
     e.preventDefault();

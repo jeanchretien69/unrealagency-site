@@ -1120,7 +1120,8 @@ let lastSession;
 sb.auth.onAuthStateChange((ev, session) => {
   if (ev === 'PASSWORD_RECOVERY'){ const p = prompt('New password (8+ characters):'); if (p) sb.auth.updateUser({ password:p }).then(({error}) => toast(error ? error.message : 'Password updated')); }
   const id = session?.user?.id || null;
-  if (id === lastSession && ev !== 'SIGNED_IN') return;
+  // Supabase says SIGNED_IN again each time you come back to the tab/app: same person = do nothing (no page reload)
+  if (id === lastSession) return;
   lastSession = id; boot(session);
 });
 

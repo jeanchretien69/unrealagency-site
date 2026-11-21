@@ -1007,7 +1007,7 @@ async function boot(session){
   const first = document.querySelector('#side button:not([hidden]):not([data-href])');
   if (!first && can('earnings')) { location.href = '/earnings'; return; }
   if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }
-  badgesStart(); if (can('ask')) askInit();
+  badgesStart(); loadTeamNames(); if (can('ask')) askInit();
   const h = location.hash.slice(1);
   const okAi = AI_SUBS.some(x => x[0] === h && x[2]());
   show(okAi || document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'todo' : first.dataset.tab));
@@ -1174,10 +1174,11 @@ async function aiMsgsView(){
       .filter(x => aimF.st === 'all' || (aimF.st === 'sent' ? sent(x) : aimF.st === 'not' ? !sent(x) && x.kind === 'reply' : x.kind !== 'reply'))
       .filter(x => !q || [x.body, x.client_text, x.sent_body, x.phone, names[x.phone]].some(t => (t || '').toLowerCase().includes(q)));
     $('#aimList').innerHTML = list.length ? list.map(x => {
+      const by = x.sent_by ? (x.sent_by === me?.id ? 'you' : (teamNames[x.sent_by] || 'team')) : '';
       const st = x.kind === 'handoff' ? ['🙋 Needed a human','red'] : x.kind === 'stop' ? ['🛑 Stopped (client said stop)','red'] : x.kind === 'error' ? ['⚠️ AI error','red'] : (AIM_ST[x.status] || [x.status,'gray']);
       const when = new Date(x.sent_at || x.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' });
       const who = names[x.phone] ? `${esc(names[x.phone])} <span>${esc(x.phone || '')}</span>` : esc(x.phone || '');
-      return `<article data-p="${esc(x.phone || '')}" data-ch="${x.channel}" tabindex="0" role="button" title="Open this conversation"><div class="aih"><b>${who}</b><span>· ${x.channel === 'of' ? 'OnlyFans' : 'SMS'} · ${when}</span><span class="pill ${st[1]}">${st[0]}</span>${x.is_test ? '<span class="pill gray">test</span>' : ''}</div>
+      return `<article data-p="${esc(x.phone || '')}" data-ch="${x.channel}" tabindex="0" role="button" title="Open this conversation"><div class="aih"><b>${who}</b><span>· ${x.channel === 'of' ? 'OnlyFans' : 'SMS'} · ${when}</span><span class="pill ${st[1]}">${st[0]}${by && /^sent_(team|edited)$/.test(x.status) ? ' by ' + esc(by) : ''}</span>${x.is_test ? '<span class="pill gray">test</span>' : ''}</div>
         ${x.client_text ? `<p class="aic">👤 ${esc(x.client_text)}</p>` : ''}
         <p class="aia">🤖 ${esc(x.body || (x.kind === 'handoff' ? 'The AI asked for a person to answer this one.' : ''))}</p>
         ${x.status === 'sent_edited' && x.sent_body ? `<p class="ais">✏️ Really sent: ${esc(x.sent_body)}</p>` : ''}<div class="aigo">💬 Open the conversation →</div></article>`;
@@ -1386,6 +1387,15 @@ async function walletView(){
 
 // ---------- SMS mini phone (admin only) ----------
 let smsChan = null, smsOpen = null, smsMsgs = [], smsNames = {};
+let teamNames = {};
+const SENT_BY_SINCE = '2026-11-21T09:35:00Z'; // who-sent tracking starts here; older texts have no name
+async function loadTeamNames(){ try { const { data } = await sb.rpc('team_names'); teamNames = Object.fromEntries((data || []).map(r => [r.id, r.name])); } catch(e){} }
+const whoSent = x => {
+  if (!x || x.direction !== 'out') return '';
+  if (x.ai) return '🤖 AI';
+  if (x.sent_by) return x.sent_by === me?.id ? '👤 You' : '👤 ' + (teamNames[x.sent_by] || 'Team');
+  return x.created_at >= SENT_BY_SINCE ? '📱 Phone' : '';
+};
 let smsJump = null; // a conversation to open when the SMS page loads (from 🤖 AI messages)
 const smsTime = d => new Date(d).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
 const smsDay = d => { const x = new Date(d), t = new Date(); return x.toDateString() === t.toDateString() ? 'Today' : x.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }); };
@@ -1601,7 +1611,7 @@ function smsRows(){
   if (smsFilter === 'unread') rows = rows.filter(r => r.unread);
   if (smsFilter === 'waiting') rows = rows.filter(r => r.last.direction === 'in');
   if (smsQ) rows = rows.filter(r => (smsName(r.p) + ' ' + r.p).toLowerCase().includes(smsQ) || r.a.some(x => x.body.toLowerCase().includes(smsQ)));
-  box.innerHTML = rows.length ? rows.map(r => `<button class="crow ${r.p===smsOpen?'on':''}" data-p="${esc(r.p)}"><span class="pav">${esc(smsName(r.p).replace(/^Test · /,'').replace(/^\+/,'').slice(0,1).toUpperCase())}</span><span class="pmeta"><b>${esc(smsName(r.p))}<span>${smsDay(r.last.created_at)==='Today'?smsTime(r.last.created_at):smsDay(r.last.created_at)}</span></b><p>${r.last.direction==='out'?'You: ':''}${esc(r.last.body || (r.last.media ? '📷 Photo' : ''))}</p></span>${r.unread?`<i class="cbadge">${r.unread}</i>`:''}</button>`).join('') : '<p class="pempty">No conversations here.</p>';
+  box.innerHTML = rows.length ? rows.map(r => `<button class="crow ${r.p===smsOpen?'on':''}" data-p="${esc(r.p)}"><span class="pav">${esc(smsName(r.p).replace(/^Test · /,'').replace(/^\+/,'').slice(0,1).toUpperCase())}</span><span class="pmeta"><b>${esc(smsName(r.p))}<span>${smsDay(r.last.created_at)==='Today'?smsTime(r.last.created_at):smsDay(r.last.created_at)}</span></b><p>${r.last.direction==='out' ? (whoSent(r.last) ? whoSent(r.last).replace(/^\S+ /,'') + ': ' : 'Sent: ') : ''}${esc(r.last.body || (r.last.media ? '📷 Photo' : ''))}</p></span>${r.unread?`<i class="cbadge">${r.unread}</i>`:''}</button>`).join('') : '<p class="pempty">No conversations here.</p>';
   box.querySelectorAll('.crow').forEach(b => b.onclick = () => { smsOpen = b.dataset.p; smsDraw(true); if (matchMedia('(max-width:820px)').matches) setTimeout(() => { const m = document.querySelector('.cmain'); if (m) m.scrollIntoView({ behavior:'smooth', block:'start' }); }, 120); });
 }
 // pictures: private files, shown through short-lived links kept in memory
@@ -1632,7 +1642,7 @@ function smsThread(first){
   let day = '', html = '';
   a.forEach((x, i) => {
     const d = smsDay(x.created_at); if (d !== day){ day = d; html += `<div class="pday">${d}</div>`; }
-    html += `<div class="bub ${x.direction} ${x.status==='failed'?'fail':''}">${smsMediaHtml(x)}${esc(x.body)}<small>${x.ai ? '🤖 ' : ''}${smsTime(x.created_at)}${x.direction==='out' && (x.status==='failed' || i===a.length-1) ? ' · ' + (label[x.status]||'') : ''}</small></div>`;
+    html += `<div class="bub ${x.direction} ${x.status==='failed'?'fail':''}">${smsMediaHtml(x)}${esc(x.body)}<small>${whoSent(x) ? whoSent(x) + ' · ' : ''}${smsTime(x.created_at)}${x.direction==='out' && (x.status==='failed' || i===a.length-1) ? ' · ' + (label[x.status]||'') : ''}</small></div>`;
   });
   main.innerHTML = `<header class="cbar"><div><b>${esc(smsName(p))}</b><small>${esc(p)}${a.some(x=>x.is_test)?' · test conversation':''}</small></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${aiMode() !== 'off' ? `<button class="btn sm ghost" id="paiTog" title="Turn the AI on or off for this client only">🤖 AI ${smsNames[p]?.ai_off ? 'OFF' : 'ON'} for this client</button>` : ''}<button class="btn sm ghost" id="prename">✏️ ${smsNames[p]?.name ? 'Rename' : 'Add a name'}</button></div></header>
     <div class="cthread" id="cthread">${html || '<p class="pempty">No messages yet. Write the first one below.</p>'}</div>

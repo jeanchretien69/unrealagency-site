@@ -208,7 +208,9 @@
   .ifacts{list-style:none;padding:0;margin:16px 0 0;font-size:13px} .ifacts li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line)} .ifacts span{color:var(--muted)}
   .tt-sec{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--pink);margin:18px 0 2px;font-weight:700}
   .aim{display:grid;gap:10px}
-  .aim article{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card)}
+  .aim article{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:var(--card);cursor:pointer;transition:border-color .15s}
+  .aim article:hover,.aim article:focus-visible{border-color:var(--pink);outline:none}
+  .aim .aigo{font-size:12.5px;font-weight:700;color:var(--pink);margin-top:8px}
   .aim .aih{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:6px}
   .aim .aih b{color:var(--ink,inherit);font-size:13.5px}
   .aim .aic{font-size:13.5px;color:var(--muted);margin:0 0 6px;white-space:pre-wrap}
@@ -1175,11 +1177,15 @@ async function aiMsgsView(){
       const st = x.kind === 'handoff' ? ['🙋 Needed a human','red'] : x.kind === 'stop' ? ['🛑 Stopped (client said stop)','red'] : x.kind === 'error' ? ['⚠️ AI error','red'] : (AIM_ST[x.status] || [x.status,'gray']);
       const when = new Date(x.sent_at || x.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' });
       const who = names[x.phone] ? `${esc(names[x.phone])} <span>${esc(x.phone || '')}</span>` : esc(x.phone || '');
-      return `<article><div class="aih"><b>${who}</b><span>· ${x.channel === 'of' ? 'OnlyFans' : 'SMS'} · ${when}</span><span class="pill ${st[1]}">${st[0]}</span>${x.is_test ? '<span class="pill gray">test</span>' : ''}</div>
+      return `<article data-p="${esc(x.phone || '')}" data-ch="${x.channel}" tabindex="0" role="button" title="Open this conversation"><div class="aih"><b>${who}</b><span>· ${x.channel === 'of' ? 'OnlyFans' : 'SMS'} · ${when}</span><span class="pill ${st[1]}">${st[0]}</span>${x.is_test ? '<span class="pill gray">test</span>' : ''}</div>
         ${x.client_text ? `<p class="aic">👤 ${esc(x.client_text)}</p>` : ''}
         <p class="aia">🤖 ${esc(x.body || (x.kind === 'handoff' ? 'The AI asked for a person to answer this one.' : ''))}</p>
-        ${x.status === 'sent_edited' && x.sent_body ? `<p class="ais">✏️ Really sent: ${esc(x.sent_body)}</p>` : ''}</article>`;
+        ${x.status === 'sent_edited' && x.sent_body ? `<p class="ais">✏️ Really sent: ${esc(x.sent_body)}</p>` : ''}<div class="aigo">💬 Open the conversation →</div></article>`;
     }).join('') : '<div class="card empty">Nothing here yet.</div>';
+    $('#aimList').querySelectorAll('article[data-p]').forEach(a => {
+      const go = () => { if (a.dataset.ch !== 'sms' || !a.dataset.p) return toast('Only SMS conversations can be opened for now'); if (String(getSelection() || '').trim()) return; smsJump = a.dataset.p; show('sms'); };
+      a.onclick = go; a.onkeydown = ev => { if (ev.key === 'Enter') go(); };
+    });
   };
   draw();
   document.querySelectorAll('#aimWho button').forEach(b => b.onclick = () => { aimF.who = b.dataset.v; draw(); });
@@ -1380,6 +1386,7 @@ async function walletView(){
 
 // ---------- SMS mini phone (admin only) ----------
 let smsChan = null, smsOpen = null, smsMsgs = [], smsNames = {};
+let smsJump = null; // a conversation to open when the SMS page loads (from 🤖 AI messages)
 const smsTime = d => new Date(d).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
 const smsDay = d => { const x = new Date(d), t = new Date(); return x.toDateString() === t.toDateString() ? 'Today' : x.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }); };
 const smsName = p => smsNames[p]?.name || p;
@@ -1538,7 +1545,8 @@ async function smsView(){
     else { const i = smsMsgs.findIndex(x => x.id === p.new.id); if (i >= 0) smsMsgs[i] = p.new; else smsMsgs.push(p.new); }
     if (tab === 'sms') smsDraw();
   }).subscribe();
-  smsOpen = null; smsDraw(true);
+  smsOpen = smsJump || null; const jumped = !!smsJump; smsJump = null; smsDraw(true);
+  if (jumped && matchMedia('(max-width:820px)').matches) setTimeout(() => { const m = document.querySelector('.cmain'); if (m) m.scrollIntoView({ behavior:'smooth', block:'start' }); }, 150);
 }
 function smsDraw(first){ smsStats(); smsRows(); smsThread(first); smsInfo(); smsBoard(); }
 let smsMode = 'chat', smsBQ = '';

@@ -3893,7 +3893,7 @@ async function trainView(){
     <section class="card tchat" aria-label="Test chat">
       <div class="tch"><div><b>Test ${esc(name)}</b><small>${esc(engine.ico)} ${esc(engine.name)}${hasKey ? '' : ' · free test engine'}</small></div><div class="tchb"><button type="button" class="btn ghost sm" id="tCopy" title="Copy this conversation">📋 Copy</button><button type="button" class="btn ghost sm" id="tExp" title="Download every test conversation of this profile">⬇️ Export all</button><button type="button" class="btn ghost sm" id="tReset">New convo</button></div></div>
       <div class="msgs" id="tMsgs"><p class="muted tempty">Text her like a client would.<br>Unsaved changes are not used, so press Save first.</p></div>
-      <form class="tcomp" id="tChat"><textarea id="trIn" rows="2" placeholder="Message ${esc(name)}… (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn">Send</button></form>
+      <form class="tcomp" id="tChat">${model === 'kaya-sms' && hasKey ? '<label title="Only image attachment presence is sent to this test chat.">Test image<input style="max-width:10em" type="file" id="tKayaImage" accept="image/*" aria-label="Test image"></label>' : ''}<textarea id="trIn" rows="2" placeholder="Message ${esc(name)}… (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn">Send</button></form>
     </section>
   </div>
   <details class="card tguide" id="tGuide" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700">📖 How to train her</summary>
@@ -3982,7 +3982,7 @@ async function trainView(){
     const a = document.createElement('a'); a.href = url; a.download = `${model}-test-convos-${new Date().toISOString().slice(0,10)}.txt`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
     toast(`Exported ${all.length} conversation${all.length > 1 ? 's' : ''}`);
   };
-  $('#tReset').onclick = () => { ++kayaTestRun; $('#tChat button').disabled = false; if (msgs.length){ archive.push({ at:started, msgs }); if (archive.length > 200) archive = archive.slice(-200); } started = null; session = 'train-' + Math.random().toString(36).slice(2); hist = []; msgs = []; persist(); $('#tMsgs').innerHTML = '<p class="muted tempty">New convo. Text her like a client would.</p>'; };
+  $('#tReset').onclick = () => { if ($('#tKayaImage')) $('#tKayaImage').value = ''; ++kayaTestRun; $('#tChat button').disabled = false; if (msgs.length){ archive.push({ at:started, msgs }); if (archive.length > 200) archive = archive.slice(-200); } started = null; session = 'train-' + Math.random().toString(36).slice(2); hist = []; msgs = []; persist(); $('#tMsgs').innerHTML = '<p class="muted tempty">New convo. Text her like a client would.</p>'; };
   const addB = (cls, text) => { const m = $('#tMsgs'); m.querySelector('.tempty')?.remove(); const b = document.createElement('div'); b.className = 'bub ' + cls; b.textContent = text; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; };
   const showReply = (wait, m, alreadyRenderedTail = null) => {
     const parts = model === 'kaya-sms' && Array.isArray(m.parts) && m.parts.length > 1 ? m.parts : [m.out];
@@ -4018,12 +4018,18 @@ async function trainView(){
   $('#trIn').onkeydown = e => { if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey && !e.isComposing){ e.preventDefault(); $('#tChat').requestSubmit(); } };
   $('#tChat').onsubmit = async e => {
     e.preventDefault();
-    const text = $('#trIn').value.trim(); if (!text || (model === 'kaya-sms' && $('#tChat button').disabled)) return;
+    let text = $('#trIn').value.trim();
+    const imageInput = model === 'kaya-sms' ? $('#tKayaImage') : null;
+    const image = imageInput?.files[0];
+    if (image && !image.type.startsWith('image/')) return toast('Select an image for the test chat.');
+    if (image) text = [text, '[he sent a photo]'].filter(Boolean).join('\n');
+    if (!text || (model === 'kaya-sms' && $('#tChat button').disabled)) return;
+    if (imageInput) imageInput.value = '';
     const run = ++kayaTestRun;
     if (model === 'kaya-sms') $('#tChat button').disabled = true;
     $('#trIn').value = ''; addB('fan', text); lastFan = text; if (!started) started = Date.now(); persist();
     const wait = addB('bot', '…');
-    hist.push({ role:'user', content:text });
+    hist.push({ role:'user', content:text, ...(image ? {hasImage:true} : {}) });
     try {
       let out = '', by = '', parts = null;
       if (hasKey){

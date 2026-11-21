@@ -1596,7 +1596,12 @@ function smsMobile(){
   const on = !!smsOpen && tab === 'sms';
   document.body.classList.toggle('smsopen', on);
   const back = $('#pBack'); if (back) back.onclick = () => { smsOpen = null; smsDraw(true); };
-  if (on && matchMedia('(max-width:820px)').matches) { const end = () => { const t = $('#cthread'); if (t) t.scrollTop = t.scrollHeight; }; end(); setTimeout(end, 250); setTimeout(end, 900); }
+  if (on) {
+    // photos load after the text: keep the chat on the latest message while they come in, unless you scrolled up
+    const t = $('#cthread'); if (!t) return;
+    const nearEnd = () => t.scrollHeight - t.scrollTop - t.clientHeight < 160;
+    t.querySelectorAll('img').forEach(img => { if (!img.complete) { const was = { v: true }; t.addEventListener('scroll', () => { was.v = nearEnd(); }, { passive:true }); img.addEventListener('load', () => { if (was.v) t.scrollTop = t.scrollHeight; }, { once:true }); } });
+  }
 }
 (() => {
   const vv = window.visualViewport; if (!vv) return;

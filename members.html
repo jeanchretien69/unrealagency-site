@@ -82,6 +82,10 @@
   .badge.admin{background:var(--pink);color:#fff}
   .nb{float:right;min-width:19px;height:19px;line-height:19px;border-radius:999px;background:#e11d48;color:#fff;font-size:11px;font-weight:800;text-align:center;padding:0 5px;margin-left:6px}
   .app{display:grid;grid-template-columns:210px 1fr;gap:24px}
+  .maincol{min-width:0}
+  .aisub{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+  .aisub button{border:1px solid var(--line);background:var(--card);color:inherit;border-radius:999px;padding:7px 14px;font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+  .aisub button.on{background:var(--pink,#ec4899);border-color:transparent;color:#fff}
   .side{display:flex;flex-direction:column;gap:4px;position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-right:4px}
   .side .grp{display:flex;flex-direction:column;gap:2px}
   .side .gb{display:flex;flex-direction:column;gap:2px}
@@ -841,6 +845,7 @@
         <div class="grp" data-g="team"><div class="gh" role="button" tabindex="0" aria-expanded="true">Team & accounts<i>▾</i></div><div class="gb">
           <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
           <button data-tab="twitter" data-perm="twitter" hidden>🐦 Twitter</button>
+          <button data-tab="prompts" data-perm="prompts" hidden>🎨 Prompt studio</button>
           <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone<span class="nb" id="nbSms" hidden></span></button>
           <button data-tab="phone" data-perm="phone" hidden>🕹 Phone control</button>
           <button data-tab="dropp" data-perm="dropp" hidden>💸 Dropp</button>
@@ -848,29 +853,22 @@
         <div class="grp" data-g="content"><div class="gh" role="button" tabindex="0" aria-expanded="true">Content<i>▾</i></div><div class="gb">
           <button data-tab="quotes" data-perm="quotes" hidden>💬 Quotes</button>
           <button data-tab="photos" data-perm="photos" hidden>📸 Photos</button>
-          <button data-tab="prompts" data-perm="prompts" hidden>🎨 Prompt studio</button>
-          <button data-tab="personas" data-perm="personas" hidden>🎀 Personas</button>
-          <button data-tab="docs" data-perm="docs" hidden>📚 Docs & scripts</button>
         </div></div>
-        <div class="grp" data-g="money"><div class="gh" role="button" tabindex="0" aria-expanded="true">AI & sales<i>▾</i></div><div class="gb">
+        <div class="grp" data-g="money"><div class="gh" role="button" tabindex="0" aria-expanded="true">AI<i>▾</i></div><div class="gb">
+          <button data-tab="aistudio" data-perm="personas" hidden>🧠 AI studio</button>
           <button data-tab="bot" data-perm="bot" hidden>🤖 AI chatbot</button>
-          <button data-tab="wallet" data-perm="wallet" hidden>💳 Wallet</button>
           <button data-href="/earnings" data-perm="earnings" hidden>📈 Statements</button>
         </div></div>
         <div class="grp" data-g="admin"><div class="gh" role="button" tabindex="0" aria-expanded="true">Admin<i>▾</i></div><div class="gb">
-          <button data-tab="brains" class="adm" hidden>⚡ AI brains</button>
-          <button data-tab="train" class="adm" hidden>🧠 Train AI</button>
           <button data-tab="time" class="adm" hidden>⏱ Time</button>
           <button data-tab="asklog" class="adm" hidden>💬 Ask log</button>
           <button data-tab="members" class="adm" hidden>👥 Access board<span class="nb" id="nbAcc" hidden></span></button>
-          <button data-tab="topups" class="adm" hidden>🪙 Top-ups</button>
-          <button data-tab="sales" class="adm" hidden>💰 Sales & fees</button>
-          <button data-tab="edit" class="adm" hidden>✏️ Edit docs</button>
           <button data-tab="settings" class="adm" hidden>⚙️ Settings</button>
           <button data-tab="drafts" class="adm" hidden>🗂 Saved site work</button>
+          <button data-tab="docs" data-perm="docs" hidden>📚 Docs & scripts</button>
         </div></div>
       </aside>
-      <div id="view"></div>
+      <div class="maincol"><div class="aisub" id="aisub" hidden></div><div id="view"></div></div>
     </div>
   </section>
 </main>
@@ -993,7 +991,8 @@ async function boot(session){
   if (!first){ $('#hTitle').textContent = 'Welcome'; $('#hSub').textContent = ''; $('#view').innerHTML = '<div class="card empty">Your account is approved, but nothing is shared with you yet. Unreal Agency will open your sections soon.</div>'; return; }
   badgesStart(); if (can('ask')) askInit();
   const h = location.hash.slice(1);
-  show(document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'todo' : first.dataset.tab));
+  const okAi = AI_SUBS.some(x => x[0] === h && x[2]());
+  show(okAi || document.querySelector(`[data-tab="${h}"]:not([hidden])`) ? h : (me.role==='admin' ? 'todo' : first.dataset.tab));
 }
 
 // little red numbers in the menu: unread texts, and new accounts waiting for access
@@ -1098,6 +1097,7 @@ document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.datas
     h.onclick = flip; h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
   });
 })();
+const AI_SUBS = [['personas','🎀 Personas',() => can('personas')],['brains','⚡ AI brains',() => me?.role === 'admin'],['train','🧠 Train AI',() => me?.role === 'admin']];
 const titles = { shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], drafts:['Saved site work','Parts of the website we built and put aside. Only you can see this.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function mnavClose(){ document.body.classList.remove('mopen'); $('#mnav').setAttribute('aria-expanded', 'false'); }
@@ -1105,16 +1105,19 @@ $('#mnav').onclick = () => { const o = document.body.classList.toggle('mopen'); 
 $('#mback').onclick = mnavClose;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') mnavClose(); });
 function show(t){
+  if (t === 'aistudio') t = (() => { try { const l = localStorage.getItem('unreal-ai-sub'); if (AI_SUBS.some(x => x[0] === l && x[2]())) return l; } catch(e){} return AI_SUBS.find(x => x[2]())[0]; })();
   if (t !== 'core') document.body.classList.remove('core-open');
   if (t !== 'time') timeStop();
   tab = t; history.replaceState(null, '', '#' + t); badges();
   document.querySelector('main.wrap').classList.toggle('wide', t === 'sms' || t === 'phone' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'core' || t === 'train' || t === 'prompts');
-  document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  const inAi = AI_SUBS.some(x => x[0] === t);
+  document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t || (inAi && b.dataset.tab === 'aistudio')));
+  { const sub = $('#aisub'); sub.hidden = !inAi; sub.innerHTML = inAi ? AI_SUBS.filter(x => x[2]()).map(x => `<button type="button" data-ai="${x[0]}" class="${x[0] === t ? 'on' : ''}">${x[1]}</button>`).join('') : ''; if (inAi) { try { localStorage.setItem('unreal-ai-sub', t); } catch(e){} sub.querySelectorAll('button').forEach(b => b.onclick = () => show(b.dataset.ai)); } }
   $('#hTitle').textContent = titles[t][0]; $('#hSub').textContent = titles[t][1];
-  { const sb = document.querySelector(`#side button[data-tab="${t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }
+  { const sb = document.querySelector(`#side button[data-tab="${inAi ? 'aistudio' : t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }
   mnavClose(); window.scrollTo(0, 0);
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), bot:botView, members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
@@ -2988,11 +2991,7 @@ async function quotesView(){
     ${posted.map(x => { const t = (x.body || '').trim(), same = t && sugg[t.toLowerCase()]; return `<tr><td class="muted" style="white-space:nowrap">${new Date(x.ts).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' })}</td><td>@${esc(x.account)}</td><td>${esc(t || '(picture only)')}${x.has_media ? ' 🖼' : ''}</td><td style="white-space:nowrap"><span class="pill ${same ? '' : 'yes'}">${!t ? 'no text' : same ? 'as suggested' : '✏️ his own edit'}</span></td></tr>`; }).join('')}
     </tbody></table></div></details>` : '';
   const copy = t => navigator.clipboard.writeText(t).then(() => toast('Copied'), () => prompt('Copy this:', t));
-  v.innerHTML = `${kayaRuleBanner()}${postedHtml}<div class="card"><h2>Add a quote</h2>
-      <div class="two"><div><label for="qEn">English</label><textarea id="qEn" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="the quote in English"></textarea></div>
-      <div><label for="qIt">Italian <button type="button" class="btn sm ghost" id="qTr" style="margin-left:6px">✨ Translate</button></label><textarea id="qIt" rows="2" style="min-height:0;font-family:inherit;font-size:14px" placeholder="auto-translated if you leave it empty"></textarea></div></div>
-      <div class="row" style="align-items:flex-end;margin-top:8px"><div><label for="qPhoto">Photo it goes with (optional)</label><input id="qPhoto" placeholder="e.g. Florence balcony, white sundress"></div><div style="flex:0 0 150px"><label for="qModel">Model</label><input id="qModel" value="Kaya"></div><button class="btn" id="qAdd">Add</button></div>
-      ${ph.length ? `<div class="row" style="align-items:center;margin-top:8px"><div><label for="qPhotoId">Photo from the library (optional)</label><select id="qPhotoId"><option value="">— none —</option>${ph.map(p => `<option value="${p.id}"${p.id === pick ? ' selected' : ''}>${p.num ? '#' + p.num + ' · ' : ''}${esc(p.model)} · ${esc(p.caption || p.path.split('/').pop())}</option>`).join('')}</select></div><img id="qPrev" alt="" style="height:84px;border-radius:10px;${pick ? '' : 'display:none'}"${pick && phById[pick] ? ` src="${purl(phById[pick].thumb || phById[pick].path)}"` : ''}></div>` : ''}</div>
+  v.innerHTML = `${kayaRuleBanner()}${postedHtml}
     <div class="smstop" style="margin-top:14px"><div class="cfilt" id="qFilt" style="padding:0;border:0"><button data-f="all">All (${all.length})</button><button data-f="new">Not used yet (${all.filter(x => !x.used_at).length})</button><button data-f="used">Used (${all.filter(x => x.used_at).length})</button></div><input id="qSearch" type="search" placeholder="Search or #22" value="${esc(quoteQ)}" style="width:220px;margin:0"></div>
     <div id="qList" style="display:grid;gap:10px"></div>`;
   const draw = () => {
@@ -3017,14 +3016,14 @@ async function quotesView(){
   };
   document.querySelectorAll('#qFilt button').forEach(b => b.onclick = () => { quoteFilter = b.dataset.f; draw(); });
   $('#qSearch').oninput = e => { quoteQ = e.target.value; draw(); };
-  $('#qAdd').onclick = async () => {
+  if ($('#qAdd')) $('#qAdd').onclick = async () => {
     const en = $('#qEn').value.trim(); let it = $('#qIt').value.trim(); if (!en && !it) return toast('Write the quote first');
     const ab = $('#qAdd'); ab.disabled = true;
     if (en && !it) { ab.textContent = 'Translating…'; it = await translateIt(en); if (!it) toast('Could not translate, saved without Italian'); }
     const { error } = await sb.from('quotes').insert({ en: en || it, it: it || null, photo: $('#qPhoto').value.trim() || null, photo_id: ($('#qPhotoId') || {}).value || null, model: $('#qModel').value.trim() || 'Kaya' });
     if (error) { ab.disabled = false; ab.textContent = 'Add'; return toast(error.message); } toast('Quote added'); quotesView();
   };
-  $('#qTr').onclick = async () => { const en = $('#qEn').value.trim(); if (!en) return toast('Write the English first'); const b = $('#qTr'); b.disabled = true; b.textContent = '…'; const it = await translateIt(en); b.disabled = false; b.textContent = '✨ Translate'; if (it) $('#qIt').value = it; else toast('Translation failed, try again'); };
+  if ($('#qTr')) $('#qTr').onclick = async () => { const en = $('#qEn').value.trim(); if (!en) return toast('Write the English first'); const b = $('#qTr'); b.disabled = true; b.textContent = '…'; const it = await translateIt(en); b.disabled = false; b.textContent = '✨ Translate'; if (it) $('#qIt').value = it; else toast('Translation failed, try again'); };
   const sel = $('#qPhotoId'); if (sel) sel.onchange = () => { const p = phById[sel.value], im = $('#qPrev'); if (p){ im.src = purl(p.thumb || p.path); im.style.display = ''; const m = $('#qModel'); if (p.model && p.model !== 'Unassigned') m.value = p.model; } else im.style.display = 'none'; };
   draw();
   (async () => { // fill any quote that has no Italian yet
@@ -3114,14 +3113,13 @@ async function photosView(){
         <div><b style="font-size:13.5px">${x.num ? `<span style="color:var(--pink)">#${x.num}</span> · ` : ''}${esc(x.model)}</b>${x.used_at ? ' <small class="muted">· used</small>' : ''}<br><small class="muted">${esc(x.caption || '')}</small></div>
         ${platBlock(x)}
         ${qBlock(x)}
-        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="dl">Download</button><button class="btn sm ghost" data-act="quote">＋ New quote</button><button class="btn sm ghost" data-act="used">${x.used_at ? 'Not used' : 'Used'}</button><button class="btn sm ghost" data-act="edit">Edit</button>${admin ? '<button class="btn sm ghost" data-act="del">✕</button>' : ''}</div></article>`).join('') : '<div class="card empty">No photos here yet.</div>';
+        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="dl">Download</button><button class="btn sm ghost" data-act="used">${x.used_at ? 'Not used' : 'Used'}</button><button class="btn sm ghost" data-act="edit">Edit</button>${admin ? '<button class="btn sm ghost" data-act="del">✕</button>' : ''}</div></article>`).join('') : '<div class="card empty">No photos here yet.</div>';
     $('#pGrid').querySelectorAll('article').forEach(el => {
       const x = all.find(r => r.id === el.dataset.id);
       el.querySelector('[data-act=open]').onclick = () => openPhoto(x.path);
       el.querySelector('[data-act=dl]').onclick = () => downloadPhoto(x.path);
       el.querySelectorAll('[data-plat]').forEach(b => b.onclick = async () => { const k = b.dataset.plat, cur = x.platforms || [], next = cur.includes(k) ? cur.filter(v => v !== k) : [...cur, k]; const { error } = await sb.from('photos').update({ platforms: next }).eq('id', x.id); if (error) return toast(/platforms/.test(error.message) ? 'Almost ready: Claude needs to add the platforms box in the database first' : error.message); x.platforms = next; draw(); });
       el.querySelectorAll('[data-cp]').forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.cp).then(() => toast('Copied'), () => prompt('Copy this:', b.dataset.cp)));
-      el.querySelector('[data-act=quote]').onclick = () => { quotePhotoPick = x.id; if (!can('quotes')) return toast('The Quotes box is not ticked for you'); show('quotes'); };
       el.querySelector('[data-act=used]').onclick = async () => { const used_at = x.used_at ? null : new Date().toISOString(); const { error } = await sb.from('photos').update({ used_at }).eq('id', x.id); if (error) return toast(error.message); photosView(); };
       el.querySelector('[data-act=edit]').onclick = async () => { const m = prompt('Model name:', x.model); if (m === null) return; const c = prompt('Caption:', x.caption || ''); if (c === null) return; const { error } = await sb.from('photos').update({ model: m.trim() || 'Unassigned', caption: c.trim() || null }).eq('id', x.id); if (error) return toast(error.message); photosView(); };
       const del = el.querySelector('[data-act=del]'); if (del) del.onclick = async () => { if (!confirm('Delete this photo for good?')) return; await sb.storage.from('model-photos').remove([x.path, x.thumb].filter(Boolean)); const { error } = await sb.from('photos').delete().eq('id', x.id); if (error) return toast(error.message); photosView(); };

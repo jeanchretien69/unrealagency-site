@@ -39,6 +39,10 @@ button.pri{background:linear-gradient(135deg,var(--pink),var(--pink2));border-co
 .toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:#000c;color:#fff;padding:8px 14px;border-radius:20px;font-size:12px;opacity:0;transition:.25s;pointer-events:none}
 .toast.on{opacity:1}
 .fs .stage{padding:0}.fs .side{display:none}
+.sw{position:absolute;top:8px;left:8px;z-index:7;display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(20,20,28,.8);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.sw button{border:0;border-radius:999px;padding:0 14px;min-height:36px;color:#fff;font-size:13px;font-weight:600;background:transparent;justify-content:center}
+.sw button:hover{background:rgba(255,255,255,.08)}
+.sw button.on{background:linear-gradient(135deg,var(--pink),var(--pink2))}
 @media (max-width:640px){
   .stage{flex-direction:column;gap:6px;padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
   .side{display:none}
@@ -70,6 +74,7 @@ button.pri{background:linear-gradient(135deg,var(--pink),var(--pink2));border-co
     <div class="st hideM" style="padding-top:8px"><span id="lat">&nbsp;</span></div>
   </div>
   <button id="pwrM" title="Power" aria-label="Power">⏻</button>
+  <div class="sw" id="sw" role="group" aria-label="Choose a phone" hidden></div>
   <div class="toast" id="toast"></div>
 </div>
 <script>
@@ -139,11 +144,12 @@ function connect() {
   clearTimeout(retryT);
   if (!('VideoDecoder' in window)) return ui('error', 'Update your browser', 'This browser cannot show the phone video. Use an up-to-date Chrome, Edge or Safari.', false);
   ui('connecting', 'Connecting…', 'Opening the phone');
-  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'); ws.binaryType = 'arraybuffer';
+  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws' + (cur ? '?d=' + encodeURIComponent(cur) : '')); ws.binaryType = 'arraybuffer';
   ws.onmessage = e => {
     lastMsg = performance.now();
     if (typeof e.data === 'string') {
       const m = JSON.parse(e.data); if (m.ping) return;
+      if (m.serial && m.serial !== cur) { cur = m.serial; renderSw(); }
       if (m.webrtc) { if (m.webrtc === 'offer') rtcOffer(m.sdp); else if (m.webrtc === 'failed') rtcStop(false); return; }
       if (m.state === 'error') ui('error', 'Phone not reachable', m.error || 'Reconnecting…', false);
       else if (m.state === 'starting' || m.state === 'idle') ui('connecting', 'Waking the phone…', m.name || 'This takes a few seconds');
@@ -158,6 +164,34 @@ function connect() {
 // a still screen sends no pictures: that's normal. Only reconnect if the server itself goes silent.
 setInterval(() => { if (state === 'live' && ws && ws.readyState === 1 && performance.now() - lastMsg > 35000) ws.close(); }, 5000);
 $('#ovB').onclick = connect;
+
+// ---------- several phones: switcher (only shows when 2+ phones are plugged in) ----------
+let cur = ''; try { cur = localStorage.getItem('ph_serial') || ''; } catch {}
+let devs = [];
+async function loadDevs() {
+  try { const r = await fetch('/devices', { cache: 'no-store' }); const j = await r.json(); devs = (j.devices || []).filter(d => d.state === 'device').sort((a, b) => a.serial.localeCompare(b.serial)); } catch { devs = []; }
+  renderSw();
+}
+function renderSw() {
+  const el = $('#sw');
+  if (devs.length < 2) { el.hidden = true; return; }
+  el.hidden = false; el.textContent = '';
+  devs.forEach((d, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Phone ' + (i + 1);
+    b.title = (d.model || 'Android') + ' · ' + d.serial; b.setAttribute('aria-pressed', d.serial === cur ? 'true' : 'false');
+    if (d.serial === cur) b.className = 'on';
+    b.onclick = () => switchTo(d.serial); el.appendChild(b);
+  });
+}
+function switchTo(s) {
+  if (s === cur) return;
+  cur = s; try { localStorage.setItem('ph_serial', s); } catch {}
+  renderSw(); clearTimeout(retryT);
+  if (ws) { ws.onclose = null; try { ws.close(); } catch {} }
+  rtcStop(false); try { dec && dec.close(); } catch {} dec = null; hadConfig = null; needKey = true; base = Infinity;
+  ctx.clearRect(0, 0, cv.width, cv.height); toast('Switching phone…'); connect();
+}
+loadDevs(); setInterval(loadDevs, 10000);
 
 // ---------- sending to the phone (scrcpy binary messages) ----------
 const send = b => { if (ws && ws.readyState === 1 && state === 'live') ws.send(b); };

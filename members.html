@@ -3817,10 +3817,10 @@ async function trainView(){
   $('#trIn').onkeydown = e => { if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey && !e.isComposing){ e.preventDefault(); $('#tChat').requestSubmit(); } };
   $('#tChat').onsubmit = async e => {
     e.preventDefault();
-    const text = $('#trIn').value.trim(); if (!text || $('#tChat button').disabled) return;
+    const text = $('#trIn').value.trim(); if (!text || (model === 'kaya-sms' && $('#tChat button').disabled)) return;
     const run = ++kayaTestRun;
     const sentAt = Date.now();
-    $('#tChat button').disabled = true;
+    if (model === 'kaya-sms') $('#tChat button').disabled = true;
     $('#trIn').value = ''; addB('fan', text); lastFan = text; if (!started) started = Date.now(); persist();
     const wait = addB('bot', '…');
     hist.push({ role:'user', content:text });
@@ -3840,7 +3840,7 @@ async function trainView(){
         const d = await r.json();
         out = (d.output || d.text || '').trim();
       }
-      if (run !== kayaTestRun || trainModel !== model) return;
+      if (model === 'kaya-sms' && (run !== kayaTestRun || trainModel !== model)) return;
       out = out || '(no reply — the AI engine may be busy, try again)';
       const m = { fan:text, out, by };
       if (parts) {
@@ -3863,11 +3863,11 @@ async function trainView(){
       }
       $('#tMsgs').scrollTop = 1e9;
     } catch(err){
-      if (run === kayaTestRun && trainModel === model) {
+      if (model !== 'kaya-sms' || (run === kayaTestRun && trainModel === model)) {
         hist.pop(); wait.textContent = 'Error: ' + err.message; wait.classList.add('handoff');
       }
     } finally {
-      if (run === kayaTestRun && trainModel === model) $('#tChat button').disabled = false;
+      if (model === 'kaya-sms' && run === kayaTestRun && trainModel === model) $('#tChat button').disabled = false;
     }
   };
   if (!owner) return;

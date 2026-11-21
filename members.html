@@ -1428,6 +1428,7 @@ const whoSent = x => {
   if (x.sent_by) return x.sent_by === me?.id ? '👤 You' : '👤 ' + (teamNames[x.sent_by] || 'Team');
   return x.created_at >= SENT_BY_SINCE ? '📱 Phone' : '';
 };
+let smsStick = true;
 let smsJump = null; // a conversation to open when the SMS page loads (from 🤖 AI messages)
 const smsTime = d => new Date(d).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' });
 const smsDay = d => { const x = new Date(d), t = new Date(); return x.toDateString() === t.toDateString() ? 'Today' : x.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }); };
@@ -1596,12 +1597,6 @@ function smsMobile(){
   const on = !!smsOpen && tab === 'sms';
   document.body.classList.toggle('smsopen', on);
   const back = $('#pBack'); if (back) back.onclick = () => { smsOpen = null; smsDraw(true); };
-  if (on) {
-    // photos load after the text: keep the chat on the latest message while they come in, unless you scrolled up
-    const t = $('#cthread'); if (!t) return;
-    const nearEnd = () => t.scrollHeight - t.scrollTop - t.clientHeight < 160;
-    t.querySelectorAll('img').forEach(img => { if (!img.complete) { const was = { v: true }; t.addEventListener('scroll', () => { was.v = nearEnd(); }, { passive:true }); img.addEventListener('load', () => { if (was.v) t.scrollTop = t.scrollHeight; }, { once:true }); } });
-  }
 }
 (() => {
   const vv = window.visualViewport; if (!vv) return;
@@ -1687,7 +1682,7 @@ function smsThread(first){
   if (!smsOpen){ main.innerHTML = '<div class="cblank"><b>Pick a conversation</b><span>or press ＋ New to text a number</span></div>'; return; }
   const p = smsOpen, a = smsMsgs.filter(x => x.phone === p), box = $('#cthread'), keep = $('#ptext')?.value || '';
   const old = $('#ptext'), ae = document.activeElement, hadFocus = !!(ae && ae.closest && ae.closest('#psend')), sel = old && ae === old ? [old.selectionStart, old.selectionEnd] : null;
-  const atEnd = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  const atEnd = !box || smsStick || box.scrollHeight - box.scrollTop - box.clientHeight < 80, prevTop = box ? box.scrollTop : 0;
   const label = { queued:'Sending…', sent:'Sent', delivered:'Delivered', failed:'Not sent' };
   let day = '', html = '';
   a.forEach((x, i) => {
@@ -1710,7 +1705,12 @@ function smsThread(first){
   $('#pfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; if (isHfFile(f)) return toast(HF_BLOCK); toast('Preparing the photo…'); const b = await smsShrink(f); if (!b) return toast('This file cannot be sent as a picture message'); if (smsPend) URL.revokeObjectURL(smsPend.url); smsPend = { p, blob:b, url:URL.createObjectURL(b) }; smsThread(); };
   if ($('#pdrop')) $('#pdrop').onclick = () => { URL.revokeObjectURL(smsPend.url); smsPend = null; smsThread(); };
   const t = $('#ptext'); t.value = keep; if (first || hadFocus){ t.focus(); try { if (sel) t.setSelectionRange(sel[0], sel[1]); else t.setSelectionRange(keep.length, keep.length); } catch(e){} }
-  if (first || atEnd) $('#cthread').scrollTop = 1e9;
+  { // stay on the latest text (also while photos load), or keep your place if you scrolled up
+    const th = $('#cthread'); if (first) smsStick = true;
+    th.scrollTop = (first || atEnd) ? 1e9 : prevTop;
+    th.addEventListener('scroll', () => { smsStick = th.scrollHeight - th.scrollTop - th.clientHeight < 80; }, { passive:true });
+    th.addEventListener('load', e => { if (e.target.tagName === 'IMG' && smsStick) th.scrollTop = 1e9; }, true);
+  }
   t.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('#psend').requestSubmit(); } };
   $('#psend').onsubmit = async e => {
     e.preventDefault(); const body = t.value.trim(), pend = smsPend && smsPend.p === p ? smsPend : null; if (!body && !pend) return;

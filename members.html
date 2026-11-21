@@ -1150,14 +1150,12 @@ async function aiMsgsView(){
     sb.from('sms_contacts').select('phone,name') ]);
   if (error) { v.innerHTML = `<div class="card empty">${esc(error.message)}</div>`; return; }
   const names = Object.fromEntries((cs||[]).map(c => [c.phone, c.name]));
-  const all = rows || [];
+  let all = rows || [];
   const sent = x => /^sent/.test(x.status);
-  const day = new Date(Date.now() - 864e5).toISOString();
-  const real = all.filter(x => !x.is_test);
-  v.innerHTML = `<div class="kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">
-      <div class="card" style="margin:0"><div class="muted" style="font-size:12px">Written by the AI · 24 h</div><b style="font-size:22px">${real.filter(x => x.created_at >= day).length}</b></div>
+  const kpis = () => { const day = new Date(Date.now() - 864e5).toISOString(), real = all.filter(x => !x.is_test); return `      <div class="card" style="margin:0"><div class="muted" style="font-size:12px">Written by the AI · 24 h</div><b style="font-size:22px">${real.filter(x => x.created_at >= day).length}</b></div>
       <div class="card" style="margin:0"><div class="muted" style="font-size:12px">Sent to real clients · 24 h</div><b style="font-size:22px">${real.filter(x => sent(x) && (x.sent_at || x.created_at) >= day).length}</b></div>
-      <div class="card" style="margin:0"><div class="muted" style="font-size:12px">Sent as written / edited</div><b style="font-size:22px">${real.filter(x => x.status==='sent_team' || x.status==='sent_ai').length} / ${real.filter(x => x.status==='sent_edited').length}</b></div>
+      <div class="card" style="margin:0"><div class="muted" style="font-size:12px">Sent as written / edited</div><b style="font-size:22px">${real.filter(x => x.status==='sent_team' || x.status==='sent_ai').length} / ${real.filter(x => x.status==='sent_edited').length}</b></div>`; };
+  v.innerHTML = `<div class="kpis" id="aimK" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px">${kpis()}
     </div>
     <div class="smstop" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
       <div class="cfilt" id="aimWho" style="padding:0;border:0"><button data-v="real">Real clients</button><button data-v="test">Tests</button><button data-v="all">Both</button></div>
@@ -1192,7 +1190,21 @@ async function aiMsgsView(){
   document.querySelectorAll('#aimWho button').forEach(b => b.onclick = () => { aimF.who = b.dataset.v; draw(); });
   document.querySelectorAll('#aimSt button').forEach(b => b.onclick = () => { aimF.st = b.dataset.v; draw(); });
   $('#aimQ').oninput = e => { aimF.q = e.target.value; draw(); };
-  clearTimeout(aimTimer); aimTimer = setTimeout(() => { if (tab === 'aimsgs' && document.activeElement?.id !== 'aimQ') aiMsgsView(); }, 30000);
+  // quiet refresh: only new or changed messages are drawn, the page and your scroll stay where they are
+  const sig = r => r.map(x => x.id + x.status + (x.sent_at || '')).join('|');
+  let last = sig(all);
+  const tick = async () => {
+    if (tab !== 'aimsgs' || !document.getElementById('aimList')) return;
+    if (!document.hidden && !String(getSelection() || '').trim()) {
+      const { data } = await sb.from('ai_messages').select('*').order('created_at', { ascending:false }).limit(500);
+      if (data && sig(data) !== last && tab === 'aimsgs' && document.getElementById('aimList')) {
+        last = sig(data); all = data; const y = window.scrollY;
+        $('#aimK').innerHTML = kpis(); draw(); window.scrollTo(0, y);
+      }
+    }
+    clearTimeout(aimTimer); aimTimer = setTimeout(tick, 30000);
+  };
+  clearTimeout(aimTimer); aimTimer = setTimeout(tick, 30000);
 }
 
 // ---------- My to-do (admin): personal + business, ticks itself ----------

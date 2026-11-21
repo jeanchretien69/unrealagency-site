@@ -117,6 +117,18 @@
   .tile b.pink{color:var(--pink)}
   .addr{display:flex;gap:8px;align-items:center;margin-top:8px}
   .addr code{flex:1;background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:10px;font-size:13px;word-break:break-all}
+  .shbars{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:6px}
+  .shday{flex:1;position:relative;height:100%;display:flex;align-items:flex-end;min-width:3px}
+  .shday i{display:block;width:100%;background:color-mix(in srgb,var(--pink) 35%,transparent);border-radius:3px 3px 0 0}
+  .shday em{position:absolute;left:15%;right:15%;bottom:0;background:var(--pink);border-radius:3px 3px 0 0}
+  .shleg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-top:8px;align-items:center}
+  .shleg i,.shleg em{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .shleg i{background:color-mix(in srgb,var(--pink) 35%,transparent)} .shleg em{background:var(--pink)}
+  .shf{display:grid;grid-template-columns:120px 1fr 50px 48px;gap:8px;align-items:center;margin:10px 0;font-size:13px}
+  .shf div{height:14px;background:var(--surface);border-radius:7px;overflow:hidden} .shf i{display:block;height:100%;background:var(--pink);border-radius:7px}
+  .shf b{text-align:right} .shf small{color:var(--muted);text-align:right}
+  .shins{margin:0;padding-left:18px} .shins li{margin:6px 0;line-height:1.45}
+  @media (max-width:640px){.shf{grid-template-columns:96px 1fr 40px 42px;font-size:12px}.shbars{height:110px}}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media (max-width:700px){.two{grid-template-columns:1fr}}
   .row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
@@ -799,6 +811,7 @@
           <button data-tab="core" class="adm" hidden>🚀 Unreal Autopilot</button>
           <button data-tab="todo" class="adm" hidden>🎯 My to-do</button>
           <button data-tab="plan" class="adm" hidden>📋 My plan</button>
+          <button data-tab="shop" class="adm" hidden>👕 papagael.com</button>
         </div></div>
         <div class="grp" data-g="team"><div class="gh" role="button" tabindex="0" aria-expanded="true">Team & accounts<i>▾</i></div><div class="gb">
           <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
@@ -1057,7 +1070,7 @@ document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.datas
     h.onclick = flip; h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
   });
 })();
-const titles = { core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function mnavClose(){ document.body.classList.remove('mopen'); $('#mnav').setAttribute('aria-expanded', 'false'); }
 $('#mnav').onclick = () => { const o = document.body.classList.toggle('mopen'); $('#mnav').setAttribute('aria-expanded', String(o)); };
@@ -1073,7 +1086,7 @@ function show(t){
   { const sb = document.querySelector(`#side button[data-tab="${t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }
   mnavClose(); window.scrollTo(0, 0);
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), bot:botView, wallet:walletView, members:membersView, topups:topupsView, sales:salesView, edit:editView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
@@ -2603,6 +2616,43 @@ async function editView(selected){
 
 
 // ---------- phone control ----------
+// ---- papagael.com shop data (admin) ----
+async function shopView(){
+  const v = $('#view');
+  v.innerHTML = '<div class="card muted">Loading papagael.com…</div>';
+  const { data:rows, error } = await sb.from('shop_stats').select('created_at,data').eq('shop','papagael.com').order('created_at', { ascending:false }).limit(1);
+  if (tab !== 'shop') return;
+  if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
+  const d = rows && rows[0] && rows[0].data;
+  if (!d) return v.innerHTML = '<div class="card empty">No data yet. Claude fills this in from your Shopify store.</div>';
+  const cur = d.currency || 'CAD';
+  const $m = n => (n == null ? '—' : Number(n).toLocaleString('en-CA', { style:'currency', currency:cur, maximumFractionDigits: Number(n) % 1 ? 2 : 0 }));
+  const $n = n => (n == null ? '—' : Number(n).toLocaleString('en-CA'));
+  const when = new Date(d.updated_at || rows[0].created_at);
+  const ago = (() => { const m = Math.round((Date.now() - when) / 6e4); return m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; })();
+  const list = (title, a, money) => `<div class="card tbl"><h2>${title}</h2>${a && a.length ? `<table><tbody>${a.map(x => `<tr><td>${esc(x.k)}</td><td class="num">${$n(x.n)}</td>${money ? `<td class="num">${$m(x.rev)}</td>` : ''}</tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing yet.</p>'}</div>`;
+  const days = d.days || [], maxV = Math.max(1, ...days.map(x => x.visitors || 0)), maxO = Math.max(1, ...days.map(x => x.orders || 0));
+  const chart = days.length ? `<div class="card"><h2>Every day</h2><div class="shbars">${days.map(x => `<div class="shday" title="${esc(x.d)} · ${$n(x.visitors)} visitors · ${$n(x.orders)} orders"><i style="height:${Math.round((x.visitors || 0) / maxV * 100)}%"></i>${x.orders ? `<em style="height:${Math.max(8, Math.round(x.orders / maxO * 40))}%"></em>` : ''}</div>`).join('')}</div><div class="shleg"><span><i></i>Visitors</span><span><em></em>Orders</span><span class="muted">${esc(days[0].d)} → ${esc(days[days.length - 1].d)}</span></div></div>` : '';
+  const f = d.funnel, fTop = f && Math.max(1, f.sessions || 0);
+  const fRow = (k, n) => `<div class="shf"><span>${k}</span><div><i style="width:${Math.max(n ? 2 : 0, Math.round(n / fTop * 100))}%"></i></div><b>${$n(n)}</b><small>${fTop && n != null ? (Math.round(n / fTop * 1000) / 10) + '%' : ''}</small></div>`;
+  const funnel = f ? `<div class="card"><h2>Where they stop</h2>${fRow('Visited', f.sessions)}${fRow('Added to cart', f.cart)}${fRow('Reached checkout', f.checkout)}${fRow('Bought', f.purchased)}</div>` : '';
+  const ord = d.orders || [];
+  v.innerHTML = `
+    <div class="row" style="margin-bottom:12px;align-items:center"><div class="muted" style="font-size:13px">${esc(d.period_label || '')} · updated ${ago} (${when.toLocaleString('en-CA', { dateStyle:'medium', timeStyle:'short' })})</div><a class="btn ghost sm" href="https://papagael.com" target="_blank" rel="noopener" style="flex:0 0 auto">papagael.com ↗</a></div>
+    <div class="tiles">
+      <div class="card tile"><span>${d.visitors != null ? 'Visitors' : 'Visits'}</span><b>${$n(d.visitors != null ? d.visitors : d.sessions)}</b></div>
+      <div class="card tile"><span>Orders</span><b>${$n(d.orders_count)}</b></div>
+      <div class="card tile"><span>Buy rate</span><b>${d.conversion == null ? '—' : d.conversion + '%'}</b></div>
+      <div class="card tile"><span>Sales</span><b class="pink">${$m(d.revenue)}</b></div>
+    </div>
+    ${d.insights && d.insights.length ? `<div class="card" style="margin-bottom:14px"><h2>🧠 Claude's read: why they don't buy</h2><ul class="shins">${d.insights.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    ${chart || funnel ? `<div class="two" style="margin-bottom:14px">${chart}${funnel}</div>` : ''}
+    <div class="two" style="margin-bottom:14px">${list('Shirts sold', d.products, true)}${(d.sizes && d.sizes.length ? list('Sizes', d.sizes) : list('Phone vs computer', d.devices))}</div>
+    <div class="two" style="margin-bottom:14px">${list('Where visitors come from', d.sources)}${list('Where visitors live', d.cities)}</div>
+    <div class="card tbl"><h2>Orders</h2>${ord.length ? `<table><thead><tr><th>Order</th><th>Date</th><th>Shirt</th><th>Size</th><th>City</th><th>Total</th><th>Shipping</th></tr></thead><tbody>${ord.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.date)}</td><td>${esc(x.item)}${x.signed ? ' ✍️' : ''}</td><td>${esc(x.size)}</td><td>${esc(x.city)}</td><td class="num">${$m(x.total)}</td><td><span class="pill ${x.shipped ? 'yes' : 'pending'}">${x.shipped ? 'shipped' : 'to ship'}</span></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No orders in this period.</p>'}</div>
+    ${d.note ? `<p class="muted" style="font-size:12px;margin-top:10px">${esc(d.note)}</p>` : ''}`;
+}
+
 async function phoneView(){
   const v = $('#view');
   let notes = ''; try { notes = localStorage.getItem('unreal-phone-notes') || ''; } catch(e){}

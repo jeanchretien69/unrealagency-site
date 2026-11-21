@@ -1718,19 +1718,19 @@ function psFormat(t){
 async function promptsView(){
   const v = $('#view'), st = psLoad();
   st.msgs = Array.isArray(st.msgs) ? st.msgs : [];
-  let pendingImg = null, busy = false;
+  let pending = [], busy = false;
   v.innerHTML = `<div class="card pschat">
-    <div class="pschat-h"><div><b>🎨 Kaya prompts</b><small>Ask for prompts, fix them, drop the Higgsfield photos here</small></div><button type="button" class="btn ghost sm" id="psNew">New chat</button></div>
+    <div class="pschat-h"><div><b>🎨 Kaya prompts</b><small>📎 show it pictures you like · ⬆️ save finished Kaya photos to Photos + Twitter</small></div><button type="button" class="btn ghost sm" id="psNew">New chat</button></div>
     <div class="msgs" id="psMsgs"></div>
     <div class="pspend" id="psPend" hidden></div>
-    <form class="pscomp" id="psForm">${can('photos') ? '<label class="btn ghost psatt" title="Add Higgsfield photos" aria-label="Add photos">📎<input type="file" id="psFile" accept="image/png,image/jpeg,image/webp" multiple hidden></label>' : ''}<textarea id="psIn" rows="1" placeholder="e.g. give me 3 cozy bed selfie prompts (Enter to send)" aria-label="Message"></textarea><button class="btn" id="psSend">Send</button></form>
+    <form class="pscomp" id="psForm"><label class="btn ghost psatt" title="Show the AI a picture (not saved)" aria-label="Show the AI a picture">📎<input type="file" id="psPic" accept="image/png,image/jpeg,image/webp" multiple hidden></label>${can('photos') ? '<label class="btn ghost psatt" title="Save finished Kaya photos to 📸 Photos and the Twitter task" aria-label="Save and schedule photos">⬆️<input type="file" id="psFile" accept="image/png,image/jpeg,image/webp" multiple hidden></label>' : ''}<textarea id="psIn" rows="1" placeholder="e.g. give me 3 cozy bed selfie prompts (Enter to send)" aria-label="Message"></textarea><button class="btn" id="psSend">Send</button></form>
   </div>`;
   const box = $('#psMsgs'), save = () => psStore(st);
   const bubble = (m, idx) => {
     const d = document.createElement('div'); d.className = 'bub ' + (m.role === 'user' ? 'fan' : 'bot') + ' psb'; d.dataset.i = idx;
     if (m.photo){
       d.innerHTML = `${m.thumb ? `<img class="psimg" src="${m.thumb}" alt="Uploaded photo">` : ''}<div class="psup">${m.undone ? 'Removed' : esc(m.where || 'Saving…')}${m.num && !m.undone ? ` <b>#${m.num}</b>` : ''}${m.id && !m.undone ? ' <button type="button" class="btn sm ghost" data-undo>Undo</button>' : ''}</div>`;
-    } else d.innerHTML = m.role === 'user' ? esc(m.text).replace(/\n/g, '<br>') : psFormat(m.text);
+    } else d.innerHTML = m.role === 'user' ? `${(m.pics || []).map(t => `<img class="psimg" src="${t}" alt="Picture sent to the AI">`).join('')}${esc(m.text || '').replace(/\n/g, '<br>')}` : psFormat(m.text);
     return d;
   };
   const wire = d => {
@@ -1739,38 +1739,40 @@ async function promptsView(){
     const u = d.querySelector('[data-undo]'); if (u) u.onclick = async () => { const m = st.msgs[+d.dataset.i]; if (!confirm('Remove this photo from 📸 Photos and the Twitter task?')) return; const { error } = await sb.rpc('x_unplace_photo', { p_photo:m.id }); if (error) return toast(error.message); m.undone = true; save(); d.replaceWith(paint(m, +d.dataset.i)); toast('Removed'); };
   };
   const paint = (m, i) => { const d = bubble(m, i); wire(d); return d; };
-  const draw = () => { box.innerHTML = st.msgs.length ? '' : '<p class="muted tempty">Hi! Ask me for Kaya prompts, like "3 cozy bed selfies" or "a night window pic in red lace".<br>Made a photo on Higgsfield? Drop it with 📎: it\'s saved in 📸 Photos and put on the 🐦 Twitter task.</p>'; st.msgs.forEach((m, i) => box.appendChild(paint(m, i))); box.scrollTop = box.scrollHeight; };
+  const draw = () => { box.innerHTML = st.msgs.length ? '' : '<p class="muted tempty">Hi! Ask me for Kaya prompts, like "3 cozy bed selfies" or "a night window pic in red lace".<br>📎 Show me a picture you like (screenshot + a few words) and I\'ll write prompts in that style.<br>⬆️ Finished a good Kaya photo on Higgsfield? Upload it there: it\'s saved in 📸 Photos and put on the 🐦 Twitter task.</p>'; st.msgs.forEach((m, i) => box.appendChild(paint(m, i))); box.scrollTop = box.scrollHeight; };
   const add = m => { st.msgs.push(m); if (st.msgs.length > 80) st.msgs = st.msgs.slice(-80); save(); box.querySelector('.tempty')?.remove(); const d = paint(m, st.msgs.length - 1); box.appendChild(d); box.scrollTop = box.scrollHeight; return d; };
-  const showPend = () => { const p = $('#psPend'); p.hidden = !pendingImg; p.innerHTML = pendingImg ? `<img src="${pendingImg}" alt=""><span>The AI will look at this photo with your next message</span><button type="button" class="btn sm ghost" id="psPendX">✕</button>` : ''; const x = $('#psPendX'); if (x) x.onclick = () => { pendingImg = null; showPend(); }; };
+  const showPend = () => { const p = $('#psPend'); p.hidden = !pending.length; p.innerHTML = pending.length ? `${pending.map(x => `<img src="${x.thumb}" alt="">`).join('')}<span>Goes to the AI with your message (not saved)</span><button type="button" class="btn sm ghost" id="psPendX">✕</button>` : ''; const x = $('#psPendX'); if (x) x.onclick = () => { pending = []; showPend(); }; };
+  const addPics = async fs => { fs = fs.filter(f => /^image\/(png|jpeg|webp)$/.test(f.type)); for (const f of fs){ if (pending.length >= 3){ toast('3 pictures max per message'); break; } try { pending.push({ full: await psShrink(f), thumb: await psShrink(f, 320, .7) }); } catch(e){ toast(e.message); } } showPend(); $('#psIn').focus(); };
   draw();
-  $('#psNew').onclick = () => { if (st.msgs.length && !confirm('Start a new chat? Photos already saved stay saved.')) return; st.msgs = []; save(); pendingImg = null; showPend(); draw(); };
+  $('#psNew').onclick = () => { if (st.msgs.length && !confirm('Start a new chat? Photos already saved stay saved.')) return; st.msgs = []; save(); pending = []; showPend(); draw(); };
   const file = $('#psFile');
   const takeFiles = async fs => {
     fs = fs.filter(f => /^image\/(png|jpeg|webp)$/.test(f.type)); if (!fs.length) return;
     for (const f of fs){
       let thumb = ''; try { thumb = await psShrink(f, 320, .7); } catch(e){}
       const m = { role:'user', photo:true, thumb, where:'Saving…' }; const d = add(m);
-      try { pendingImg = await psShrink(f); showPend(); } catch(e){}
       const r = await psSavePlace(f); Object.assign(m, r); save(); d.replaceWith(paint(m, st.msgs.indexOf(m))); box.scrollTop = box.scrollHeight;
     }
   };
   if (file) file.onchange = e => { takeFiles([...e.target.files]); e.target.value = ''; };
+  $('#psPic').onchange = e => { addPics([...e.target.files]); e.target.value = ''; };
   v.querySelector('.pschat').ondragover = e => e.preventDefault();
-  v.querySelector('.pschat').ondrop = e => { e.preventDefault(); if (can('photos')) takeFiles([...e.dataTransfer.files]); };
-  $('#psIn').onpaste = e => { const fs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/')); if (fs.length && can('photos')){ e.preventDefault(); takeFiles(fs); } };
+  v.querySelector('.pschat').ondrop = e => { e.preventDefault(); addPics([...e.dataTransfer.files]); };
+  $('#psIn').onpaste = e => { const fs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/')); if (fs.length){ e.preventDefault(); addPics(fs); } };
   const inp = $('#psIn'); inp.oninput = () => { inp.style.height = 'auto'; inp.style.height = Math.min(160, inp.scrollHeight) + 'px'; };
   inp.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); $('#psForm').requestSubmit(); } };
   $('#psForm').onsubmit = async e => {
     e.preventDefault(); if (busy) return;
-    const q = inp.value.trim(); if (!q && !pendingImg) return;
-    const history = st.msgs.filter(m => !m.photo && m.text && !m.err).slice(-12).map(m => ({ role:m.role, content:m.text }));
-    if (q) add({ role:'user', text:q });
+    const q = inp.value.trim(); if (!q && !pending.length) return;
+    const history = st.msgs.filter(m => !m.photo && m.text && !m.err).slice(-12).map(m => ({ role:m.role, content:(m.pics && m.pics.length ? `[sent ${m.pics.length} picture${m.pics.length > 1 ? 's' : ''}] ` : '') + m.text }));
+    const imgs = pending.map(x => x.full);
+    add({ role:'user', text:q, pics: pending.map(x => x.thumb) });
     inp.value = ''; inp.oninput();
-    const img = pendingImg; pendingImg = null; showPend();
+    pending = []; showPend();
     busy = true; $('#psSend').disabled = true;
     const wait = document.createElement('div'); wait.className = 'bub bot'; wait.textContent = '…'; box.appendChild(wait); box.scrollTop = box.scrollHeight;
     try {
-      const { data, error } = await sb.functions.invoke('prompt-ai', { body:{ q, image:img, history } });
+      const { data, error } = await sb.functions.invoke('prompt-ai', { body:{ q, images:imgs, history } });
       let msg = data?.error; if (error){ msg = error.message; try { msg = (await error.context.json()).error || msg; } catch(_){} }
       wait.remove();
       if (msg) add({ role:'assistant', text:'⚠️ ' + msg, err:true }); else add({ role:'assistant', text:data.a });

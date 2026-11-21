@@ -856,7 +856,6 @@
         </div></div>
         <div class="grp" data-g="money"><div class="gh" role="button" tabindex="0" aria-expanded="true">AI<i>▾</i></div><div class="gb">
           <button data-tab="aistudio" data-perm="personas" hidden>🧠 AI studio</button>
-          <button data-tab="bot" data-perm="bot" hidden>🤖 AI chatbot</button>
           <button data-href="/earnings" data-perm="earnings" hidden>📈 Statements</button>
         </div></div>
         <div class="grp" data-g="admin"><div class="gh" role="button" tabindex="0" aria-expanded="true">Admin<i>▾</i></div><div class="gb">
@@ -1097,7 +1096,7 @@ document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.datas
     h.onclick = flip; h.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
   });
 })();
-const AI_SUBS = [['personas','🎀 Personas',() => can('personas')],['brains','⚡ AI brains',() => me?.role === 'admin'],['train','🧠 Train AI',() => me?.role === 'admin']];
+const AI_SUBS = [['train','🧠 Train AI',() => me?.role === 'admin'],['brains','⚡ AI brains',() => me?.role === 'admin'],['personas','🎀 Personas',() => can('personas')]];
 const titles = { shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], drafts:['Saved site work','Parts of the website we built and put aside. Only you can see this.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function mnavClose(){ document.body.classList.remove('mopen'); $('#mnav').setAttribute('aria-expanded', 'false'); }
@@ -1117,7 +1116,7 @@ function show(t){
   { const sb = document.querySelector(`#side button[data-tab="${inAi ? 'aistudio' : t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }
   mnavClose(); window.scrollTo(0, 0);
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), bot:botView, members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
@@ -1714,7 +1713,22 @@ async function draftsView(){
 // ---------- 🎨 Prompt studio: a simple chat that writes Kaya prompts + saves/schedules photos ----------
 const PS_KEY = 'ua_prompt_chat_v2';
 const psLoad = () => { try { return JSON.parse(localStorage.getItem(PS_KEY) || '{}') || {}; } catch { return {}; } };
-const psStore = s => { try { localStorage.setItem(PS_KEY, JSON.stringify(s)); } catch {} };
+let psTimer = null;
+const psStore = s => {
+  s.at = Date.now();
+  try { localStorage.setItem(PS_KEY, JSON.stringify(s)); } catch {}
+  clearTimeout(psTimer);
+  const msgs = (s.msgs || []).filter(m => m.where !== 'Saving…');
+  psTimer = setTimeout(() => { sb.from('member_chats').upsert({ user_id: me.id, kind: 'prompts', msgs, updated_at: new Date(s.at).toISOString() }).then(({ error }) => { if (error) console.warn('prompt chat not saved', error.message); }); }, 400);
+};
+async function psFetch(){
+  const local = psLoad();
+  try {
+    const { data } = await sb.from('member_chats').select('msgs,updated_at').eq('user_id', me.id).eq('kind', 'prompts').maybeSingle();
+    if (data && Array.isArray(data.msgs) && new Date(data.updated_at).getTime() > (local.at || 0)) return { msgs: data.msgs, at: new Date(data.updated_at).getTime() };
+  } catch(e){}
+  return local;
+}
 function psShrink(file, max = 1280, q = 0.85){
   return new Promise((ok, bad) => {
     const img = new Image(), url = URL.createObjectURL(file);
@@ -1738,7 +1752,7 @@ function psFormat(t){
   }).filter(Boolean).join('');
 }
 async function promptsView(){
-  const v = $('#view'), st = psLoad();
+  const v = $('#view'), st = await psFetch();
   st.msgs = Array.isArray(st.msgs) ? st.msgs : [];
   let pending = [], busy = false;
   v.innerHTML = `<div class="card pschat">

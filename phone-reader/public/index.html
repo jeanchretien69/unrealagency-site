@@ -17,6 +17,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.
 canvas{display:block;touch-action:none;cursor:pointer;outline:none;background:#000}
 #rv{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:fill;pointer-events:none;opacity:0;background:#000}
 #rv.on{opacity:1}
+#pwrM{display:none;position:absolute;top:6px;right:6px;z-index:6;width:30px;height:30px;padding:0;border-radius:50%;border:0;background:rgba(20,20,28,.72);color:#fff;font-size:15px;align-items:center;justify-content:center;opacity:.75}
 .ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;line-height:1.4;color:#fff;background:radial-gradient(circle at 50% 35%,rgba(255,79,163,.18),#07070b 70%);transition:opacity .35s}
 .ov.hide{opacity:0;pointer-events:none}
 .ov b{font-size:16px}.ov span{color:#b9b9cc;font-size:13px;max-width:240px}
@@ -40,11 +41,13 @@ button.pri{background:linear-gradient(135deg,var(--pink),var(--pink2));border-co
 .fs .stage{padding:0}.fs .side{display:none}
 @media (max-width:640px){
   .stage{flex-direction:column;gap:6px;padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
-  .side{flex-direction:row;flex-wrap:nowrap;min-width:0;width:100%;justify-content:space-around;padding:6px;border-radius:16px;gap:4px}
+  .side{display:none}
+  #pwrM{display:flex}
   .side h4,.sp,.st,.hideM,#bFs{display:none}
   .side button{flex:1;justify-content:center;padding:8px 0;font-size:16px;border-radius:12px}
   .frame{padding:0;border-radius:18px;background:none;box-shadow:none}.frame.live{box-shadow:none}.screen{border-radius:18px}
   html,body{background:#000}
+  .stage{padding:0 0 env(safe-area-inset-bottom)}
   .side{background:#111117;border-color:#22222c}.side button{color:#f2f2f7;border-color:#2a2a35;background:#17171f}
 }
 </style></head><body>
@@ -66,6 +69,7 @@ button.pri{background:linear-gradient(135deg,var(--pink),var(--pink2));border-co
     <button class="pri" id="bFs">⛶ <span class="hideM">Full screen</span></button>
     <div class="st hideM" style="padding-top:8px"><span id="lat">&nbsp;</span></div>
   </div>
+  <button id="pwrM" title="Power" aria-label="Power">⏻</button>
   <div class="toast" id="toast"></div>
 </div>
 <script>
@@ -85,8 +89,8 @@ function fit() {
   if (!vw) return;
   const side = $('#side'), narrow = innerWidth <= 640, fs = document.body.classList.contains('fs');
   const H = window.visualViewport ? visualViewport.height : innerHeight;
-  const aw = innerWidth - (narrow ? 8 : fs ? 0 : side.offsetWidth + 46), ah = H - (narrow ? side.offsetHeight + 18 : 4);
-  const pad = fs ? 0 : narrow ? 6 : 10, r = vw / vh;
+  const aw = innerWidth - (narrow ? 0 : fs ? 0 : side.offsetWidth + 46), ah = H - (narrow ? 2 : 4);
+  const pad = fs ? 0 : narrow ? 0 : 10, r = vw / vh;
   let h = Math.min(ah - pad, (aw - pad) / r); h = Math.max(h, 120);
   cv.style.height = h + 'px'; cv.style.width = h * r + 'px';
 }
@@ -188,6 +192,7 @@ cv.addEventListener('keydown', e => {
 cv.addEventListener('paste', e => { const t = e.clipboardData?.getData('text'); if (t) { clip(t); e.preventDefault(); } });
 function clip(t) { const e = new TextEncoder().encode(t.slice(0, 20000)); const b = new DataView(new ArrayBuffer(14 + e.length)); b.setUint8(0, 9); b.setBigInt64(1, 0n); b.setUint8(9, 1); b.setUint32(10, e.length); new Uint8Array(b.buffer, 14).set(e); send(b.buffer); toast('Pasted'); }
 document.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { tap(+b.dataset.k); cv.focus(); });
+$('#pwrM').onclick = () => tap(26);
 $('#bBack').onclick = () => { send(new Uint8Array([4, 0]).buffer); send(new Uint8Array([4, 1]).buffer); cv.focus(); };
 $('#bFs').onclick = () => { const on = document.body.classList.toggle('fs'); try { if (on) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); } catch {} setTimeout(fit, 50); };
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('fs'); setTimeout(fit, 50); });

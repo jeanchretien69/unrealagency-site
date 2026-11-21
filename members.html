@@ -707,13 +707,13 @@
   body.phmax-on{overflow:hidden}
   body.phmax-on .askbtn{display:none}
   @media (max-width:640px){.phonecard{padding:10px}.phwrap{flex-direction:column;height:auto;min-height:0}.phscreen{height:calc(100vh - 190px);min-height:480px;flex:none}.phnote{width:auto}.phnote textarea{min-height:140px}
-    .phonecard.phmax{overflow-y:auto;padding:0;padding-top:env(safe-area-inset-top)}.phonecard.phmax .phwrap{height:auto;gap:0}
+    .phonecard.phmax{overflow-y:auto;padding:0;padding-top:env(safe-area-inset-top);background:#000}.phonecard.phmax .phscreen{background:#000}.phonecard.phmax .phwrap{height:auto;gap:0}
     .phonecard.phmax .phscreen{height:calc(100vh - env(safe-area-inset-top));height:calc(100dvh - env(safe-area-inset-top));border-radius:0}
     .phonecard.phmax .phnote{border-radius:0;border-left:0;border-right:0;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
     .phonecard.phmax .phnote-top{display:none}
     .phonecard.phmax .phfloat{display:flex}}
-  .phfloat{display:none;position:absolute;top:8px;left:8px;z-index:5;gap:6px}
-  .phfloat button{width:34px;height:34px;border-radius:50%;border:0;background:rgba(20,20,28,.72);color:#fff;font-size:15px;line-height:34px;padding:0;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .phfloat{display:none;position:absolute;top:6px;left:6px;z-index:5;gap:6px;opacity:.75}
+  .phfloat button{width:30px;height:30px;border-radius:50%;border:0;background:rgba(20,20,28,.72);color:#fff;font-size:15px;line-height:30px;padding:0;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 </style>
 </head>
 <body>
@@ -2629,11 +2629,11 @@ async function phoneView(){
   let saveT; note.oninput = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem('unreal-phone-notes', note.value); $('#phNSaved').textContent = 'saved'; setTimeout(() => $('#phNSaved').textContent = '', 1200); } catch(e){} }, 400); };
   $('#phReload').onclick = load; $('#phReload2').onclick = load; $('#phR').onclick = load;
   const card = v.querySelector('.phonecard');
-  const setMax = on => { card.classList.toggle('phmax', on); document.body.classList.toggle('phmax-on', on); $('#phMax').textContent = on ? '✕ Exit max' : '⛶ Max size'; $('#phMax2').hidden = !on; };
+  const setMax = on => { card.classList.toggle('phmax', on); document.body.classList.toggle('phmax-on', on); $('#phMax').textContent = on ? '✕ Exit max' : '⛶ Max size'; $('#phMax2').hidden = !on; const tc = document.querySelector('meta[name=theme-color]'); if (tc) { tc.dataset.def = tc.dataset.def || tc.content; tc.content = on ? '#000000' : tc.dataset.def; } };
   $('#phMax').onclick = () => setMax(!card.classList.contains('phmax')); $('#phMax2').onclick = () => setMax(false); $('#phX').onclick = () => setMax(false);
   const escKey = e => { if (e.key === 'Escape' && card.classList.contains('phmax') && document.activeElement !== note) setMax(false); };
   document.addEventListener('keydown', escKey);
-  new MutationObserver((m, o) => { if (!document.body.contains(card)) { document.removeEventListener('keydown', escKey); removeEventListener('message', onMsg); document.body.classList.remove('phmax-on'); o.disconnect(); } }).observe(v, { childList:true });
+  new MutationObserver((m, o) => { if (!document.body.contains(card)) { const tc = document.querySelector('meta[name=theme-color]'); if (tc && tc.dataset.def) tc.content = tc.dataset.def; document.removeEventListener('keydown', escKey); removeEventListener('message', onMsg); document.body.classList.remove('phmax-on'); o.disconnect(); } }).observe(v, { childList:true });
   // opens straight at max size on a computer
   setMax(true); // opens at max size, on computer and phone
   load();

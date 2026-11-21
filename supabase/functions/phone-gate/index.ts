@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // Phone control gate: the phone reader asks "is this pass still good?" (pass sent in the x-pass header).
-// 200 = yes. Anything else = no. Checks: signature, one phone only, not expired, and the person still has access today.
+// 200 = yes (body: {all, phones} = which phones). Anything else = no. Checks: signature, one phone only, not expired, and the person still has access today.
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const HOST = "phone.unrealagency.ai";
 const H = { "Cache-Control": "no-store" };
@@ -25,5 +25,8 @@ Deno.serve(async (req: Request) => {
   // access can be taken away any time: check the person today
   const { data: me } = await admin.from("profiles").select("role,approved,perms").eq("id", uid).maybeSingle();
   if (!me || me.approved === false || !(me.role === "admin" || (me.perms || []).includes("phone"))) return no();
-  return new Response("ok", { status: 200, headers: H });
+  // which phones this person may open: admin = all; others = phones whose access list has them (🔐 Access in Phone control)
+  if (me.role === "admin") return new Response(JSON.stringify({ all: true, phones: [] }), { status: 200, headers: { ...H, "Content-Type": "application/json" } });
+  const { data: rows } = await admin.from("phone_devices").select("serial").contains("allow", [uid]);
+  return new Response(JSON.stringify({ all: false, phones: (rows || []).map((r: { serial: string }) => r.serial) }), { status: 200, headers: { ...H, "Content-Type": "application/json" } });
 });

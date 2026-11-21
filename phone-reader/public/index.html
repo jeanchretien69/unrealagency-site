@@ -167,17 +167,19 @@ $('#ovB').onclick = connect;
 
 // ---------- several phones: switcher (only shows when 2+ phones are plugged in) ----------
 let cur = ''; try { cur = localStorage.getItem('ph_serial') || ''; } catch {}
-let devs = [];
+let devs = [], names = {}; // names: serial -> { name, sort } (sent by unrealagency.ai)
 async function loadDevs() {
-  try { const r = await fetch('/devices', { cache: 'no-store' }); const j = await r.json(); devs = (j.devices || []).filter(d => d.state === 'device').sort((a, b) => a.serial.localeCompare(b.serial)); } catch { devs = []; }
+  try { const r = await fetch('/devices', { cache: 'no-store' }); const j = await r.json(); devs = (j.devices || []).filter(d => d.state === 'device'); } catch { devs = []; }
+  sortDevs();
   renderSw();
 }
+function sortDevs() { const o = s => (names[s] && Number.isFinite(names[s].sort)) ? names[s].sort : 999; devs.sort((a, b) => o(a.serial) - o(b.serial) || a.serial.localeCompare(b.serial)); }
 function renderSw() {
   const el = $('#sw');
   if (devs.length < 2) { el.hidden = true; return; }
   el.hidden = false; el.textContent = '';
   devs.forEach((d, i) => {
-    const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Phone ' + (i + 1);
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = (names[d.serial] && names[d.serial].name) || ('Phone ' + (i + 1));
     b.title = (d.model || 'Android') + ' · ' + d.serial; b.setAttribute('aria-pressed', d.serial === cur ? 'true' : 'false');
     if (d.serial === cur) b.className = 'on';
     b.onclick = () => switchTo(d.serial); el.appendChild(b);
@@ -234,6 +236,10 @@ document.addEventListener('fullscreenchange', () => { if (!document.fullscreenEl
 const PARENTS = ['https://unrealagency.ai', 'https://www.unrealagency.ai'];
 addEventListener('message', e => {
   if (!PARENTS.includes(e.origin) || e.data?.type !== 'unreal-phone') return;
+  if (e.data.action === 'names' && e.data.names && typeof e.data.names === 'object') {
+    names = {}; for (const [k, v] of Object.entries(e.data.names)) if (v && typeof v.name === 'string') names[k] = { name: v.name.slice(0, 40), sort: Number(v.sort) };
+    sortDevs(); renderSw();
+  }
   if (e.data.action === 'ping') e.source.postMessage({ type:'unreal-phone', ready:true }, e.origin);
   if (e.data.action === 'paste' && typeof e.data.text === 'string' && e.data.text) {
     if (state !== 'live') return toast('Phone not connected yet');

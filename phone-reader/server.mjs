@@ -33,23 +33,30 @@ const CFG = {
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
 // ---------------- access gate ----------------
-const gateCache = new Map(); // pass -> { ok, until }
-async function gateOk(pass) {
-  if (!CFG.GATE_URL) return true;
-  if (!pass || !/^[A-Za-z0-9._~-]{20,400}$/.test(pass)) return false;
+const gateCache = new Map(); // pass -> { acc, until }
+const ALL = { all: true, phones: new Set() };
+// returns null (no access) or { all, phones:Set(serials this person may open) }
+async function gateAcc(pass) {
+  if (!CFG.GATE_URL) return ALL;
+  if (!pass || !/^[A-Za-z0-9._~-]{20,400}$/.test(pass)) return null;
   const c = gateCache.get(pass);
-  if (c && c.until > Date.now()) return c.ok;
-  let ok = false;
+  if (c && c.until > Date.now()) return c.acc;
+  let acc = null;
   try {
     const r = await fetch(`${CFG.GATE_URL}?host=${encodeURIComponent(CFG.PHONE_HOST)}`, {
       headers: { 'x-pass': pass }, signal: AbortSignal.timeout(8000),
     });
-    ok = r.status === 200;
-  } catch (e) { log('gate error', e.message); ok = false; }
-  gateCache.set(pass, { ok, until: Date.now() + (ok ? 60000 : 10000) });
+    if (r.status === 200) {
+      let j = null; try { j = JSON.parse(await r.text()); } catch {}
+      acc = { all: j?.all === true, phones: new Set(Array.isArray(j?.phones) ? j.phones.filter(x => typeof x === 'string') : []) };
+    }
+  } catch (e) { log('gate error', e.message); acc = null; }
+  gateCache.set(pass, { acc, until: Date.now() + (acc ? 60000 : 10000) });
   if (gateCache.size > 500) for (const [k, v] of gateCache) if (v.until < Date.now()) gateCache.delete(k);
-  return ok;
+  return acc;
 }
+const gateOk = async pass => !!(await gateAcc(pass));
+const mayOpen = (acc, serial) => !!acc && (acc.all || acc.phones.has(serial));
 const isLocal = req => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress) && !req.headers['cf-connecting-ip'] && !req.headers['cf-ray'];
 const LOCAL_ORIGINS = () => [`http://localhost:${CFG.PORT}`, `http://127.0.0.1:${CFG.PORT}`];
 const SITE_ORIGINS = ['https://unrealagency.ai', 'https://www.unrealagency.ai'];
@@ -85,9 +92,10 @@ async function listDevices() {
   }).filter(d => SERIAL_RE.test(d.serial) && !d.serial.startsWith('emulator-'));
 }
 // which phone a viewer asked for: ?d=<serial>, or the configured one, or the first phone found
-async function pickKey(wanted) {
-  if (CFG.FAKE_DEVICE_PORT) return 'fake';
-  const devs = await listDevices();
+async function pickKey(wanted, acc = ALL) {
+  if (CFG.FAKE_DEVICE_PORT) return mayOpen(acc, 'fake') ? 'fake' : '_none';
+  const devs = (await listDevices()).filter(d => mayOpen(acc, d.serial));
+  if (wanted && !mayOpen(acc, wanted)) wanted = '';
   if (wanted && SERIAL_RE.test(wanted) && devs.some(d => d.serial === wanted)) return wanted;
   if (CFG.PHONE_SERIAL !== 'usb' && devs.some(d => d.serial === CFG.PHONE_SERIAL)) return CFG.PHONE_SERIAL;
   return devs.length ? devs[0].serial : (wanted && SERIAL_RE.test(wanted) ? wanted : '_none');
@@ -358,7 +366,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (!isLocal(req) && !(await gateOk(cookieOf(req)))) return deny(res);
     if (u.pathname === '/devices') {
-      const devs = await listDevices();
+      const acc = isLocal(req) ? ALL : await gateAcc(cookieOf(req));
+      const devs = (await listDevices()).filter(d => mayOpen(acc, d.serial));
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...SEC_HEADERS() });
       return res.end(JSON.stringify({ devices: devs.map(d => ({ ...d, live: (SESSIONS.get(d.serial) || {}).state === 'live' })) }));
     }
@@ -373,12 +382,13 @@ server.on('upgrade', async (req, socket) => {
   try {
     const wu = new URL(req.url, 'http://x');
     if (wu.pathname !== '/ws') return socket.destroy();
-    const pick = async () => session(await pickKey(wu.searchParams.get('d') || ''));
+    const pick = async (acc) => session(await pickKey(wu.searchParams.get('d') || '', acc));
     const origin = req.headers.origin;
-    if (isLocal(req)) { if (!LOCAL_ORIGINS().includes(origin)) { socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); return socket.destroy(); } return wsAccept(req, socket, await pick()); }
-    if (!(await gateOk(cookieOf(req)))) { socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n'); return socket.destroy(); }
+    if (isLocal(req)) { if (!LOCAL_ORIGINS().includes(origin)) { socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); return socket.destroy(); } return wsAccept(req, socket, await pick(ALL)); }
+    const acc = await gateAcc(cookieOf(req));
+    if (!acc) { socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n'); return socket.destroy(); }
     if (origin && CFG.PHONE_HOST && new URL(origin).host !== CFG.PHONE_HOST) { socket.write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n'); return socket.destroy(); }
-    wsAccept(req, socket, await pick());
+    wsAccept(req, socket, await pick(acc));
   } catch { socket.destroy(); }
 });
 server.listen(CFG.PORT, CFG.HOST, () => log(`phone reader on http://${CFG.HOST}:${CFG.PORT}`, RTC.available ? '(webrtc on)' : '(webrtc off)', CFG.GATE_URL ? '(gate on)' : '(NO GATE: local test only)', CFG.FAKE_DEVICE_PORT ? '(fake phone)' : ''));

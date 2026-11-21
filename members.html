@@ -721,7 +721,13 @@
   /* phone control */
   .phonecard{padding:12px 14px 14px;scroll-margin-top:66px}
   .phonebar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
-  .phbtns{display:flex;gap:8px;align-items:center}
+  .phbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .phacc{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:12px}
+  .phacc-box{background:var(--card,#fff);color:var(--ink,#111);border-radius:16px;width:min(440px,100%);max-height:88vh;overflow:auto;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  .phacc-ph{border:1px solid var(--line,#eee);border-radius:12px;padding:10px 12px;margin:10px 0}
+  .phacc-ph input[type=text]{width:100%;font:600 15px system-ui;border:1px solid var(--line,#ddd);border-radius:8px;padding:7px 9px;margin-bottom:8px;background:transparent;color:inherit}
+  .phacc-ph label{display:flex;gap:8px;align-items:center;padding:5px 0;font-size:14px}
+  .phacc-ph label input{width:18px;height:18px}
   .phwrap{display:flex;gap:12px;height:calc(100vh - 136px);min-height:560px}
   .phscreen{position:relative;flex:1;min-width:0;border-radius:16px;overflow:hidden;background:#0b0b10}
   .phscreen iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#0b0b10}
@@ -2659,18 +2665,51 @@ async function phoneView(){
   let notes = ''; try { notes = localStorage.getItem('unreal-phone-notes') || ''; } catch(e){}
   v.innerHTML = `<div class="card phonecard">
     <div class="phonebar"><div><b>Model phone</b> <span class="muted" style="font-size:12px" id="phSt">Getting your access…</span></div>
-    <div class="phbtns"><button class="btn ghost sm" id="phMax" type="button">⛶ Max size</button><button class="btn ghost sm" id="phReload" type="button">Reload</button><a class="btn sm" id="phOpen" target="_blank" rel="noopener" hidden>New tab ↗</a></div></div>
+    <div class="phbtns"><button class="btn ghost sm" id="phMax" type="button">⛶ Max size</button><button class="btn ghost sm" id="phReload" type="button">Reload</button>${me?.role==='admin'?'<button class="btn ghost sm" id="phAcc" type="button">🔐 Access</button>':''}<a class="btn sm" id="phOpen" target="_blank" rel="noopener" hidden>New tab ↗</a></div></div>
     <div class="phwrap">
       <div class="phscreen"><div class="phfloat"><button type="button" id="phX" aria-label="Exit">✕</button><button type="button" id="phR" aria-label="Reload">⟳</button></div><iframe id="phFrame" title="Phone" allow="autoplay; clipboard-read; clipboard-write; fullscreen; local-network-access" referrerpolicy="no-referrer" hidden></iframe>
         <div class="phmsg" id="phMsg"><div class="phspin"></div></div></div>
       <div class="phnote">
-        <div class="phnote-top"><button class="btn ghost sm" id="phMax2" type="button">✕ Exit max</button><button class="btn ghost sm" id="phReload2" type="button">⟳ Reload</button><span class="phst" id="phSt2"></span></div>
+        <div class="phnote-top"><button class="btn ghost sm" id="phMax2" type="button">✕ Exit max</button><button class="btn ghost sm" id="phReload2" type="button">⟳ Reload</button>${me?.role==='admin'?'<button class="btn ghost sm" id="phAcc2" type="button">🔐 Access</button>':''}<span class="phst" id="phSt2"></span></div>
         <div class="phnote-h"><b>📝 Text box</b><span id="phNSaved"></span></div>
         <textarea id="phNote" placeholder="Type or paste text here…">${esc(notes)}</textarea>
       </div>
     </div></div>`;
   const PHONE_ORIGIN = 'https://phone.unrealagency.ai';
   const frame = $('#phFrame'); let ready = false;
+  // phone names (Phone Philippe, Phone Gaël…) go to the phone page for its switcher
+  let phNames = {};
+  const loadNames = async () => { try { const { data } = await sb.from('phone_devices').select('serial,name,sort'); phNames = {}; (data||[]).forEach(d => { if (d.name) phNames[d.serial] = { name:d.name, sort:d.sort }; }); } catch(e){} };
+  const sendNames = (win, origin) => { try { (win || frame.contentWindow).postMessage({ type:'unreal-phone', action:'names', names: phNames }, origin || new URL(frame.src).origin); } catch(e){} };
+  loadNames().then(() => sendNames());
+  // 🔐 Access (admin): who can open which phone. Admin always can.
+  const openAccess = async () => {
+    const [{ data: phs, error: e1 }, { data: ppl }] = await Promise.all([
+      sb.from('phone_devices').select('serial,name,sort,allow').order('sort'),
+      sb.from('profiles').select('id,full_name,role,approved,perms').neq('role','admin') ]);
+    if (e1) return toast(e1.message);
+    const team = (ppl||[]).filter(u => u.approved !== false);
+    const ov = document.createElement('div'); ov.className = 'phacc';
+    ov.innerHTML = `<div class="phacc-box" role="dialog" aria-label="Phone access"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:17px">🔐 Phone access</b><button class="btn ghost sm" type="button" data-x>✕</button></div>
+      <p class="muted" style="font-size:13px;margin:6px 0 0">You always have access. Tick who else can open each phone.</p>
+      ${(phs||[]).map(ph => `<div class="phacc-ph" data-s="${esc(ph.serial)}"><input type="text" maxlength="40" value="${esc(ph.name)}" aria-label="Phone name">
+        ${team.length ? team.map(u => `<label><input type="checkbox" value="${u.id}" ${(ph.allow||[]).includes(u.id)?'checked':''}> ${esc(u.full_name || 'Member')}</label>`).join('') : '<p class="muted" style="font-size:13px">No team members yet.</p>'}
+        <div class="muted" style="font-size:11px;margin-top:4px">${esc(ph.serial)}</div></div>`).join('')}
+      <button class="btn" type="button" data-save style="width:100%;margin-top:6px">Save</button></div>`;
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.onclick = e => { if (e.target === ov || e.target.closest('[data-x]')) close(); };
+    ov.querySelector('[data-save]').onclick = async () => {
+      const rows = [...ov.querySelectorAll('.phacc-ph')].map(el => ({ serial: el.dataset.s, name: el.querySelector('input[type=text]').value.trim(), allow: [...el.querySelectorAll('input[type=checkbox]:checked')].map(b => b.value) }));
+      for (const r of rows) { const { error } = await sb.from('phone_devices').update({ name: r.name, allow: r.allow, updated_at: new Date().toISOString() }).eq('serial', r.serial); if (error) return toast(error.message); }
+      // the Phone control tab shows for people on at least one phone
+      for (const u of team) {
+        const want = rows.some(r => r.allow.includes(u.id)), has = (u.perms||[]).includes('phone');
+        if (want !== has) { const perms = want ? [...(u.perms||[]), 'phone'] : (u.perms||[]).filter(x => x !== 'phone'); await sb.from('profiles').update({ perms }).eq('id', u.id); }
+      }
+      toast('Access saved ✓'); close(); await loadNames(); sendNames();
+    };
+  };
   // on the phone's own Mac: connect straight to it (no trip through Cloudflare)
   const tryLocal = async () => {
     if (me?.role !== 'admin' || innerWidth <= 640) return false;
@@ -2701,7 +2740,8 @@ async function phoneView(){
     frame.src = url; frame.hidden = false; $('#phMsg').hidden = true;
   };
   // the phone page answers "ready" once it can take text
-  const onMsg = e => { if (e.origin === PHONE_ORIGIN && e.data?.type === 'unreal-phone') { if (e.data.ready) ready = true; if (e.data.sent) toast('Sent to the phone ✓'); } };
+  const onMsg = e => { if ((e.origin === PHONE_ORIGIN || e.origin === 'http://localhost:8100') && e.data?.type === 'unreal-phone') { if (e.data.ready) { ready = true; sendNames(e.source, e.origin); } if (e.data.sent) toast('Sent to the phone ✓'); } };
+  if ($('#phAcc')) $('#phAcc').onclick = openAccess; if ($('#phAcc2')) $('#phAcc2').onclick = openAccess;
   addEventListener('message', onMsg);
   frame.addEventListener('load', () => { try { frame.contentWindow.postMessage({ type:'unreal-phone', action:'ping' }, PHONE_ORIGIN); } catch(e){} });
   const note = $('#phNote');

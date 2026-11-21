@@ -230,6 +230,33 @@
   .csugg{flex-basis:100%;display:flex;align-items:center;gap:10px;font-size:13.5px;padding:9px 12px;border-radius:12px;background:var(--warnbg)}
   .csugg span{flex:1;white-space:pre-wrap} .csugg b{color:var(--warn);margin-right:8px}
   .csugg.error{background:var(--badbg)} .csugg.error b{color:var(--bad)}
+  /* Train AI: wide PC dashboard (profiles on top, boxes left, editor middle, test chat right) */
+  .tbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+  .tprofs{display:flex;flex-wrap:wrap;gap:8px}
+  .tprof{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 16px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer;min-height:44px;text-align:left}
+  .tprof b{font-size:14px} .tprof small{font-size:11.5px;color:var(--muted)}
+  .tprof.on{border-color:var(--pink);background:var(--blush)} .tprof.add{border-style:dashed;justify-content:center;color:var(--muted);font-weight:700}
+  .tact{display:flex;gap:8px}
+  .tlab{display:grid;grid-template-columns:230px minmax(0,1fr) minmax(360px,420px);gap:14px;align-items:start}
+  @media (max-width:1250px){.tlab{grid-template-columns:210px minmax(0,1fr)}.tchat{grid-column:1/-1;position:static!important;height:560px!important}}
+  @media (max-width:760px){.tlab{grid-template-columns:1fr}.tnav{position:static!important}}
+  .tnav{padding:10px;position:sticky;top:84px}
+  .tnh{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:6px 8px 10px}
+  .tnavb{display:flex;align-items:center;gap:9px;width:100%;padding:10px;border:0;border-radius:10px;background:none;color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer;min-height:40px}
+  .tnavb:hover{background:var(--surface)} .tnavb.on{background:var(--blush);font-weight:700}
+  .tnavb.add{color:var(--pink);font-weight:700;margin-top:4px}
+  .tdot{flex:0 0 9px;height:9px;border-radius:50%;background:var(--line)} .tdot.ok{background:#1f8a4c}
+  .tedit{display:flex;flex-direction:column;min-height:calc(100vh - 220px)}
+  .thead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+  .thead h2{margin:0 0 4px} .thead p{margin:0;font-size:13.5px}
+  .tbig{flex:1;width:100%;min-height:calc(100vh - 380px);font-family:inherit;font-size:14.5px;line-height:1.6;resize:vertical;padding:14px}
+  .tedit .tex{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+  .tchat{display:flex;flex-direction:column;padding:0;overflow:hidden;position:sticky;top:84px;height:calc(100vh - 220px);min-height:480px}
+  .tch{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .tch small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .tempty{font-size:13px;text-align:center;margin:auto}
+  .tcomp{display:flex;gap:8px;align-items:flex-end;padding:10px;border-top:1px solid var(--line)}
+  .tcomp textarea{flex:1;min-height:44px;max-height:140px;resize:none;font-family:inherit;font-size:14px;border-radius:14px}
   .tguide ol{margin:10px 0 0;padding-left:20px;line-height:1.7}
   .tsec{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
   .tsec summary{cursor:pointer;font-weight:700}
@@ -3495,7 +3522,7 @@ async function brainsView(){
 // Each profile's instructions are one text in the database. Here it is shown as separate boxes (one per
 // CAPITAL LETTER heading) so each part is easy to find and edit. Saving puts the boxes back into one text.
 const BOT_URL = 'https://jeanchretien.app.n8n.cloud/webhook/eed38aa6-9d3a-4273-96cf-79bc653af7a3/chat';
-let trainModel = null, trainSession = null, lastFan = '', trainSecs = [], trainHist = [], trainRaw = false;
+let trainModel = null, trainSession = null, lastFan = '', trainSecs = [], trainHist = [], trainRaw = false, trainSel = 0;
 const TSEC = [
   [/^(PERSONA & STYLE|TEXTING STYLE)/, 'How she texts', 'Length of her texts, slang, emojis, tone. This is what makes her sound like a real girl and not a robot.', 'Example:  - 1–2 lines, lowercase, max one emoji'],
   [/^(WHO YOU ARE|PERSONA)/, 'Who she is', 'Her age, look, city, passions, likes and dislikes. She uses this when he asks about her.', 'Example:  - Lives in Milan, loves photography and matcha'],
@@ -3537,44 +3564,47 @@ async function trainView(){
   if (!trainModel || !data.find(x=>x.model===trainModel)) trainModel = data[0]?.model || null;
   const c = data.find(x=>x.model===trainModel) || { model:'', display_name:'', system_prompt:'', examples:'' };
   const name = c.display_name || c.model, owner = me.role === 'admin', hasKey = smsAiState.hasKey;
-  const smsProf = settings.sms_ai_profile || 'kaya-fans-sms';
+  const smsProf = settings.sms_ai_profile || 'kaya-fans-sms', ofProf = brainCfg('of').profile;
   trainSession = 'train-' + Math.random().toString(36).slice(2); trainHist = [];
   trainSecs = trainSplit(c.system_prompt);
-  const rows = t => Math.min(18, Math.max(2, String(t).split('\n').length + 1));
-  let guideOpen = true; try { guideOpen = localStorage.getItem('unreal-train-guide') !== 'closed'; } catch(e){}
-  const boxes = () => trainRaw
-    ? `<label for="tPrompt">Everything she knows, as one text</label><textarea id="tPrompt">${esc(trainJoin(trainSecs))}</textarea><p class="muted" style="font-size:12.5px;margin-top:6px">A line in CAPITAL LETTERS starts a new box.</p>`
-    : trainSecs.map((x, i) => { const inf = tsecInfo(x.key); return `<details class="tsec" ${i < 2 ? 'open' : ''}><summary>${esc(inf.t)}<small>${esc(inf.d)}</small></summary><textarea data-i="${i}" rows="${rows(x.content)}" aria-label="${esc(inf.t)}">${esc(x.content)}</textarea>${inf.ex ? `<p class="tex">${esc(inf.ex)}</p>` : ''}</details>`; }).join('') + `<button type="button" class="btn sm ghost" id="tAdd">+ Add a box</button>`;
+  let examples = c.examples || '', dirty = false;
+  if (trainSel > trainSecs.length) trainSel = 0;
   const lastErr = (settings.sms_ai_last_error || '').split('|');
   const delays = [5, 10, 20, 30, 45, 60, 90], delay = Number(settings.sms_ai_delay || 20);
+  const tag = x => [x.model === smsProf ? '📱 SMS phone' : '', x.model === ofProf ? '🔞 OnlyFans' : ''].filter(Boolean).join(' · ');
+  const engine = brainInfo(brainCfg(trainModel === ofProf && trainModel !== smsProf ? 'of' : 'sms').engine);
+  const navInfo = i => i === trainSecs.length ? { t:'Good examples', filled: !!examples.trim() } : { t: tsecInfo(trainSecs[i].key).t, filled: !!trainSecs[i].content.trim() };
+  const navHtml = () => trainRaw
+    ? `<p class="muted" style="font-size:13px;margin:4px 6px">All boxes are shown as one text. A line in CAPITAL LETTERS starts a new box.</p>`
+    : [...trainSecs.keys(), trainSecs.length].map(i => { const n = navInfo(i); return `<button type="button" class="tnavb ${i === trainSel ? 'on' : ''}" data-s="${i}"><span class="tdot ${n.filled ? 'ok' : ''}" aria-hidden="true"></span><span>${esc(n.t)}</span></button>`; }).join('') + `<button type="button" class="tnavb add" id="tAdd">+ Add a box</button>`;
+  const editHtml = () => {
+    if (trainRaw) return `<div class="thead"><div><h2>Everything she knows</h2><p class="muted">One text. A line in CAPITAL LETTERS starts a new box.</p></div></div><textarea id="tArea" class="tbig" aria-label="Everything she knows">${esc(trainJoin(trainSecs))}</textarea>`;
+    if (trainSel === trainSecs.length) return `<div class="thead"><div><h2>Good examples</h2><p class="muted">Real chats that worked. She copies the style, never the words. Format: <b>Fan:</b> … then <b>${esc(name)}:</b> … with an empty line between chats.</p></div></div><textarea id="tArea" class="tbig" aria-label="Good examples" placeholder="Fan: hey what are you doing&#10;${esc(name)}: just woke up lol still in bed u?">${esc(examples)}</textarea><p class="tex">Tip: press ✏️ Fix this reply under a bad answer in the test chat. It lands here.</p>`;
+    const x = trainSecs[trainSel], inf = tsecInfo(x.key);
+    return `<div class="thead"><div><h2>${esc(inf.t)}</h2><p class="muted">${esc(inf.d)}</p></div>${x.key ? `<button type="button" class="btn sm ghost" id="tDel">Delete box</button>` : ''}</div><textarea id="tArea" class="tbig" aria-label="${esc(inf.t)}">${esc(x.content)}</textarea>${inf.ex ? `<p class="tex">${esc(inf.ex)}</p>` : ''}`;
+  };
   v.innerHTML = `
-  <details class="card tguide" id="tGuide" ${guideOpen ? 'open' : ''} style="margin-bottom:14px"><summary style="cursor:pointer;font-weight:700">📖 How to train her (read once)</summary>
+  <div class="tbar">
+    <div class="tprofs" role="tablist" aria-label="Profiles">${data.map(x => `<button type="button" role="tab" aria-selected="${x.model === trainModel}" class="tprof ${x.model === trainModel ? 'on' : ''}" data-m="${esc(x.model)}"><b>${esc(x.display_name || x.model)}</b>${tag(x) ? `<small>${esc(tag(x))}</small>` : ''}</button>`).join('')}<button type="button" class="tprof add" id="tNew">+ New profile</button></div>
+    <div class="tact"><button type="button" class="btn sm ghost" id="tRaw">${trainRaw ? 'Show as boxes' : 'Show as one text'}</button><button type="button" class="btn" id="tSave">Saved</button></div>
+  </div>
+  <div class="tlab">
+    <nav class="card tnav" aria-label="Her brain"><div class="tnh">${esc(name)}'s brain</div><div id="tNav">${navHtml()}</div></nav>
+    <section class="card tedit" id="tEdit">${editHtml()}</section>
+    <section class="card tchat" aria-label="Test chat">
+      <div class="tch"><div><b>Test ${esc(name)}</b><small>${esc(engine.ico)} ${esc(engine.name)}${hasKey ? '' : ' · free test engine'}</small></div><button type="button" class="btn ghost sm" id="tReset">New convo</button></div>
+      <div class="msgs" id="tMsgs"><p class="muted tempty">Text her like a client would.<br>Unsaved changes are not used, so press Save first.</p></div>
+      <form class="tcomp" id="tChat"><textarea id="tIn" rows="2" placeholder="Message ${esc(name)}… (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn">Send</button></form>
+    </section>
+  </div>
+  <details class="card tguide" id="tGuide" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700">📖 How to train her</summary>
     <ol>
-      <li><b>Pick a profile.</b> A profile is one way of talking. There is one for SMS and one for OnlyFans.</li>
-      <li><b>Fill the boxes.</b> Each box is one part of her brain. Write short lines that start with a dash, like the example under each box. Then press <b>Save</b>.</li>
-      <li><b>Test her</b> on the phone on the right. Text her like a client would.</li>
-      <li><b>Fix what you don't like.</b> Under a bad answer, press <b>✏️ Fix this reply</b> and write what she should have said. It is added to her good examples.</li>
+      <li><b>Pick a profile</b> at the top. One profile = one way of talking (SMS, OnlyFans…).</li>
+      <li><b>Click a box</b> on the left and write short lines that start with a dash. Green dot = filled.</li>
+      <li><b>Save</b> (or Ctrl/⌘+S), then <b>test her</b> on the right like a client would.</li>
+      <li><b>Fix bad answers</b> with ✏️ under the reply. It is added to her good examples.</li>
     </ol>
-    <p class="muted" style="font-size:13px;margin:10px 0 0">Real examples teach her more than rules. Everything you save is live on the next message. To turn the AI on or off, use the switch on the 📱 SMS phone page.</p>
   </details>
-  <div class="row" style="margin-bottom:14px">
-    <div><label for="tPick">Profile</label><select id="tPick">${data.map(x=>`<option value="${esc(x.model)}" ${x.model===trainModel?'selected':''}>${esc(x.display_name||x.model)}${x.model === smsProf ? ' · answers the SMS phone' : x.model === brainCfg('of').profile ? ' · answers OnlyFans' : ''}</option>`).join('')}</select></div>
-    <div style="flex:0"><button class="btn ghost" id="tNew">+ New profile</button></div>
-  </div>
-  <div class="train">
-    <form id="tForm" class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px"><b style="font-size:17px">${esc(name)}'s brain</b><button type="button" class="btn sm ghost" id="tRaw">${trainRaw ? 'Show as boxes' : 'Show as one text'}</button></div>
-      <div id="tBoxes">${boxes()}</div>
-      <label for="tExamples" style="margin-top:14px">Good examples <span class="muted" style="font-weight:400">— real chats that worked. She copies the style, not the words. Format: Fan: … / ${esc(name)}: …</span></label>
-      <textarea id="tExamples" placeholder="Fan: hey what are you doing&#10;${esc(name)}: just woke up lol still in bed 🙈 u?">${esc(c.examples)}</textarea>
-      <div class="row" style="margin-top:14px"><div style="flex:0"><button class="btn">Save</button></div><div><p class="muted" style="font-size:13px">Saved = live on the next message.</p></div></div>
-    </form>
-    <div class="card phone">
-      <div class="ph"><b>Test ${esc(name)}</b><button class="btn ghost sm" id="tReset">New convo</button></div>
-      <div class="msgs" id="tMsgs"><p class="muted" style="font-size:13px;text-align:center;margin:auto">Text her like a client would. Save first if you changed something.${hasKey ? '' : '<br><br>This test uses a free test engine. Add the AI key below to test with the real one.'}</p></div>
-      <form class="compose" id="tChat"><input id="tIn" placeholder="Message ${esc(name)}…" autocomplete="off"><button class="btn sm">Send</button></form>
-    </div>
-  </div>
   ${owner ? `<div class="card" style="margin-top:14px"><h2>⚙️ AI settings</h2>
     <div class="aiset">
       <div><label for="aKeyIn">AI key (OpenRouter) <span class="pill ${hasKey ? 'yes' : 'no'}">${hasKey ? 'Saved' : 'Missing'}</span></label>
@@ -3593,46 +3623,59 @@ async function trainView(){
     ${lastErr[1] ? `<p class="msg err" style="margin-top:12px">Last AI problem (${esc(new Date(lastErr[0]).toLocaleString())}): ${esc(lastErr.slice(1).join('|'))}</p>` : ''}
   </div>` : ''}`;
 
-  const readBoxes = () => { if (trainRaw) trainSecs = trainSplit($('#tPrompt').value); else document.querySelectorAll('#tBoxes textarea[data-i]').forEach(t => { trainSecs[+t.dataset.i].content = t.value; }); };
-  const wireBoxes = () => {
-    const add = $('#tAdd'); if (!add) return;
-    add.onclick = () => {
+  const setDirty = d => { dirty = d; const b = $('#tSave'); if (b){ b.textContent = d ? 'Save changes' : 'Saved'; b.classList.toggle('ghost', !d); } };
+  setDirty(false);
+  const readCur = () => { const a = $('#tArea'); if (!a) return; if (trainRaw) trainSecs = trainSplit(a.value); else if (trainSel === trainSecs.length) examples = a.value; else trainSecs[trainSel].content = a.value; };
+  const render = () => { $('#tNav').innerHTML = navHtml(); $('#tEdit').innerHTML = editHtml(); wire(); };
+  const wire = () => {
+    document.querySelectorAll('#tNav [data-s]').forEach(b => b.onclick = () => { readCur(); trainSel = +b.dataset.s; render(); $('#tArea')?.focus(); });
+    const a = $('#tArea'); if (a) a.oninput = () => { setDirty(true); if (!trainRaw && trainSel < trainSecs.length){ const dot = document.querySelector(`#tNav [data-s="${trainSel}"] .tdot`); if (dot) dot.classList.toggle('ok', !!a.value.trim()); } };
+    const add = $('#tAdd'); if (add) add.onclick = () => {
       const n = prompt('Name of the new box (for example: NIGHT ROUTINE):'); if (!n) return;
       const key = n.trim().toUpperCase().replace(/[^A-Z &'-]/g, '').trim(); if (key.length < 4) return toast('Use a longer name, letters only');
-      readBoxes(); trainSecs.push({ key, suffix:'', inline:false, content:'' }); $('#tBoxes').innerHTML = boxes(); wireBoxes();
-      const last = [...document.querySelectorAll('#tBoxes .tsec')].pop(); last.open = true; last.querySelector('textarea').focus();
+      readCur(); trainSecs.push({ key, suffix:'', inline:false, content:'' }); trainSel = trainSecs.length - 1; setDirty(true); render(); $('#tArea').focus();
+    };
+    const del = $('#tDel'); if (del) del.onclick = () => {
+      if (!confirm(`Delete the box "${tsecInfo(trainSecs[trainSel].key).t}"? Press Save after to make it final.`)) return;
+      trainSecs.splice(trainSel, 1); trainSel = Math.max(0, trainSel - 1); setDirty(true); render();
     };
   };
-  wireBoxes();
-  $('#tGuide').ontoggle = e => { try { localStorage.setItem('unreal-train-guide', e.target.open ? 'open' : 'closed'); } catch(err){} };
-  $('#tRaw').onclick = () => { readBoxes(); trainRaw = !trainRaw; $('#tBoxes').innerHTML = boxes(); $('#tRaw').textContent = trainRaw ? 'Show as boxes' : 'Show as one text'; wireBoxes(); };
-  $('#tPick').onchange = e => { trainModel = e.target.value; trainView(); };
+  wire();
+  const save = async () => {
+    readCur(); const text = trainJoin(trainSecs); if (!text.trim()) return toast('Her brain is empty. Fill at least one box.');
+    $('#tSave').disabled = true;
+    const { error } = await sb.from('bot_config').update({ system_prompt:text, examples, updated_at:new Date().toISOString() }).eq('model', trainModel);
+    $('#tSave').disabled = false;
+    if (error) return toast(error.message);
+    setDirty(false); toast('Saved. Live on the next message');
+  };
+  $('#tSave').onclick = () => dirty ? save() : toast('Nothing to save');
+  if (!window._tKeys){ window._tKeys = true; document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's' && $('#tSave')){ e.preventDefault(); $('#tSave').click(); } }); }
+  const leaveOk = () => !dirty || confirm('You have unsaved changes. Leave without saving?');
+  $('#tRaw').onclick = () => { readCur(); trainRaw = !trainRaw; $('#tRaw').textContent = trainRaw ? 'Show as boxes' : 'Show as one text'; render(); };
+  document.querySelectorAll('.tprof[data-m]').forEach(b => b.onclick = () => { if (b.dataset.m === trainModel || !leaveOk()) return; trainModel = b.dataset.m; trainSel = 0; trainView(); });
   $('#tNew').onclick = async () => {
+    if (!leaveOk()) return;
     const n = prompt('New profile name (e.g. Coco):'); if (!n) return;
     const slug = n.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-');
     const base = c.system_prompt.replaceAll(name, n.trim());
     const { error } = await sb.from('bot_config').insert({ model:slug, display_name:n.trim(), system_prompt:base });
     if (error) return toast(error.message);
-    trainModel = slug; toast('Created. Now edit her boxes'); trainView();
+    trainModel = slug; trainSel = 0; toast('Created from ' + name + '. Now edit her boxes'); trainView();
   };
-  $('#tForm').onsubmit = async e => {
-    e.preventDefault(); readBoxes();
-    const text = trainJoin(trainSecs); if (!text.trim()) return toast('Her brain is empty. Fill at least one box.');
-    const { error } = await sb.from('bot_config').update({ system_prompt:text, examples:$('#tExamples').value, updated_at:new Date().toISOString() }).eq('model', trainModel);
-    toast(error ? error.message : 'Saved');
-  };
-  $('#tReset').onclick = () => { trainSession = 'train-' + Math.random().toString(36).slice(2); trainHist = []; $('#tMsgs').innerHTML = ''; };
-  const add = (cls, text) => { const m = $('#tMsgs'); if (m.querySelector('p.muted')) m.innerHTML=''; const b = document.createElement('div'); b.className = 'bub ' + cls; b.textContent = text; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; };
+  $('#tReset').onclick = () => { trainSession = 'train-' + Math.random().toString(36).slice(2); trainHist = []; $('#tMsgs').innerHTML = '<p class="muted tempty">New convo. Text her like a client would.</p>'; };
+  const addB = (cls, text) => { const m = $('#tMsgs'); m.querySelector('.tempty')?.remove(); const b = document.createElement('div'); b.className = 'bub ' + cls; b.textContent = text; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; };
+  $('#tIn').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('#tChat').requestSubmit(); } };
   $('#tChat').onsubmit = async e => {
     e.preventDefault();
     const text = $('#tIn').value.trim(); if (!text) return;
-    $('#tIn').value = ''; add('fan', text); lastFan = text;
-    const wait = add('bot', '…');
+    $('#tIn').value = ''; addB('fan', text); lastFan = text;
+    const wait = addB('bot', '…');
     trainHist.push({ role:'user', content:text });
     try {
       let out = '', by = '';
       if (hasKey){
-        const r = await smsAi({ action:'chat', channel: trainModel === brainCfg('of').profile && trainModel !== brainCfg('sms').profile ? 'of' : 'sms', profile:trainModel, history:trainHist });
+        const r = await smsAi({ action:'chat', channel: trainModel === ofProf && trainModel !== smsProf ? 'of' : 'sms', profile:trainModel, history:trainHist });
         if (r.error) throw new Error(r.error);
         out = (r.output || '').trim(); by = r.by ? `${brainInfo(r.by).ico} ${brainInfo(r.by).name}${r.backup ? ' · backup' : ''}` : '';
       } else {
@@ -3640,19 +3683,21 @@ async function trainView(){
         const d = await r.json();
         out = (d.output || d.text || '').trim();
       }
-      out = out || '(no reply — the free AI engine may be busy, try again)';
+      out = out || '(no reply — the AI engine may be busy, try again)';
       trainHist.push({ role:'assistant', content:out });
       wait.textContent = out; if (out.includes('[HANDOFF]')) wait.classList.add('handoff');
       const fan = text, fix = document.createElement('button');
       fix.className = 'fix'; fix.type = 'button'; fix.textContent = '✏️ Fix this reply';
       fix.onclick = async () => {
         const better = prompt(`What should ${name} have said?`, out); if (!better || better === out) return;
-        const ex = $('#tExamples'); ex.value = (ex.value.trim() ? ex.value.trim() + '\n\n' : '') + `Fan: ${fan}\n${name}: ${better}`;
-        const { error } = await sb.from('bot_config').update({ examples: ex.value, updated_at:new Date().toISOString() }).eq('model', trainModel);
-        toast(error ? error.message : 'Added to her examples'); fix.textContent = '✓ Learned';
+        readCur(); examples = (examples.trim() ? examples.trim() + '\n\n' : '') + `Fan: ${fan}\n${name}: ${better}`;
+        const { error } = await sb.from('bot_config').update({ examples, updated_at:new Date().toISOString() }).eq('model', trainModel);
+        if (!trainRaw && trainSel === trainSecs.length) $('#tArea').value = examples;
+        const dot = document.querySelector(`#tNav [data-s="${trainSecs.length}"] .tdot`); if (dot) dot.classList.add('ok');
+        toast(error ? error.message : 'Added to her good examples'); fix.textContent = '✓ Learned';
       };
       wait.after(fix); if (by){ const t = document.createElement('div'); t.className = 'bby'; t.textContent = by; wait.after(t); } $('#tMsgs').scrollTop = 1e9;
-    } catch(err){ trainHist.pop(); wait.textContent = 'Error: ' + err.message; }
+    } catch(err){ trainHist.pop(); wait.textContent = 'Error: ' + err.message; wait.classList.add('handoff'); }
   };
   if (!owner) return;
   $('#aKeySave').onclick = async () => {

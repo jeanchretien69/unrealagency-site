@@ -3817,8 +3817,10 @@ async function trainView(){
     }
     if (m.out.includes('[HANDOFF]')) wait.classList.add('handoff');
     const fix = document.createElement('button');
-    fix.className = 'fix'; fix.type = 'button'; fix.textContent = m.learned ? '✓ Learned' : '✏️ Fix this reply';
+    const isFixedKaya = model === 'kaya-sms' && String(m.by || '').includes('fixed-kaya-sms');
+    fix.className = 'fix'; fix.type = 'button'; fix.textContent = isFixedKaya ? '🔒 Fixed Kaya SMS rule' : (m.learned ? '✓ Learned' : '✏️ Fix this reply');
     fix.onclick = async () => {
+      if (isFixedKaya) return toast('This reply is enforced by the Kaya SMS backend. Training examples cannot override it. Update the Kaya SMS booking workflow to change this template.');
       const better = prompt(`What should ${name} have said?`, m.out); if (!better || better === m.out) return;
       readCur(); examples = (examples.trim() ? examples.trim() + '\n\n' : '') + `Fan: ${m.fan}\n${name}: ${better}`;
       const { error } = await sb.from('bot_config').update({ examples, updated_at:new Date().toISOString() }).eq('model', model);

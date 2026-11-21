@@ -4052,6 +4052,11 @@ async function trainView(){
   $('#tReset').onclick = () => { testImg = null; showPic(); ++kayaTestRun; $('#tChat button').disabled = false; if (msgs.length){ archive.push({ at:started, msgs }); if (archive.length > 200) archive = archive.slice(-200); } started = null; session = 'train-' + Math.random().toString(36).slice(2); hist = []; msgs = []; persist(); $('#tMsgs').innerHTML = '<p class="muted tempty">New convo. Text her like a client would.</p>'; };
   const addB = (cls, text) => { const m = $('#tMsgs'); m.querySelector('.tempty')?.remove(); const b = document.createElement('div'); b.className = 'bub ' + cls; b.textContent = text; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; };
   const showReply = (wait, m, alreadyRenderedTail = null) => {
+    if (model === 'kaya-sms' && m.stopped) {
+      wait.className = 'bby';
+      wait.textContent = 'Opted out · no reply sent';
+      return;
+    }
     const parts = model === 'kaya-sms' && Array.isArray(m.parts) && m.parts.length > 1 ? m.parts : [m.out];
     let tail = alreadyRenderedTail || wait;
     if (!alreadyRenderedTail) {
@@ -4107,6 +4112,12 @@ async function trainView(){
       if (hasKey){
         const r = await smsAi({ action:'chat', channel: trainModel === ofProf && trainModel !== smsProf ? 'of' : 'sms', profile:trainModel, history:hist });
         if (r.error) throw new Error(r.error);
+        if (model === 'kaya-sms' && r.kind === 'stop') {
+          if (run !== kayaTestRun || trainModel !== model) return;
+          const entry = {fan:text, out:'', stopped:true};
+          msgs.push(entry); persist(); showReply(wait, entry);
+          return;
+        }
         out = (r.output || '').trim(); by = r.by ? `${brainInfo(r.by).ico} ${brainInfo(r.by).name}${r.backup ? ' · backup' : ''}` : '';
         if (model === 'kaya-sms' && Array.isArray(r.messages) && r.messages.length > 1) {
           parts = r.messages.map(p => String(p));

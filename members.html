@@ -266,6 +266,7 @@
   .tchat{display:flex;flex-direction:column;padding:0;overflow:hidden;position:sticky;top:84px;height:calc(100vh - 270px);min-height:460px}
   .tch{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
   .tch small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .tchb{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
   .tempty{font-size:13px;text-align:center;margin:auto}
   .tcomp{display:flex;gap:8px;align-items:flex-end;padding:10px 64px 10px 10px;border-top:1px solid var(--line)}
   @media (max-width:760px){.tcomp{padding-right:10px;margin-bottom:56px}}
@@ -3621,7 +3622,7 @@ async function trainView(){
   const smsProf = settings.sms_ai_profile || 'kaya-fans-sms', ofProf = brainCfg('of').profile;
   const model = trainModel, st = tLoad(model) || {};
   let session = st.session || 'train-' + Math.random().toString(36).slice(2); let hist = Array.isArray(st.hist) ? st.hist : [];
-  let msgs = Array.isArray(st.msgs) ? st.msgs : [];
+  let msgs = Array.isArray(st.msgs) ? st.msgs : [], archive = Array.isArray(st.archive) ? st.archive : [], started = st.started || null;
   trainSecs = st.dirty && Array.isArray(st.secs) ? st.secs : trainSplit(c.system_prompt);
   let examples = st.dirty && typeof st.examples === 'string' ? st.examples : (c.examples || ''), dirty = !!st.dirty;
   if (typeof st.sel === 'number') trainSel = st.sel;
@@ -3649,7 +3650,7 @@ async function trainView(){
     <nav class="card tnav" aria-label="Her brain"><div class="tnh">${esc(name)}'s brain</div><div id="tNav">${navHtml()}</div></nav>
     <section class="card tedit" id="tEdit">${editHtml()}</section>
     <section class="card tchat" aria-label="Test chat">
-      <div class="tch"><div><b>Test ${esc(name)}</b><small>${esc(engine.ico)} ${esc(engine.name)}${hasKey ? '' : ' · free test engine'}</small></div><button type="button" class="btn ghost sm" id="tReset">New convo</button></div>
+      <div class="tch"><div><b>Test ${esc(name)}</b><small>${esc(engine.ico)} ${esc(engine.name)}${hasKey ? '' : ' · free test engine'}</small></div><div class="tchb"><button type="button" class="btn ghost sm" id="tCopy" title="Copy this conversation">📋 Copy</button><button type="button" class="btn ghost sm" id="tExp" title="Download every test conversation of this profile">⬇️ Export all</button><button type="button" class="btn ghost sm" id="tReset">New convo</button></div></div>
       <div class="msgs" id="tMsgs"><p class="muted tempty">Text her like a client would.<br>Unsaved changes are not used, so press Save first.</p></div>
       <form class="tcomp" id="tChat"><textarea id="trIn" rows="2" placeholder="Message ${esc(name)}… (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn">Send</button></form>
     </section>
@@ -3683,8 +3684,8 @@ async function trainView(){
   const readCur = () => { const a = $('#tArea'); if (!a) return; if (trainRaw) trainSecs = trainSplit(a.value); else if (trainSel === trainSecs.length) examples = a.value; else trainSecs[trainSel].content = a.value; };
   // Keep edits + test chat when leaving the page (per profile, in this browser)
   const persist = () => {
-    if (trainModel !== model){ const o = tLoad(model) || {}; return tStore(model, { ...o, session, hist, msgs }); }
-    readCur(); const inp = $('#trIn'); tStore(model, { secs:trainSecs, examples, dirty, sel:trainSel, session, hist, msgs, draft: inp ? inp.value : (st.draft || '') });
+    if (trainModel !== model){ const o = tLoad(model) || {}; return tStore(model, { ...o, session, hist, msgs, archive, started }); }
+    readCur(); const inp = $('#trIn'); tStore(model, { secs:trainSecs, examples, dirty, sel:trainSel, session, hist, msgs, archive, started, draft: inp ? inp.value : (st.draft || '') });
   };
   const setDirty = d => { dirty = d; const b = $('#tSave'); if (b){ b.textContent = d ? 'Save changes' : 'Saved'; b.classList.toggle('ghost', !d); } const u = $('#tUndo'); if (u) u.hidden = !d; };
   setDirty(dirty);
@@ -3714,7 +3715,7 @@ async function trainView(){
   };
   $('#tSave').onclick = () => dirty ? save() : toast('Nothing to save');
   if (!window._tKeys){ window._tKeys = true; document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's' && $('#tSave')){ e.preventDefault(); $('#tSave').click(); } }); }
-  $('#tUndo').onclick = () => { if (!confirm('Throw away your unsaved changes and go back to the saved version?')) return; dirty = false; tStore(model, { session:session, hist:hist, msgs, sel:trainSel, draft:$('#trIn').value }); trainView(); };
+  $('#tUndo').onclick = () => { if (!confirm('Throw away your unsaved changes and go back to the saved version?')) return; dirty = false; tStore(model, { session, hist, msgs, archive, started, sel:trainSel, draft:$('#trIn').value }); trainView(); };
   $('#tRaw').onclick = () => { readCur(); trainRaw = !trainRaw; $('#tRaw').textContent = trainRaw ? 'Show as boxes' : 'Show as one text'; render(); };
   document.querySelectorAll('.tprof[data-m]').forEach(b => b.onclick = () => { if (b.dataset.m === trainModel) return; persist(); trainModel = b.dataset.m; trainSel = 0; trainView(); });
   $('#tNew').onclick = async () => {
@@ -3726,7 +3727,21 @@ async function trainView(){
     if (error) return toast(error.message);
     trainModel = slug; trainSel = 0; toast('Created from ' + name + '. Now edit her boxes'); trainView();
   };
-  $('#tReset').onclick = () => { session = 'train-' + Math.random().toString(36).slice(2); hist = []; msgs = []; persist(); $('#tMsgs').innerHTML = '<p class="muted tempty">New convo. Text her like a client would.</p>'; };
+  const fmtD = t => new Date(t).toLocaleString('en-CA', { dateStyle:'medium', timeStyle:'short' });
+  const convoTxt = (list, at, n) => [`=== ${name} · test convo${n ? ' ' + n : ''}${at ? ' · ' + fmtD(at) : ''} ===`, ...list.flatMap(m => [`Fan: ${m.fan}`, `${name}: ${m.out}${m.by ? `   [${m.by}]` : ''}`, ''])].join('\n');
+  $('#tCopy').onclick = async () => {
+    if (!msgs.length) return toast('Nothing to copy yet. Send her a message first');
+    try { await navigator.clipboard.writeText(convoTxt(msgs, started)); toast('Conversation copied'); } catch { toast('Copy blocked by the browser. Use Export all'); }
+  };
+  $('#tExp').onclick = () => {
+    const all = [...archive, ...(msgs.length ? [{ at:started, msgs }] : [])];
+    if (!all.length) return toast('No test conversations yet');
+    const txt = `${name} — all test conversations (${all.length})\nExported ${fmtD(Date.now())}\n\n` + all.map((c, i) => convoTxt(c.msgs, c.at, i + 1)).join('\n\n');
+    const url = URL.createObjectURL(new Blob([txt], { type:'text/plain;charset=utf-8' }));
+    const a = document.createElement('a'); a.href = url; a.download = `${model}-test-convos-${new Date().toISOString().slice(0,10)}.txt`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast(`Exported ${all.length} conversation${all.length > 1 ? 's' : ''}`);
+  };
+  $('#tReset').onclick = () => { if (msgs.length){ archive.push({ at:started, msgs }); if (archive.length > 200) archive = archive.slice(-200); } started = null; session = 'train-' + Math.random().toString(36).slice(2); hist = []; msgs = []; persist(); $('#tMsgs').innerHTML = '<p class="muted tempty">New convo. Text her like a client would.</p>'; };
   const addB = (cls, text) => { const m = $('#tMsgs'); m.querySelector('.tempty')?.remove(); const b = document.createElement('div'); b.className = 'bub ' + cls; b.textContent = text; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; };
   const showReply = (wait, m) => {
     wait.textContent = m.out; if (m.out.includes('[HANDOFF]')) wait.classList.add('handoff');
@@ -3749,7 +3764,7 @@ async function trainView(){
   $('#tChat').onsubmit = async e => {
     e.preventDefault();
     const text = $('#trIn').value.trim(); if (!text) return;
-    $('#trIn').value = ''; addB('fan', text); lastFan = text; persist();
+    $('#trIn').value = ''; addB('fan', text); lastFan = text; if (!started) started = Date.now(); persist();
     const wait = addB('bot', '…');
     hist.push({ role:'user', content:text });
     try {

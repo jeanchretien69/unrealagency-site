@@ -246,12 +246,12 @@
   .tnavb:hover{background:var(--surface)} .tnavb.on{background:var(--blush);font-weight:700}
   .tnavb.add{color:var(--pink);font-weight:700;margin-top:4px}
   .tdot{flex:0 0 9px;height:9px;border-radius:50%;background:var(--line)} .tdot.ok{background:#1f8a4c}
-  .tedit{display:flex;flex-direction:column;min-height:calc(100vh - 220px)}
+  .tedit{display:flex;flex-direction:column;min-height:calc(100vh - 270px)}
   .thead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
   .thead h2{margin:0 0 4px} .thead p{margin:0;font-size:13.5px}
-  .tbig{flex:1;width:100%;min-height:calc(100vh - 380px);font-family:inherit;font-size:14.5px;line-height:1.6;resize:vertical;padding:14px}
+  .tbig{flex:1;width:100%;min-height:calc(100vh - 430px);font-family:inherit;font-size:14.5px;line-height:1.6;resize:vertical;padding:14px}
   .tedit .tex{font-size:12.5px;color:var(--muted);margin:8px 0 0}
-  .tchat{display:flex;flex-direction:column;padding:0;overflow:hidden;position:sticky;top:84px;height:calc(100vh - 220px);min-height:480px}
+  .tchat{display:flex;flex-direction:column;padding:0;overflow:hidden;position:sticky;top:84px;height:calc(100vh - 270px);min-height:460px}
   .tch{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
   .tch small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
   .tempty{font-size:13px;text-align:center;margin:auto}
@@ -3665,7 +3665,7 @@ async function trainView(){
   };
   $('#tReset').onclick = () => { trainSession = 'train-' + Math.random().toString(36).slice(2); trainHist = []; $('#tMsgs').innerHTML = '<p class="muted tempty">New convo. Text her like a client would.</p>'; };
   const addB = (cls, text) => { const m = $('#tMsgs'); m.querySelector('.tempty')?.remove(); const b = document.createElement('div'); b.className = 'bub ' + cls; b.textContent = text; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; };
-  $('#tIn').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); $('#tChat').requestSubmit(); } };
+  $('#tIn').onkeydown = e => { if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey && !e.isComposing){ e.preventDefault(); $('#tChat').requestSubmit(); } };
   $('#tChat').onsubmit = async e => {
     e.preventDefault();
     const text = $('#tIn').value.trim(); if (!text) return;

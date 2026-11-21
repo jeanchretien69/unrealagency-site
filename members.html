@@ -3594,7 +3594,7 @@ async function trainView(){
     <section class="card tchat" aria-label="Test chat">
       <div class="tch"><div><b>Test ${esc(name)}</b><small>${esc(engine.ico)} ${esc(engine.name)}${hasKey ? '' : ' · free test engine'}</small></div><button type="button" class="btn ghost sm" id="tReset">New convo</button></div>
       <div class="msgs" id="tMsgs"><p class="muted tempty">Text her like a client would.<br>Unsaved changes are not used, so press Save first.</p></div>
-      <form class="tcomp" id="tChat"><textarea id="tIn" rows="2" placeholder="Message ${esc(name)}… (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn">Send</button></form>
+      <form class="tcomp" id="tChat"><textarea id="trIn" rows="2" placeholder="Message ${esc(name)}… (Enter to send, Shift+Enter for a new line)" aria-label="Message"></textarea><button class="btn">Send</button></form>
     </section>
   </div>
   <details class="card tguide" id="tGuide" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700">📖 How to train her</summary>
@@ -3665,11 +3665,11 @@ async function trainView(){
   };
   $('#tReset').onclick = () => { trainSession = 'train-' + Math.random().toString(36).slice(2); trainHist = []; $('#tMsgs').innerHTML = '<p class="muted tempty">New convo. Text her like a client would.</p>'; };
   const addB = (cls, text) => { const m = $('#tMsgs'); m.querySelector('.tempty')?.remove(); const b = document.createElement('div'); b.className = 'bub ' + cls; b.textContent = text; m.appendChild(b); m.scrollTop = m.scrollHeight; return b; };
-  $('#tIn').onkeydown = e => { if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey && !e.isComposing){ e.preventDefault(); $('#tChat').requestSubmit(); } };
+  $('#trIn').onkeydown = e => { if ((e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey && !e.isComposing){ e.preventDefault(); $('#tChat').requestSubmit(); } };
   $('#tChat').onsubmit = async e => {
     e.preventDefault();
-    const text = $('#tIn').value.trim(); if (!text) return;
-    $('#tIn').value = ''; addB('fan', text); lastFan = text;
+    const text = $('#trIn').value.trim(); if (!text) return;
+    $('#trIn').value = ''; addB('fan', text); lastFan = text;
     const wait = addB('bot', '…');
     trainHist.push({ role:'user', content:text });
     try {

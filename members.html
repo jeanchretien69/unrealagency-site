@@ -1331,6 +1331,7 @@ async function smsGate(body){
   if (error){ let m = error.message; try { m = (await error.context.json()).error || m; } catch(e){} return { error:m }; }
   return data || {};
 }
+const smsKayaPending = {};
 let smsFilter = 'all', smsQ = '';
 function smsStats(){
   const box = $('#smsStats'); if (!box) return;
@@ -1407,7 +1408,20 @@ function smsSuggHtml(p, a){
 }
 function smsSuggWire(p){
   const use = $('#sgUse'), no = $('#sgNo'), ask = $('#psugg'), tog = $('#paiTog');
-  if (use) use.onclick = () => { const t = $('#ptext'); t.value = smsSugg[p]?.body || ''; t.focus(); };
+  if (use) use.onclick = () => {
+    const t = $('#ptext'), body = smsSugg[p]?.body || '';
+    // Kaya SMS only: keep the copyable email in its own outgoing SMS.
+    const email = 'eli-y5sen@hotmail.com';
+    const pieces = body.includes(email)
+      ? [body.slice(0, body.indexOf(email)).trim(), email, body.slice(body.indexOf(email) + email.length).trim()].filter(Boolean)
+      : [body];
+    if (settings.sms_ai_profile === 'kaya-sms' && pieces.length > 1) {
+      smsKayaPending[p] = pieces.slice(1);
+      t.value = pieces[0];
+      toast('Kaya SMS: send this text, then the next SMS will be ready separately');
+    } else t.value = body;
+    t.focus();
+  };
   if (no) no.onclick = () => { delete smsSugg[p]; sb.from('sms_suggestions').delete().eq('phone', p).then(() => {}); smsThread(); };
   if (ask) ask.onclick = async () => {
     ask.disabled = true; toast('Kaya is writing…');
@@ -1584,6 +1598,12 @@ function smsThread(first){
     t.value = ''; const { data: row, error } = await sb.from('sms_messages').insert({ phone:p, direction:'out', body, media, status:'queued', is_read:true, is_test:a.some(x => x.is_test) }).select().single();
     if (error){ t.value = body; return toast(error.message); }
     if (smsSugg[p]){ delete smsSugg[p]; sb.from('sms_suggestions').delete().eq('phone', p).then(() => {}); }
+    // Fill the next approved Kaya SMS part only after the previous part was submitted.
+    if (settings.sms_ai_profile === 'kaya-sms' && smsKayaPending[p]?.length) {
+      t.value = smsKayaPending[p].shift();
+      if (!smsKayaPending[p].length) delete smsKayaPending[p];
+      toast('Next separate Kaya SMS is ready to send');
+    }
     $('#ptext')?.focus();
     if (row && !row.is_test){ const r = await smsGate({ action:'send', id:row.id }); if (r.error) toast(r.error); }
     $('#ptext')?.focus();
@@ -4023,7 +4043,7 @@ async function trainView(){
         const r = await smsAi({ action:'chat', channel: trainModel === ofProf && trainModel !== smsProf ? 'of' : 'sms', profile:trainModel, history:hist });
         if (r.error) throw new Error(r.error);
         out = (r.output || '').trim(); by = r.by ? `${brainInfo(r.by).ico} ${brainInfo(r.by).name}${r.backup ? ' · backup' : ''}` : '';
-        if (model === 'kaya-sms' && Array.isArray(r.messages) && r.messages.length === 3) {
+        if (model === 'kaya-sms' && Array.isArray(r.messages) && r.messages.length > 1) {
           parts = r.messages.map(p => String(p));
           out = parts.join('\n\n');
         }

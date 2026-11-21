@@ -298,6 +298,9 @@
   .pswin p{margin:0 0 6px;font-size:13px;line-height:1.5;max-height:6.2em;overflow:auto}
   .psrule{margin-top:10px}.psrule textarea{width:100%;font:inherit;font-size:13px}
   .psguide{margin:10px 0 0;padding-left:20px;line-height:1.7}
+  .psups{display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:12.5px}
+  .psups span{background:var(--blush);border-radius:8px;padding:4px 8px}
+  .psdrop.on{outline:2px dashed var(--pink)}
   @media (max-width:900px){ .psgrid{grid-template-columns:1fr} .psform{grid-template-columns:1fr} .psgo{padding-top:0} }
   .tguide ol{margin:10px 0 0;padding-left:20px;line-height:1.7}
   .tsec{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
@@ -1683,6 +1686,16 @@ function psShrink(file){
     img.src = url;
   });
 }
+async function psUploadPlace(files, model, caption){
+  const ids = []; await photoUpload([...files], model, caption, ids);
+  const out = [];
+  for (const id of ids){
+    const { data, error } = await sb.rpc('x_place_photo', { p_photo: id });
+    if (error){ out.push({ num:null, where:'saved in 📸 Photos' }); continue; }
+    out.push({ num:data.num, where: data.account ? `𝕏 @${data.account} · ${xLabel(data.day)} · Picture ${data.slot}` : (data.full ? 'saved (Twitter plan is full for 2 weeks)' : 'saved in 📸 Photos') });
+  }
+  return out;
+}
 async function promptsView(){
   const v = $('#view'), owner = me.role === 'admin';
   const [{ data: models, error }, { data: wins }] = await Promise.all([
@@ -1702,7 +1715,8 @@ async function promptsView(){
   const card = (r, i) => `<div class="pscard" data-i="${i}">
       <div class="pshead"><b>${esc(r.title || 'Prompt ' + (i + 1))}</b>${r.changed ? `<small>✓ ${esc(r.changed)}</small>` : ''}</div>
       <textarea class="pstext" data-txt aria-label="Prompt">${esc(r.prompt)}</textarea>
-      <div class="psact"><button type="button" class="btn sm" data-copy>📋 Copy</button><button type="button" class="btn sm ghost" data-fixo>🔧 Fix it</button><button type="button" class="btn sm ghost" data-win>${r.won ? '⭐ Saved' : '⭐ Winner'}</button><button type="button" class="btn sm ghost" data-rm aria-label="Remove">✕</button></div>
+      <div class="psact"><button type="button" class="btn sm" data-copy>📋 Copy</button><button type="button" class="btn sm ghost" data-fixo>🔧 Fix it</button><button type="button" class="btn sm ghost" data-win>${r.won ? '⭐ Saved' : '⭐ Winner'}</button>${can('photos') ? `<label class="btn sm ghost psatt">⬆️ Upload the photos<input type="file" accept="image/png,image/jpeg,image/webp" multiple data-up hidden></label>` : ''}<button type="button" class="btn sm ghost" data-rm aria-label="Remove">✕</button></div>
+      ${(r.ups || []).length ? `<div class="psups">${r.ups.map(u => `<span>${u.num ? `<b>#${u.num}</b> · ` : ''}${esc(u.where)}</span>`).join('')}</div>` : ''}
       <div class="psfix" ${r.fixOpen ? '' : 'hidden'}>
         <textarea data-fb rows="2" placeholder="What to change? e.g. remove the hat, make it sunset, tighter top, less AI-looking">${esc(r.fb || '')}</textarea>
         <div class="psfixb"><label class="btn sm ghost psatt">📎 Add the photo Higgsfield made<input type="file" accept="image/*" data-img hidden></label>${r.img ? `<span class="psthumb"><img src="${r.img}" alt="Attached photo"><button type="button" data-imgx aria-label="Remove photo">✕</button></span>` : ''}<button type="button" class="btn sm" data-fix>✨ Fix the prompt</button></div>
@@ -1722,8 +1736,9 @@ async function promptsView(){
   <div class="psgrid">
     <section><div class="psrh"><h2 style="margin:0">Prompts for ${esc(st.model)}</h2>${res().length ? '<button type="button" class="btn sm ghost" id="psClear">Clear all</button>' : ''}</div><div id="psRes">${res().length ? res().map(card).join('') : '<div class="card empty">Pick a theme and press ✨ Give me prompts.<br>Then copy one into Higgsfield, generate, and come back to 🔧 Fix it.</div>'}</div></section>
     <aside>
+      ${can('photos') ? `<div class="card psdrop" id="psDrop" style="margin-bottom:14px"><h2>⬆️ Upload Higgsfield photos</h2><p class="muted" style="font-size:13px;margin:-4px 0 10px">Saved in 📸 Photos as ${esc(st.model)}, numbered automatically.${st.model.toLowerCase() === 'kaya' ? ' Each one goes on the next free picture of the 🐦 Twitter task.' : ''}</p><label class="btn psatt" style="width:100%;justify-content:center">Choose photos<input type="file" id="psUpAll" accept="image/png,image/jpeg,image/webp" multiple hidden></label><div id="psUpRes" class="psups"></div></div>` : ''}
       <div class="card"><h2>⭐ Winners · ${esc(st.model)}</h2><div id="psWins">${winList()}</div></div>
-      <details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700">📖 How to use it</summary><ol class="psguide"><li>Pick the model and a theme, press <b>✨ Give me prompts</b>.</li><li><b>📋 Copy</b> one into Higgsfield with her reference photo. Launch a few at once.</li><li>Not right? <b>🔧 Fix it</b>: write what to change and add the photo it made.</li><li>Great photo? Press <b>⭐ Winner</b>. Upload the photo to 📸 Photos.</li></ol></details>
+      <details class="card" style="margin-top:14px"><summary style="cursor:pointer;font-weight:700">📖 How to use it</summary><ol class="psguide"><li>Pick the model and a theme, press <b>✨ Give me prompts</b>.</li><li><b>📋 Copy</b> one into Higgsfield with her reference photo. Launch a few at once.</li><li>Not right? <b>🔧 Fix it</b>: write what to change and add the photo it made.</li><li>Great photo? Press <b>⭐ Winner</b>, then <b>⬆️ Upload the photos</b>. They get a number and go on the next free picture of the 🐦 Twitter task.</li></ol></details>
       <details class="card" style="margin-top:14px" ${owner ? '' : ''}><summary style="cursor:pointer;font-weight:700">⚙️ What the AI follows${owner ? '' : ' (read only)'}</summary>${rulesHtml()}${owner ? `<div class="row" style="margin-top:10px;gap:8px"><button type="button" class="btn sm" id="psRulesSave" style="flex:0">Save rules</button><button type="button" class="btn sm ghost" id="psAddModel" style="flex:0">+ Add a model</button></div>${usage ? `<p class="muted" style="font-size:12px;margin-top:10px">${esc(usage)}</p>` : ''}` : ''}</details>
     </aside>
   </div>`;
@@ -1753,6 +1768,7 @@ async function promptsView(){
     el.querySelector('[data-fb]').oninput = e => { r().fb = e.target.value; save(); };
     el.querySelector('[data-img]').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { r().img = await psShrink(f); save(); rerender(); } catch(err){ toast(err.message); } };
     const ix = el.querySelector('[data-imgx]'); if (ix) ix.onclick = () => { delete r().img; save(); rerender(); };
+    const up = el.querySelector('[data-up]'); if (up) up.onchange = async e => { const fs = [...e.target.files]; if (!fs.length) return; toast('Uploading ' + fs.length + '…'); const res2 = await psUploadPlace(fs, st.model, r().title || ''); r().ups = [...(r().ups || []), ...res2]; save(); toast(res2.length + ' photo' + (res2.length > 1 ? 's' : '') + ' saved'); rerender(); };
     el.querySelector('[data-win]').onclick = async () => {
       if (r().won) return toast('Already saved as a winner');
       const { data, error } = await sb.from('prompt_winners').insert({ model:st.model, prompt:ta.value }).select().single();
@@ -1770,6 +1786,9 @@ async function promptsView(){
       busy = false;
     };
   });
+  const upAll = $('#psUpAll');
+  const doUp = async fs => { fs = fs.filter(f => /^image\/(png|jpeg|webp)$/.test(f.type)); if (!fs.length) return; $('#psUpRes').innerHTML = `<span>Uploading ${fs.length}…</span>`; const r2 = await psUploadPlace(fs, st.model, ''); $('#psUpRes').innerHTML = r2.map(u => `<span>${u.num ? `<b>#${u.num}</b> · ` : ''}${esc(u.where)}</span>`).join('') || '<span>Nothing saved</span>'; toast(r2.length + ' photo' + (r2.length > 1 ? 's' : '') + ' saved'); };
+  if (upAll){ upAll.onchange = e => doUp([...e.target.files]); const dz = $('#psDrop'); dz.ondragover = e => { e.preventDefault(); dz.classList.add('on'); }; dz.ondragleave = () => dz.classList.remove('on'); dz.ondrop = e => { e.preventDefault(); dz.classList.remove('on'); doUp([...e.dataTransfer.files]); }; }
   // paste a screenshot straight into an open fix box
   v.onpaste = async e => { const f = [...(e.clipboardData?.files || [])].find(x => x.type.startsWith('image/')); const box = e.target.closest?.('.pscard'); if (!f || !box) return; e.preventDefault(); try { res()[+box.dataset.i].img = await psShrink(f); save(); rerender(); } catch(err){ toast(err.message); } };
   v.querySelectorAll('.pswin').forEach(el => {
@@ -3037,7 +3056,7 @@ async function openPhoto(path){ const { data } = await sb.storage.from('model-ph
 async function downloadPhoto(path){ const { data } = await sb.storage.from('model-photos').createSignedUrl(path, 120, { download:true }); if (data?.signedUrl){ const a = document.createElement('a'); a.href = data.signedUrl; a.download = ''; document.body.appendChild(a); a.click(); a.remove(); } else toast('Could not download this photo'); }
 const imgFrom = file => new Promise(res => { const u = URL.createObjectURL(file), im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => { URL.revokeObjectURL(u); res(null); }; im.src = u; });
 async function imgScaled(file, max, q){ const im = await imgFrom(file); if (!im) return null; const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); return new Promise(res => c.toBlob(b => res(b), 'image/jpeg', q)); }
-async function photoUpload(files, model, caption){
+async function photoUpload(files, model, caption, ids){
   let ok = 0;
   for (const f of files){
     if (!/^image\/(png|jpeg|webp)$/.test(f.type)){ toast(f.name + ': png, jpg or webp only'); continue; }
@@ -3049,7 +3068,7 @@ async function photoUpload(files, model, caption){
     let thumb = null; const tb = await imgScaled(blob, 640, .82);
     if (tb){ thumb = `${dir}/thumb-${id}.jpg`; const tu = await sb.storage.from('model-photos').upload(thumb, tb, { contentType:'image/jpeg' }); if (tu.error) thumb = null; }
     const { error } = await sb.from('photos').insert({ id, model, caption: caption || null, path, thumb, mime, bytes: blob.size });
-    if (error){ toast(error.message); continue; } ok++;
+    if (error){ toast(error.message); continue; } ok++; if (ids) ids.push(id);
   }
   return ok;
 }

@@ -774,7 +774,7 @@
     body.smsopen .cthread .bub{max-width:84%}
     body.smsopen #ptext{font-size:16px}
     body.smsopen .askbtn,body.smsopen .mnav,body.smsopen .askp{display:none!important}
-    .cback{display:inline-flex}
+    .cback{display:inline-flex;width:44px;height:44px;position:relative;z-index:2;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
   }
 
   /* phone control */
@@ -1596,7 +1596,6 @@ function smsDraw(first){ smsStats(); smsRows(); smsThread(first); smsInfo(); sms
 function smsMobile(){
   const on = !!smsOpen && tab === 'sms';
   document.body.classList.toggle('smsopen', on);
-  const back = $('#pBack'); if (back) back.onclick = () => { smsOpen = null; smsDraw(true); };
 }
 (() => {
   const vv = window.visualViewport; if (!vv) return;
@@ -1705,6 +1704,7 @@ function smsThread(first){
   $('#pfile').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; if (isHfFile(f)) return toast(HF_BLOCK); toast('Preparing the photo…'); const b = await smsShrink(f); if (!b) return toast('This file cannot be sent as a picture message'); if (smsPend) URL.revokeObjectURL(smsPend.url); smsPend = { p, blob:b, url:URL.createObjectURL(b) }; smsThread(); };
   if ($('#pdrop')) $('#pdrop').onclick = () => { URL.revokeObjectURL(smsPend.url); smsPend = null; smsThread(); };
   const t = $('#ptext'); t.value = keep; if (first || hadFocus){ t.focus(); try { if (sel) t.setSelectionRange(sel[0], sel[1]); else t.setSelectionRange(keep.length, keep.length); } catch(e){} }
+  { const bk = $('#pBack'); if (bk) bk.onclick = e => { e.preventDefault(); smsOpen = null; smsDraw(true); window.scrollTo(0, 0); }; }
   { // stay on the latest text (also while photos load), or keep your place if you scrolled up
     const th = $('#cthread'); if (first) smsStick = true;
     th.scrollTop = (first || atEnd) ? 1e9 : prevTop;

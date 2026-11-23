@@ -3335,6 +3335,7 @@ async function quotesView(){
 
 // ---------- photo library ----------
 let photoModel = 'all', photoFilter = 'all', photoQ = '', quotePhotoPick = null;
+let photoView = (() => { try { return localStorage.getItem('photoView') || 'grid'; } catch(e){ return 'grid'; } })();
 const photoUrlCache = {};
 async function photoUrls(paths){
   const need = [...new Set(paths.filter(p => p && !(photoUrlCache[p] && photoUrlCache[p].exp > Date.now())))];
@@ -3398,16 +3399,21 @@ async function photosView(){
       <input type="file" id="pFiles" accept="image/png,image/jpeg,image/webp" multiple hidden><button class="btn" id="pPick">Choose photos</button></div></div>
     <div class="smstop" style="margin-top:14px"><div class="cfilt" id="pModels2" style="padding:0;border:0"><button data-m="all">All (${count('all')})</button>${models.filter(m => count(m)).map(m => `<button data-m="${esc(m)}">${esc(m)} (${count(m)})</button>`).join('')}</div>
       <div class="cfilt" id="pFilt" style="padding:0;border:0"><button data-f="all">Any</button><button data-f="new">Not used</button><button data-f="used">Used</button></div>
+      <div class="cfilt" id="pView" style="padding:0;border:0"><button data-v="grid">🔲 Grid</button><button data-v="list">📜 One by one</button></div>
       <input id="pSearch" type="search" placeholder="Search or #22" value="${esc(photoQ)}" style="width:200px;margin:0"></div>
     <div id="pGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px"></div>`;
-  const draw = () => {
+  const draw = async () => {
     document.querySelectorAll('#pModels2 button').forEach(b => b.classList.toggle('on', b.dataset.m === photoModel));
+    document.querySelectorAll('#pView button').forEach(b => b.classList.toggle('on', b.dataset.v === photoView));
+    const list = photoView === 'list', g = $('#pGrid');
+    g.style.gridTemplateColumns = list ? '1fr' : 'repeat(auto-fill,minmax(190px,1fr))'; g.style.maxWidth = list ? '680px' : ''; g.style.margin = list ? '0 auto' : '';
     document.querySelectorAll('#pFilt button').forEach(b => b.classList.toggle('on', b.dataset.f === photoFilter));
     const q = photoQ.trim().toLowerCase();
     const rows = all.filter(x => (photoModel === 'all' || x.model === photoModel) && (photoFilter === 'all' || (photoFilter === 'used') === !!x.used_at) && (!q || (/^#?\d+$/.test(q) ? String(x.num) === q.replace('#', '') : [x.model, x.caption, x.file_name, x.path].join(' ').toLowerCase().includes(q))));
+    const full = list ? await photoUrls(rows.map(x => x.path)) : null, src = x => list ? (full(x.path) || url(x.thumb || x.path)) : url(x.thumb || x.path);
     $('#pGrid').innerHTML = rows.length ? rows.map(x => `<article class="card" style="position:relative;padding:10px;display:flex;flex-direction:column;gap:8px${x.used_at ? ';opacity:.65' : ''}" data-id="${x.id}">
         ${x.num ? `<span style="position:absolute;top:16px;left:16px;z-index:1;background:var(--pink);color:#fff;font-weight:800;font-size:15px;padding:3px 10px;border-radius:999px;box-shadow:0 2px 8px rgba(0,0,0,.35)">#${x.num}</span>` : ''}
-        <img src="${url(x.thumb || x.path)}" alt="" loading="lazy" data-act="open" style="width:100%;border-radius:12px;cursor:zoom-in;background:var(--blush);min-height:120px;object-fit:cover">
+        <img src="${src(x)}" alt="" loading="lazy" data-act="open" style="width:100%;border-radius:12px;cursor:zoom-in;background:var(--blush);min-height:120px;${list ? 'height:auto;object-fit:contain' : 'object-fit:cover'}">
         <div><b style="font-size:13.5px">${x.num ? `<span style="color:var(--pink)">#${x.num}</span> · ` : ''}${esc(x.model)}</b>${x.used_at ? ' <small class="muted">· used</small>' : ''}<br><small class="muted">${esc(x.caption || '')}</small><br><small class="muted" style="font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all;user-select:all" title="File name">📄 ${esc(x.file_name || (x.path || '').split('/').pop())}</small></div>
         ${platBlock(x)}
         ${qBlock(x)}
@@ -3425,6 +3431,7 @@ async function photosView(){
   };
   document.querySelectorAll('#pModels2 button').forEach(b => b.onclick = () => { photoModel = b.dataset.m; draw(); });
   document.querySelectorAll('#pFilt button').forEach(b => b.onclick = () => { photoFilter = b.dataset.f; draw(); });
+  document.querySelectorAll('#pView button').forEach(b => b.onclick = () => { photoView = b.dataset.v; try { localStorage.setItem('photoView', photoView); } catch(e){} draw(); });
   $('#pSearch').oninput = e => { photoQ = e.target.value; draw(); };
   const go = async files => {
     files = [...files].filter(f => f.type.startsWith('image/')); if (!files.length) return;

@@ -1155,7 +1155,7 @@ function show(t){
   { const sb = document.querySelector(`#side button[data-tab="${inAi ? 'aistudio' : t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }
   mnavClose(); window.scrollTo(0, 0);
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ aimsgs:aiMsgsView, shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, growth:growthView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ aimsgs:aiMsgsView, shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(me.role === 'admin' ? ['contract','tool','doc','script','site'] : ['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, growth:growthView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
@@ -1352,11 +1352,13 @@ async function docList(cats){
   const v = $('#view');
   if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
   if (!data.length) return v.innerHTML = `<div class="card empty">Nothing shared with you here yet.</div>`;
-  v.innerHTML = '<div class="grid">' + data.map(d => `<button class="card item" data-id="${d.id}"><span class="badge">${esc(d.category)}${d.model ? ' · '+esc(d.model) : ''}</span><h3>${esc(d.title)}</h3><p>${esc(d.body.replace(/[#*_]/g,'').slice(0,220))}</p></button>`).join('') + '</div>';
+  v.innerHTML = '<div class="grid">' + data.map(d => `<button class="card item" data-id="${d.id}"><span class="badge">${d.category === 'contract' ? '🔒 contract' : esc(d.category)}${d.model ? ' · '+esc(d.model) : ''}</span><h3>${d.file ? '📄 ' : ''}${esc(d.title)}</h3><p>${esc(d.body.replace(/[#*_]/g,'').slice(0,220))}</p></button>`).join('') + '</div>';
   v.querySelectorAll('.item').forEach(b => b.onclick = () => {
     const d = data.find(x => x.id === b.dataset.id);
-    v.innerHTML = `<button class="btn ghost sm back">← Back</button><article class="card doc"><span class="badge">${esc(d.category)}</span><h1 style="margin:10px 0 4px">${esc(d.title)}</h1><p class="muted" style="font-size:13px">Updated ${date(d.updated_at)}</p>${md(d.body)}</article>`;
+    v.innerHTML = `<button class="btn ghost sm back">← Back</button><article class="card doc"><span class="badge">${esc(d.category)}</span><h1 style="margin:10px 0 4px">${esc(d.title)}</h1><p class="muted" style="font-size:13px">Updated ${date(d.updated_at)}</p>${d.file ? `<p><button class="btn" id="dFile">📄 Open PDF</button> <button class="btn ghost" id="dFileDl">Download</button></p>` : ''}${md(d.body)}</article>`;
     v.querySelector('.back').onclick = () => docList(cats);
+    const fOpen = async dl => { const { data } = await sb.storage.from('docs-files').createSignedUrl(d.file, 600, dl ? { download:true } : undefined); if (!data?.signedUrl) return toast('Could not open the file'); if (dl){ const a = document.createElement('a'); a.href = data.signedUrl; a.download = ''; document.body.appendChild(a); a.click(); a.remove(); } else window.open(data.signedUrl, '_blank'); };
+    if (d.file){ $('#dFile').onclick = () => fOpen(false); $('#dFileDl').onclick = () => fOpen(true); }
   });
 }
 

@@ -1509,6 +1509,9 @@ function smsSuggHtml(p, a){
   const g = smsSugg[p]; if (!g) return '';
   const last = a[a.length - 1]; if (g.kind !== 'stop' && (!last || last.direction !== 'in')) return '';
   const x = '<button type="button" class="btn sm ghost" id="sgNo" aria-label="Hide this">✕</button>';
+  if (g.kind === 'teaser' && settings.sms_ai_profile === 'kaya-sms') {
+    return `<div class="csugg"><span><b>📷 Kaya’s teaser photo</b>${esc(g.body)}</span><button type="button" class="btn sm" id="sgUse">Attach photo</button>${x}</div>`;
+  }
   if (g.kind === 'reply') return `<div class="csugg"><span><b>💡 Kaya suggests</b>${esc(g.body)}</span><button type="button" class="btn sm" id="sgUse">Use it</button>${x}</div>`;
   if (g.kind === 'handoff') return `<div class="csugg"><span><b>🙋 Kaya asks for a human</b>She does not know what to answer here. Write this one yourself.</span>${x}</div>`;
   if (g.kind === 'stop') return `<div class="csugg error"><span><b>⛔ Kaya stopped</b>He was rude, seems under 18, or asked to stop. The AI is now off for this client.</span>${x}</div>`;
@@ -1516,8 +1519,29 @@ function smsSuggHtml(p, a){
 }
 function smsSuggWire(p){
   const use = $('#sgUse'), no = $('#sgNo'), ask = $('#psugg'), tog = $('#paiTog');
-  if (use) use.onclick = () => {
-    const t = $('#ptext'), body = smsSugg[p]?.body || '';
+  if (use) use.onclick = async () => {
+    const t = $('#ptext'), suggestion = smsSugg[p], body = suggestion?.body || '';
+    if (suggestion?.kind === 'teaser') {
+      if (settings.sms_ai_profile !== 'kaya-sms') return;
+      use.disabled = true;
+      try {
+        const { photo, error } = await smsAi({action:'kaya_teaser_photo'});
+        if (error || !photo?.path) throw new Error(error || 'The teaser photo is unavailable.');
+        const file = await sb.storage.from('sms-media').download(photo.path);
+        if (file.error || !file.data) throw new Error('The teaser photo could not be loaded.');
+        if (smsOpen !== p || smsSugg[p]?.kind !== 'teaser') return;
+        if (smsPend) URL.revokeObjectURL(smsPend.url);
+        smsPend = {p, path:photo.path, blob:file.data, url:URL.createObjectURL(file.data)};
+        const composer = $('#ptext');
+        if (!composer.value.trim()) composer.value = body;
+        smsThread();
+      } catch (err) {
+        toast(err.message);
+      } finally {
+        use.disabled = false;
+      }
+      return;
+    }
     // Kaya SMS only: keep the copyable email in its own outgoing SMS.
     const email = 'eli-y5sen@hotmail.com';
     const pieces = body.includes(email)
@@ -1735,9 +1759,11 @@ function smsThread(first){
     e.preventDefault(); const body = t.value.trim(), pend = smsPend && smsPend.p === p ? smsPend : null; if (!body && !pend) return;
     let media = null;
     if (pend){
-      const path = 'out/' + crypto.randomUUID() + '.jpg';
-      const up = await sb.storage.from('sms-media').upload(path, pend.blob, { contentType:'image/jpeg' });
-      if (up.error) return toast('Photo upload failed: ' + up.error.message);
+      const path = pend.path || 'out/' + crypto.randomUUID() + '.jpg';
+      if (!pend.path) {
+        const up = await sb.storage.from('sms-media').upload(path, pend.blob, { contentType:'image/jpeg' });
+        if (up.error) return toast('Photo upload failed: ' + up.error.message);
+      }
       smsUrls[path] = pend.url; media = [{ path, type:'image/jpeg', name:'photo.jpg' }]; smsPend = null;
     }
     t.value = ''; const { data: row, error } = await sb.from('sms_messages').insert({ phone:p, direction:'out', body, media, status:'queued', is_read:true, is_test:a.some(x => x.is_test) }).select().single();
@@ -4156,6 +4182,11 @@ async function trainView(){
         tail = bubble;
       }
     }
+    if (model === 'kaya-sms' && m.teaser?.path) {
+      wait.insertAdjacentHTML('beforeend', smsMediaHtml({media:[m.teaser]}));
+      wait.querySelector('img')?.setAttribute('alt','Kaya teaser photo preview');
+      smsMediaFill(wait);
+    }
     if (m.out.includes('[HANDOFF]')) wait.classList.add('handoff');
     const fix = document.createElement('button');
     const isFixedKaya = model === 'kaya-sms' && String(m.by || '').includes('fixed-kaya-sms');
@@ -4195,7 +4226,7 @@ async function trainView(){
     const wait = addB('bot', '…');
     hist.push({ role:'user', content:text, ...(image ? {hasImage:true} : {}) });
     try {
-      let out = '', by = '', parts = null;
+      let out = '', by = '', parts = null, teaser = null;
       if (hasKey){
         const r = await smsAi({ action:'chat', channel: trainModel === ofProf && trainModel !== smsProf ? 'of' : 'sms', profile:trainModel, history:hist });
         if (r.error) throw new Error(r.error);
@@ -4206,6 +4237,7 @@ async function trainView(){
           return;
         }
         out = (r.output || '').trim(); by = r.by ? `${brainInfo(r.by).ico} ${brainInfo(r.by).name}${r.backup ? ' · backup' : ''}` : '';
+        if (model === 'kaya-sms') teaser = r.teaser || null;
         if (model === 'kaya-sms' && Array.isArray(r.messages) && r.messages.length > 1) {
           parts = r.messages.map(p => String(p));
           out = parts.join('\n\n');
@@ -4217,7 +4249,7 @@ async function trainView(){
       }
       if (model === 'kaya-sms' && (run !== kayaTestRun || trainModel !== model)) return;
       out = out || '(no reply — the AI engine may be busy, try again)';
-      const m = { fan:text, out, by };
+      const m = { fan:text, out, by, ...(teaser ? {teaser} : {}) };
       if (parts) {
         m.parts = parts;
         // Kaya SMS Train AI: render all three separate bubbles immediately.

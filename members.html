@@ -1574,7 +1574,7 @@ async function smsView(){
   smsPad();
   document.querySelectorAll('.clist .cfilt button').forEach(b => b.onclick = () => { smsFilter = b.dataset.f; document.querySelectorAll('.clist .cfilt button').forEach(x => x.classList.toggle('on', x === b)); smsRows(); });
   $('#pnew').onclick = () => { let n = prompt('Phone number to text (with country code, e.g. +15145550000):'); if (!n) return; n = n.replace(/[^\d+]/g, ''); if (n.replace(/\D/g,'').length < 10) return toast('That number looks too short'); if (!n.startsWith('+')) n = '+' + (n.length === 10 ? '1' : '') + n; smsOpen = n; smsDraw(true); };
-  const [m, c, g] = await Promise.all([ sb.from('sms_messages').select('*').order('created_at').limit(5000), sb.from('sms_contacts').select('*'), sb.from('sms_suggestions').select('*') ]);
+  const [m, c, g] = await Promise.all([ smsLoadMessages(), sb.from('sms_contacts').select('*'), sb.from('sms_suggestions').select('*') ]);
   if (m.error){ $('#crows').innerHTML = `<p class="pempty">${esc(m.error.message)}</p>`; return; }
   smsMsgs = m.data || []; smsNames = Object.fromEntries((c.data||[]).map(x => [x.phone, x]));
   smsSugg = Object.fromEntries((g.data||[]).map(x => [x.phone, x]));
@@ -1591,6 +1591,24 @@ async function smsView(){
   }).subscribe();
   smsOpen = smsJump || null; const jumped = !!smsJump; smsJump = null; smsDraw(true);
   if (jumped && matchMedia('(max-width:820px)').matches) setTimeout(() => { const m = document.querySelector('.cmain'); if (m) m.scrollIntoView({ behavior:'smooth', block:'start' }); }, 150);
+}
+async function smsLoadMessages(){
+  if (settings.sms_ai_profile !== 'kaya-sms') {
+    return sb.from('sms_messages').select('*').order('created_at').limit(5000);
+  }
+  const messages = [];
+  const pageSize = 500;
+  let cursor;
+  do {
+    let query = sb.from('sms_messages').select('*').order('created_at').order('id').limit(pageSize);
+    if (cursor) query = query.or(`created_at.gt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.gt.${cursor.id})`);
+    const { data, error } = await query;
+    if (error) return { error };
+    const page = data || [];
+    messages.push(...page);
+    cursor = page.length === pageSize ? page.at(-1) : null;
+  } while (cursor);
+  return { data: messages };
 }
 function smsDraw(first){ smsStats(); smsRows(); smsThread(first); smsInfo(); smsBoard(); smsMobile(); }
 // iPhone: the open chat takes the whole screen (one scroll only), ‹ goes back to the list

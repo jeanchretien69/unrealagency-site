@@ -880,6 +880,7 @@
           <button data-tab="shop" class="adm" hidden>👕 papagael.com</button>
         </div></div>
         <div class="grp" data-g="team"><div class="gh" role="button" tabindex="0" aria-expanded="true">Team & accounts<i>▾</i></div><div class="gb">
+          <button data-tab="growth" class="adm" hidden>🌱 Growth</button>
           <button data-tab="twitter" data-perm="twitter" hidden>🐦 Twitter</button>
           <button data-tab="prompts" data-perm="prompts" hidden>🎨 Prompt studio</button>
           <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone<span class="nb" id="nbSms" hidden></span></button>
@@ -1134,7 +1135,7 @@ document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.datas
   });
 })();
 const AI_SUBS = [['train','🧠 Train AI',() => me?.role === 'admin'],['brains','⚡ AI brains',() => me?.role === 'admin'],['personas','🎀 Personas',() => can('personas')]];
-const titles = { aimsgs:['AI messages','Every message your AI wrote, with what the client said before. Sent ones and the ones waiting.'], shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], drafts:['Saved site work','Parts of the website we built and put aside. Only you can see this.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { growth:['Growth','Kaya on Instagram, Facebook and Snapchat: what was done, the men we reached and where they\'re from, and what runs next.'], aimsgs:['AI messages','Every message your AI wrote, with what the client said before. Sent ones and the ones waiting.'], shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], drafts:['Saved site work','Parts of the website we built and put aside. Only you can see this.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function mnavClose(){ document.body.classList.remove('mopen'); $('#mnav').setAttribute('aria-expanded', 'false'); }
 $('#mnav').onclick = () => { const o = document.body.classList.toggle('mopen'); $('#mnav').setAttribute('aria-expanded', String(o)); };
@@ -1146,7 +1147,7 @@ function show(t){
   if (t !== 'core') document.body.classList.remove('core-open');
   if (t !== 'time') timeStop();
   tab = t; history.replaceState(null, '', '#' + t); badges();
-  document.querySelector('main.wrap').classList.toggle('wide', t === 'aimsgs' || t === 'sms' || t === 'phone' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'core' || t === 'train' || t === 'prompts');
+  document.querySelector('main.wrap').classList.toggle('wide', t === 'aimsgs' || t === 'sms' || t === 'phone' || t === 'dropp' || t === 'brains' || t === 'twitter' || t === 'growth' || t === 'core' || t === 'train' || t === 'prompts');
   const inAi = AI_SUBS.some(x => x[0] === t);
   document.querySelectorAll('#side button').forEach(b => b.classList.toggle('on', b.dataset.tab === t || (inAi && b.dataset.tab === 'aistudio')));
   { const sub = $('#aisub'); sub.hidden = !inAi; sub.innerHTML = inAi ? AI_SUBS.filter(x => x[2]()).map(x => `<button type="button" data-ai="${x[0]}" class="${x[0] === t ? 'on' : ''}">${x[1]}</button>`).join('') : ''; if (inAi) { try { localStorage.setItem('unreal-ai-sub', t); } catch(e){} sub.querySelectorAll('button').forEach(b => b.onclick = () => show(b.dataset.ai)); } }
@@ -1154,7 +1155,7 @@ function show(t){
   { const sb = document.querySelector(`#side button[data-tab="${inAi ? 'aistudio' : t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }
   mnavClose(); window.scrollTo(0, 0);
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ aimsgs:aiMsgsView, shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ aimsgs:aiMsgsView, shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, growth:growthView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
@@ -3005,6 +3006,109 @@ async function editView(selected){
 
 // ---------- phone control ----------
 // ---- papagael.com shop data (admin) ----
+// ---------- 🌱 Growth (admin): Kaya's IG / FB / Snap work, the men we reach, what's next ----------
+const GW_PLAT = { instagram:['📸','Instagram'], facebook:['📘','Facebook'], snapchat:['👻','Snapchat'], threads:['🧵','Threads'] };
+const GW_KIND = { ig_client_hunt:'Client hunt', fb_session:'Facebook session', snap_spotlight:'Spotlight + Quick Add', snap_replies:'Replies + Quick Add', ali_warmup:'ALI warm-up (auto)', setup:'Setup' };
+const GW_ACC = [
+  { p:'instagram', u:'kayabianchi', url:'https://instagram.com/kayabianchi', what:'Client hunt 3×/day + ALI warm-up 3×/day' },
+  { p:'facebook', u:'Kaya Bianchi', url:'', what:'2 sessions/day, likes on men\'s comments' },
+  { p:'snapchat', u:'kaya_tsofficial', url:'https://snapchat.com/add/kaya_tsofficial', what:'1 Spotlight + 2 Quick Add/reply sessions a day' },
+  { p:'threads', u:'kayabianchi', url:'https://threads.net/@kayabianchi', what:'Linked to IG · nothing automatic yet' } ];
+// every day, in the time zone the job runs on
+const GW_PLAN = [
+  { tz:'Asia/Bangkok', h:13, m:41, p:'snapchat', k:'snap_spotlight', t:'Spotlight + Quick Add', d:'1 Spotlight video from a Kaya photo, up to 25 Quick Adds, replies' },
+  { tz:'Europe/Rome', h:8, m:37, p:'instagram', k:'ig_client_hunt', t:'Client hunt #1', d:'40 likes on men\'s comments · 15 post likes · 5 comments · 8 follows · DMs' },
+  { tz:'Europe/Rome', h:9, m:22, p:'facebook', k:'fb_session', t:'Facebook #1', d:'15–20 likes on men\'s comments · 10 post likes · 2–3 comments' },
+  { tz:'Europe/Rome', h:10, m:0, p:'instagram', k:'ali_warmup', t:'ALI warm-up (3 sessions until 23:00)', d:'Automatic: feed + reels, ~8 likes, 2 comments, 2 follows each', auto:true },
+  { tz:'Europe/Rome', h:18, m:26, p:'facebook', k:'fb_session', t:'Facebook #2', d:'15–20 likes on men\'s comments · 10 post likes · 2–3 comments' },
+  { tz:'Europe/Rome', h:19, m:57, p:'instagram', k:'ig_client_hunt', t:'Client hunt #2', d:'40 likes on men\'s comments · 15 post likes · 5 comments · 8 follows · DMs' },
+  { tz:'Europe/Rome', h:20, m:53, p:'snapchat', k:'snap_replies', t:'Replies + Quick Add', d:'Answer every snap in Italian · up to 25 Quick Adds' },
+  { tz:'Europe/Rome', h:22, m:24, p:'instagram', k:'ig_client_hunt', t:'Client hunt #3', d:'Same as #1 + saves the day\'s ALI warm-up numbers' } ];
+let gwF = { p:'all', q:'', city:false }, gwData = null;
+const gwOff = (tz, d) => (new Date(d.toLocaleString('en-US', { timeZone:tz })) - new Date(d.toLocaleString('en-US', { timeZone:'UTC' }))) / 6e4;
+function gwAt(s, dayShift){ // the next/this occurrence of a plan slot, as a Date
+  const now = new Date(Date.now() + (dayShift || 0) * 864e5);
+  const [y, mo, d] = new Intl.DateTimeFormat('en-CA', { timeZone:s.tz }).format(now).split('-').map(Number);
+  const noon = new Date(Date.UTC(y, mo - 1, d, 12));
+  return new Date(Date.UTC(y, mo - 1, d, s.h, s.m) - gwOff(s.tz, noon) * 6e4);
+}
+const gwT = (d, tz) => d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:tz });
+const gwAgo = iso => { const m = Math.round((Date.now() - new Date(iso)) / 6e4); return m < 1 ? 'now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; };
+function gwLink(x){
+  const u = encodeURIComponent(String(x.username).replace(/^@/, ''));
+  return x.platform === 'instagram' ? `https://instagram.com/${u}` : x.platform === 'snapchat' ? `https://snapchat.com/add/${u}` : x.platform === 'threads' ? `https://threads.net/@${u}` : `https://www.facebook.com/search/top?q=${u}`;
+}
+async function growthView(){
+  const v = $('#view');
+  const since = new Date(Date.now() - 30 * 864e5).toISOString();
+  const [s, p, t] = await Promise.all([
+    sb.from('growth_sessions').select('*').gte('started_at', since).order('started_at', { ascending:false }).limit(500),
+    sb.from('growth_people').select('*').order('last_seen', { ascending:false }).limit(2000),
+    sb.from('my_todos').select('title,done_at,proof').eq('done', true).like('title', '👻 Snap Spotlight%').gte('done_at', since) ]);
+  if (tab !== 'growth') return;
+  if (s.error || p.error) { v.innerHTML = `<div class="card empty">${esc((s.error || p.error).message)}</div>`; return; }
+  // Spotlights logged only in the to-do (before the Growth log existed)
+  const sess = s.data || [];
+  (t.data || []).forEach(x => { if (!sess.some(y => y.kind === 'snap_spotlight' && Math.abs(new Date(y.started_at) - new Date(x.done_at)) < 36e5)) sess.push({ platform:'snapchat', account:'kaya_tsofficial', kind:'snap_spotlight', started_at:x.done_at, status:'done', posts:1, note:x.proof || x.title }); });
+  sess.sort((a, b) => new Date(b.started_at) - new Date(a.started_at));
+  gwData = { sess, people: p.data || [] };
+  gwRender();
+}
+function gwRender(){
+  const v = $('#view'), { sess, people } = gwData, P = gwF.p;
+  const inP = x => P === 'all' || x.platform === P;
+  const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+  const today = sess.filter(x => inP(x) && new Date(x.started_at) >= dayStart);
+  const sum = (a, k) => a.reduce((n, x) => n + (Number(x[k]) || 0), 0);
+  const clients = people.filter(x => x.role === 'client' && inP(x)), creators = people.filter(x => x.role === 'creator' && inP(x));
+  const newToday = clients.filter(x => new Date(x.first_seen) >= dayStart).length;
+  // schedule: next run of each slot (today or tomorrow), done-today check
+  const now = Date.now(), lt = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const slots = GW_PLAN.filter(inP).map(sl => {
+    const at = gwAt(sl, 0), done = sess.find(x => x.kind === sl.k && Math.abs(new Date(x.started_at) - at) < (sl.auto ? 13 : 2) * 36e5 && new Date(x.started_at) >= at - 9e5);
+    return { ...sl, at, next: at.getTime() > now ? at : gwAt(sl, 1), done };
+  });
+  const upcoming = slots.slice().sort((a, b) => a.next - b.next);
+  const nx = upcoming[0];
+  const mins = nx ? Math.round((nx.next - now) / 6e4) : 0;
+  const days = [...Array(14)].map((_, i) => { const d = new Date(dayStart.getTime() - (13 - i) * 864e5), e = new Date(d.getTime() + 864e5); const a = sess.filter(x => inP(x) && new Date(x.started_at) >= d && new Date(x.started_at) < e); return { d, cl:sum(a, 'comment_likes'), all:sum(a, 'comment_likes') + sum(a, 'likes') + sum(a, 'comments') + sum(a, 'follows') + sum(a, 'quick_adds') }; });
+  const maxD = Math.max(1, ...days.map(x => x.all));
+  let list = clients;
+  if (gwF.q) { const q = gwF.q.toLowerCase(); list = list.filter(x => [x.username, x.display_name, x.location, x.source, x.last_comment].some(f => String(f || '').toLowerCase().includes(q))); }
+  if (gwF.city) list = list.filter(x => x.location);
+  const cities = {}; clients.forEach(x => { if (x.location) { const c = x.location.trim(); cities[c] = (cities[c] || 0) + 1; } });
+  const topCities = Object.entries(cities).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const stPill = x => x.status === 'done' ? '<span class="pill yes">done</span>' : x.status === 'blocked' ? '<span class="pill red">blocked</span>' : x.status === 'skipped' ? '<span class="pill gray">skipped</span>' : '<span class="pill wait">partial</span>';
+  const nums = x => [['comment_likes','comment likes'],['likes','likes'],['comments','comments'],['follows','follows'],['quick_adds','quick adds'],['dms','DMs'],['posts','posted']].filter(([k]) => Number(x[k])).map(([k, l]) => `<b>${x[k]}</b> ${l}`).join(' · ') || '<span class="muted">—</span>';
+  v.innerHTML = `
+    <div class="cfilt" id="gwP" style="padding:0;border:0;margin-bottom:14px">${[['all','All'],['instagram','📸 Instagram'],['facebook','📘 Facebook'],['snapchat','👻 Snapchat']].map(([k, l]) => `<button data-v="${k}" class="${P === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    ${nx ? `<div class="card" style="margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span style="font-size:26px">${GW_PLAT[nx.p][0]}</span><div style="flex:1;min-width:200px"><div class="muted" style="font-size:12px">Next up · in ${mins < 60 ? mins + ' min' : Math.floor(mins / 60) + ' h ' + (mins % 60) + ' min'}</div><b>${esc(nx.t)}</b> <span class="muted">· ${gwT(nx.next, lt)} your time · ${gwT(nx.next, 'Europe/Rome')} Rome</span><div class="muted" style="font-size:13px">${esc(nx.d)}</div></div></div>` : ''}
+    <div class="tiles">
+      <div class="card tile"><span>Comment likes today</span><b class="pink">${sum(today, 'comment_likes')}</b></div>
+      <div class="card tile"><span>Post likes · comments today</span><b>${sum(today, 'likes')} · ${sum(today, 'comments')}</b></div>
+      <div class="card tile"><span>Follows + Quick Adds today</span><b>${sum(today, 'follows') + sum(today, 'quick_adds')}</b></div>
+      <div class="card tile"><span>DMs answered today</span><b>${sum(today, 'dms')}</b></div>
+      <div class="card tile"><span>Men tracked${newToday ? ` · +${newToday} today` : ''}</span><b>${clients.length}</b></div>
+    </div>
+    <div class="two" style="margin-bottom:14px">
+      <div class="card"><h2>Our accounts</h2>${GW_ACC.filter(a => P === 'all' || a.p === P).map(a => { const n7 = sess.filter(x => x.platform === a.p && new Date(x.started_at) >= new Date(now - 7 * 864e5) && x.status === 'done').length; return `<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)"><span style="font-size:20px">${GW_PLAT[a.p][0]}</span><div style="flex:1;min-width:0"><b>${a.url ? `<a href="${a.url}" target="_blank" rel="noopener">${esc(a.u)}</a>` : esc(a.u)}</b> <span class="muted" style="font-size:12px">${GW_PLAT[a.p][1]} · phone 2820</span><div class="muted" style="font-size:12px">${esc(a.what)}</div></div><span class="pill ${n7 ? 'yes' : 'gray'}">${n7} sessions · 7 d</span></div>`; }).join('')}</div>
+      <div class="card"><h2>Last 14 days</h2><div class="shbars">${days.map(x => `<div class="shday" title="${x.d.toLocaleDateString('en-CA', { month:'short', day:'numeric' })} · ${x.all} actions · ${x.cl} comment likes"><i style="height:${Math.round(x.all / maxD * 100)}%"></i>${x.cl ? `<em style="height:${Math.round(x.cl / maxD * 100)}%"></em>` : ''}</div>`).join('')}</div><div class="shleg"><span><i></i>All actions</span><span><em></em>Comment likes</span></div>
+      ${topCities.length ? `<h2 style="margin-top:14px">Where the men are from</h2><div style="display:flex;flex-wrap:wrap;gap:6px">${topCities.map(([c, n]) => `<span class="pill gray">${esc(c)} · ${n}</span>`).join('')}</div>` : ''}</div>
+    </div>
+    <div class="card tbl" style="margin-bottom:14px"><h2>Every day · the menu</h2><table><thead><tr><th>Your time</th><th>Rome</th><th>App</th><th>Job</th><th>Today</th></tr></thead><tbody>${slots.sort((a, b) => a.at - b.at).map(sl => `<tr><td><b>${gwT(sl.at, lt)}</b></td><td class="muted">${gwT(sl.at, 'Europe/Rome')}</td><td>${GW_PLAT[sl.p][0]}</td><td><b>${esc(sl.t)}</b><div class="muted" style="font-size:12px">${esc(sl.d)}</div></td><td>${sl.done ? stPill(sl.done) : sl.at.getTime() > now ? `<span class="pill gray">${sl === nx ? 'next' : 'later'}</span>` : '<span class="pill wait">no log yet</span>'}</td></tr>`).join('')}</tbody></table>
+      <p class="muted" style="font-size:12px;margin-top:8px">Every job checks the phone is free first (the ALI warm-up has priority) and stops at once on any Instagram/Facebook/Snapchat warning.</p></div>
+    <div class="card tbl" style="margin-bottom:14px"><h2>Men we reached <span class="muted" style="font-weight:400;font-size:13px">· ${list.length}</span></h2>
+      <div class="row" style="gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap"><input id="gwQ" type="search" placeholder="Search a name, a city, a creator" value="${esc(gwF.q)}" style="max-width:280px;margin:0"><label class="muted" style="font-size:13px;display:flex;gap:6px;align-items:center;flex:0 0 auto"><input type="checkbox" id="gwC" ${gwF.city ? 'checked' : ''} style="width:auto;margin:0"> City known only</label></div>
+      ${list.length ? `<div style="overflow-x:auto"><table><thead><tr><th>Who</th><th>From</th><th>Found under</th><th>His comment</th><th>What we did</th><th>Seen</th></tr></thead><tbody>${list.slice(0, 400).map(x => `<tr><td>${GW_PLAT[x.platform][0]} <a href="${gwLink(x)}" target="_blank" rel="noopener"><b>${esc(x.username)}</b></a>${x.display_name && x.display_name !== x.username ? `<div class="muted" style="font-size:12px">${esc(x.display_name)}</div>` : ''}</td><td>${x.location ? esc(x.location) : '<span class="muted">—</span>'}</td><td class="muted">${esc(x.source || '')}</td><td style="font-size:13px;max-width:260px">${esc(x.last_comment || '')}</td><td>${[x.liked_comment && '<span class="pill yes">comment liked</span>', x.followed && `<span class="pill yes">${x.platform === 'snapchat' ? 'added' : 'followed'}</span>`, x.followed_back && '<span class="pill yes">followed back</span>', x.dm_status && `<span class="pill wait">${esc(x.dm_status)}</span>`].filter(Boolean).join(' ')}</td><td class="muted" style="font-size:12px;white-space:nowrap">${x.times_seen > 1 ? x.times_seen + '× · ' : ''}${gwAgo(x.last_seen)}</td></tr>`).join('')}</tbody></table></div>` : `<p class="muted">${clients.length ? 'Nobody matches.' : 'Nobody yet. The first client hunt fills this in.'}</p>`}</div>
+    <div class="two" style="margin-bottom:14px">
+      <div class="card tbl"><h2>Work done</h2>${sess.filter(inP).length ? `<table><tbody>${sess.filter(inP).slice(0, 80).map(x => `<tr><td style="white-space:nowrap">${GW_PLAT[x.platform][0]} <span class="muted" style="font-size:12px">${new Date(x.started_at).toLocaleString('en-CA', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</span></td><td><b>${esc(GW_KIND[x.kind] || x.kind)}</b> ${stPill(x)}<div style="font-size:13px">${nums(x)}</div>${x.note ? `<div class="muted" style="font-size:12px">${esc(x.note)}</div>` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing logged yet.</p>'}</div>
+      <div class="card tbl"><h2>Creators we work under</h2>${creators.length ? `<table><tbody>${creators.slice(0, 80).map(x => `<tr><td>${GW_PLAT[x.platform][0]} <a href="${gwLink(x)}" target="_blank" rel="noopener"><b>${esc(x.username)}</b></a></td><td>${x.location ? esc(x.location) : '<span class="muted">—</span>'}</td><td class="muted" style="font-size:12px;white-space:nowrap">${x.times_seen}× · ${gwAgo(x.last_seen)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">The Italian trans creators whose comment sections we work show up here.</p>'}</div>
+    </div>`;
+  v.querySelectorAll('#gwP button').forEach(b => b.onclick = () => { gwF.p = b.dataset.v; gwRender(); });
+  const q = $('#gwQ'); q.oninput = () => { gwF.q = q.value; clearTimeout(q._t); q._t = setTimeout(() => { const pos = q.selectionStart; gwRender(); const n = $('#gwQ'); n.focus(); n.setSelectionRange(pos, pos); }, 250); };
+  $('#gwC').onchange = e => { gwF.city = e.target.checked; gwRender(); };
+}
+
 async function shopView(){
   const v = $('#view');
   v.innerHTML = '<div class="card muted">Loading papagael.com…</div>';

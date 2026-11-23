@@ -880,7 +880,6 @@
           <button data-tab="shop" class="adm" hidden>👕 papagael.com</button>
         </div></div>
         <div class="grp" data-g="team"><div class="gh" role="button" tabindex="0" aria-expanded="true">Team & accounts<i>▾</i></div><div class="gb">
-          <button data-tab="team" data-perm="team" hidden>✅ Team to-do</button>
           <button data-tab="twitter" data-perm="twitter" hidden>🐦 Twitter</button>
           <button data-tab="prompts" data-perm="prompts" hidden>🎨 Prompt studio</button>
           <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone<span class="nb" id="nbSms" hidden></span></button>
@@ -991,7 +990,6 @@ document.querySelectorAll('[data-signout]').forEach(b => b.onclick = () => sb.au
 // ---------- state ----------
 let me = null, settings = {}, tab = 'personas';
 const PERMS = [
-  { k:'team', l:'✅ Team to-do', sub:[['team:Before posting','Before posting'],['team:Daily posting','Daily posting'],['team:Rules','Rules']] },
   { k:'twitter', l:'🐦 Twitter', sub:[] },
   { k:'sms', l:'📱 SMS phone', sub:[] },
   { k:'phone', l:'🕹 Phone control', sub:[] },

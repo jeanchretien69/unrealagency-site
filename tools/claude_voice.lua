@@ -1,6 +1,6 @@
 -- Claude Voice
 -- FRONT thumb button (Ctrl+Option+Cmd+D): press = record, press = stop (text goes into Claude), press = send.
--- BACK thumb button (Ctrl+Option+Cmd+S): clicks Claude's own mic button, nothing else: press = mic on, press again = mic off.
+-- BACK thumb button (Ctrl+Option+Cmd+S): instant click on Claude's own mic button (setup once: mouse on the mic + Ctrl+Option+Cmd+M).
 -- Click the pink bubble while talking = cancel.
 local M = {}
 local HOME = os.getenv("HOME")
@@ -151,65 +151,42 @@ end
 function M.toggle() if state == "idle" then M.start() elseif state == "rec" then M.stop() elseif state == "review" then M.send() end end
 
 M.key = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "d", M.toggle)
--- BACK thumb button (Mac Mouse Fix sends Ctrl+Option+Cmd+S): Claude's own mic, clicked for you.
--- Claude is in front: press 1 = its mic starts right away (no app switch) · press 2 = mic stops, text lands, sent (Enter).
--- Claude not in front: same, but Claude comes forward first and you go back to your app after sending.
--- (Claude has no keyboard shortcut for its chat mic, so the mic button is found and pressed through Accessibility.)
-local ax = hs.axuielement
-local nState, nPrev, nTimer = "idle", nil, nil
-local START = { "dictat", "microphone", "voice input", "record", "speak", "micro" }
-local STOP = { "stop", "done", "finish", "transcri", "confirm", "dictat", "microphone", "micro" }
-local function label(e)
-  local t = {}
-  for _, a in ipairs({ "AXDescription", "AXTitle", "AXHelp", "AXRoleDescription" }) do
-    local v = e:attributeValue(a); if type(v) == "string" and v ~= "" and a ~= "AXRoleDescription" then t[#t + 1] = v end
-  end
-  return table.concat(t, " "):lower()
+-- BACK thumb button (Mac Mouse Fix sends Ctrl+Option+Cmd+S): an instant real click on Claude's own mic button.
+-- One-time setup: put the mouse on Claude's mic button and press Ctrl+Option+Cmd+M (position saved, relative to the Claude window).
+-- Then the back thumb clicks that spot in a split second and the mouse jumps right back to where it was.
+local POS = DIR .. "/mic_pos.txt"
+local function claudeWin()
+  local c = hs.application.get(CLAUDE); if not c then return nil, nil end
+  return c, (c:focusedWindow() or c:mainWindow())
 end
-local function claudeFront(after)
-  local f = hs.application.frontmostApplication()
-  if f and f:bundleID() == CLAUDE then return after() end
-  local c = hs.application.get(CLAUDE)
-  if c then c:activate() else hs.application.launchOrFocusByBundleID(CLAUDE) end
-  local tries = 0
-  hs.timer.waitUntil(function() tries = tries + 1; local f = hs.application.frontmostApplication(); return tries > 40 or (f and f:bundleID() == CLAUDE) end,
-    function() hs.timer.doAfter(0.15, after) end, 0.05)
+local function readPos()
+  local f = io.open(POS); if not f then return nil end
+  local dx, dy = f:read("n", "n"); f:close()
+  if dx and dy then return dx, dy end
 end
--- find Claude's mic button (words = what its label may contain), press it; done(ok)
-local function pressMic(words, done)
-  local c = hs.application.get(CLAUDE); if not c then return done(false) end
-  local app = ax.applicationElement(c)
-  pcall(function() app:setAttributeValue("AXManualAccessibility", true) end) -- Electron: show the page's buttons
-  local win = app:attributeValue("AXFocusedWindow") or app
-  win:elementSearch(function(_, found)
-    local best, all = nil, {}
-    for i = 1, (found and #found or 0) do
-      local e = found[i]; local l = label(e)
-      if l ~= "" then all[#all + 1] = l end
-      if not l:find("voice mode") then
-        for rank, w in ipairs(words) do
-          if l:find(w, 1, true) and (not best or rank < best.rank) then best = { e = e, rank = rank } end
-        end
-      end
-    end
-    if best then best.e:performAction("AXPress"); return done(true) end
-    local f = io.open(DIR .. "/claude_buttons.txt", "w"); if f then f:write(table.concat(all, "\n")); f:close() end
-    hs.alert.show("🎙 Can't find Claude's mic button (button names saved in ~/.claude-voice/claude_buttons.txt)", 5)
-    done(false)
-  end, ax.searchCriteriaFunction({ attribute = "AXRole", value = "AXButton" }))
+function M.saveMic()
+  local _, w = claudeWin()
+  if not w then hs.alert.show("🎙 Open Claude first", 2); return end
+  local p, fr = hs.mouse.absolutePosition(), w:frame()
+  local f = io.open(POS, "w"); f:write(string.format("%d %d", math.floor(p.x - (fr.x + fr.w / 2)), math.floor(fr.y + fr.h - p.y))); f:close()
+  hs.alert.show("🎙 Claude mic saved ✅ — back thumb now clicks it", 2)
 end
--- BACK thumb = exactly like clicking Claude's own mic button: no bubble, no sound, no auto-send.
--- press = Claude's mic on · press again = Claude's mic off (Claude writes the text; you send it yourself).
-local micOn = false
 function M.native()
   if state ~= "idle" then return end -- the front-button recorder is busy: don't mix the two
-  claudeFront(function()
-    pressMic(micOn and STOP or START, function(ok)
-      if ok then micOn = not micOn
-      elseif micOn then micOn = false; pressMic(START, function(ok2) if ok2 then micOn = true end end) end
-    end)
-  end)
+  local dx, dy = readPos()
+  if not dx then hs.alert.show("🎙 Setup: put your mouse on Claude's mic button, then press Ctrl+Option+Cmd+M", 4); return end
+  local c, w = claudeWin()
+  if not w then hs.application.launchOrFocusByBundleID(CLAUDE); return end
+  local function click()
+    local fr = w:frame()
+    local back = hs.mouse.absolutePosition()
+    hs.eventtap.leftClick({ x = fr.x + fr.w / 2 + dx, y = fr.y + fr.h - dy }, 20000)
+    hs.mouse.absolutePosition(back)
+  end
+  local f = hs.application.frontmostApplication()
+  if f and f:bundleID() == CLAUDE then click() else w:focus(); hs.timer.doAfter(0.25, click) end
 end
+M.micKey = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "m", M.saveMic)
 M.enterKey = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "s", M.native)
 hs.autoLaunch(true)
 hs.accessibilityState(true)

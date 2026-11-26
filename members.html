@@ -1409,8 +1409,8 @@ const ntName = n => (n.icon ? n.icon + ' ' : '') + (n.title || 'Untitled');
 function ntPath(n){ const p = []; let x = n; while (x){ p.unshift(x); x = x.parent_id ? ntGet(x.parent_id) : null; } return p; }
 async function notesView(){
   const v = $('#view');
-  let data = [], from = 0, error = null;
-  for (;;) { const r = await sb.from('notes').select('id,parent_id,title,icon,sort,pinned,src,updated_at').order('id').range(from, from + 999); if (r.error) { error = r.error; break; } data = data.concat(r.data); if (r.data.length < 1000) break; from += 1000; }
+  const { data: tree, error } = await sb.rpc('notes_tree');
+  const data = (tree || []).map(a => ({ id:a[0], parent_id:a[1], title:a[2] || 'Untitled', icon:a[3], sort:a[4], pinned:a[5], src:a[6], updated_at:a[7] }));
   if (error) { v.innerHTML = `<div class="card empty">${esc(error.message)}</div>`; return; }
   NT.all = data; ntDirty();
   try { NT.open = new Set(JSON.parse(localStorage.getItem('unreal-nt-open') || '[]')); } catch(e){}

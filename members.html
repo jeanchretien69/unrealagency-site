@@ -1446,7 +1446,7 @@ async function ntOpen(id, show){
     ${kids.length ? `<div class="nt-kids">${kids.map(k => `<button data-o="${k.id}">${esc(ntName(k))}</button>`).join('')}</div>` : ''}`;
   pg.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ntOpen(b.dataset.o, true));
   pg.querySelectorAll('.nt-body pre, .nt-body blockquote').forEach(el => { const c = document.createElement('button'); c.className = 'nt-cp'; c.textContent = 'Copy'; c.onclick = async () => { await navigator.clipboard.writeText(el.innerText.replace(/Copy$/, '').trim()); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy', 1200); }; el.appendChild(c); });
-  pg.querySelectorAll('.nt-body a[href]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+  pg.querySelectorAll('.nt-body a[href]').forEach(a => { const h = a.getAttribute('href'); if (h.startsWith('#n-')) { a.onclick = e => { e.preventDefault(); ntGet(h.slice(3)) ? ntOpen(h.slice(3), true) : toast('Page not found'); }; } else { a.target = '_blank'; a.rel = 'noopener'; } });
   $('#ntBack').onclick = () => $('#nt').classList.remove('open');
   $('#ntEdit').onclick = () => ntEdit(n);
   $('#ntSub').onclick = () => ntCreate(n.id);

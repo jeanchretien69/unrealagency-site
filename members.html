@@ -1466,10 +1466,19 @@ async function ntOpen(id, show){
     <div class="nt-crumb">${path.slice(0,-1).map(p => `<a data-o="${p.id}">${esc(ntName(p))}</a>`).join(' / ') || '&nbsp;'}</div>
     <div class="nt-h"><h1>${esc(ntName(n))}</h1><div class="nt-tools"><button class="btn sm" id="ntEdit">✏️ Edit</button><button class="btn ghost sm" id="ntSub">+ Sub-page</button><button class="btn ghost sm" id="ntMore">⋯</button></div></div>
     <p class="muted" style="font-size:12px;margin:4px 0 16px">Updated ${date(n.updated_at)}${n.src ? ' · from Notion' : ''}</p>
-    <div class="nt-body" id="ntBody">${n.body.trim() ? purify.sanitize(marked.parse(n.body), { ADD_TAGS:['details','summary'] }) : '<p class="muted">Empty page. Click ✏️ Edit to write.</p>'}</div>
+    <div class="nt-body" id="ntBody">${n.body.trim() ? purify.sanitize(marked.parse(n.body.replace(/\]\(nf:/g, '](#nf-')), { ADD_TAGS:['details','summary'] }) : '<p class="muted">Empty page. Click ✏️ Edit to write.</p>'}</div>
     ${kids.length ? `<div class="nt-kids">${kids.slice(0, 300).map(k => `<button data-o="${k.id}">${esc(ntName(k))}</button>`).join('')}</div>${kids.length > 300 ? `<p class="muted" style="font-size:12px">+ ${kids.length - 300} more pages, use the search to find them.</p>` : ''}` : ''}`;
   pg.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ntOpen(b.dataset.o, true));
   pg.querySelectorAll('.nt-body pre, .nt-body blockquote').forEach(el => { const c = document.createElement('button'); c.className = 'nt-cp'; c.textContent = 'Copy'; c.onclick = async () => { await navigator.clipboard.writeText(el.innerText.replace(/Copy$/, '').trim()); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy', 1200); }; el.appendChild(c); });
+  { const imgs = [...pg.querySelectorAll('.nt-body img')].filter(i => (i.getAttribute('src') || '').startsWith('#nf-'));
+    const links = [...pg.querySelectorAll('.nt-body a')].filter(a => (a.getAttribute('href') || '').startsWith('#nf-'));
+    const keys = [...new Set([...imgs.map(i => i.getAttribute('src').slice(4)), ...links.map(a => a.getAttribute('href').slice(4))])];
+    imgs.forEach(i => { i.dataset.nk = i.getAttribute('src').slice(4); i.loading = 'lazy'; i.removeAttribute('src'); });
+    if (keys.length) sb.storage.from('notes-files').createSignedUrls(keys, 3600).then(({ data }) => {
+      const m = Object.fromEntries((data || []).map(x => [x.path, x.signedUrl]));
+      imgs.forEach(i => { const k = i.dataset.nk; if (m[k]) i.src = m[k]; });
+      links.forEach(a => { const k = a.getAttribute('href').slice(4); if (m[k]) { a.href = m[k]; a.target = '_blank'; a.rel = 'noopener'; } });
+    }); }
   pg.querySelectorAll('.nt-body a[href]').forEach(a => { const h = a.getAttribute('href'); if (h.startsWith('#n-')) { a.onclick = e => { e.preventDefault(); ntGet(h.slice(3)) ? ntOpen(h.slice(3), true) : toast('Page not found'); }; } else { a.target = '_blank'; a.rel = 'noopener'; } });
   $('#ntBack').onclick = () => $('#nt').classList.remove('open');
   $('#ntEdit').onclick = () => ntEdit(n);

@@ -1,6 +1,6 @@
 -- Claude Voice
 -- FRONT thumb button (Ctrl+Option+Cmd+D): press = record, press = stop (text goes into Claude), press = send.
--- BACK thumb button (Ctrl+Option+Cmd+S): Claude's own dictation (faster): press = start, press again = stop and send.
+-- BACK thumb button (Ctrl+Option+Cmd+S): Claude's own mic, pressed directly: press = start, press again = stop and send.
 -- Click the pink bubble while talking = cancel.
 local M = {}
 local HOME = os.getenv("HOME")
@@ -151,35 +151,77 @@ end
 function M.toggle() if state == "idle" then M.start() elseif state == "rec" then M.stop() elseif state == "review" then M.send() end end
 
 M.key = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "d", M.toggle)
--- BACK thumb button (Mac Mouse Fix sends Ctrl+Option+Cmd+S): Claude's own dictation, inside the Claude chat.
--- press 1 = bring Claude forward + start its mic (Cmd+D) · press 2 = stop its mic (Cmd+D), wait for the text, send (Enter), go back.
+-- BACK thumb button (Mac Mouse Fix sends Ctrl+Option+Cmd+S): Claude's own mic, clicked for you.
+-- Claude is in front: press 1 = its mic starts right away (no app switch) · press 2 = mic stops, text lands, sent (Enter).
+-- Claude not in front: same, but Claude comes forward first and you go back to your app after sending.
+-- (Claude has no keyboard shortcut for its chat mic, so the mic button is found and pressed through Accessibility.)
+local ax = hs.axuielement
 local nState, nPrev, nTimer = "idle", nil, nil
+local START = { "dictat", "microphone", "voice input", "record", "speak", "micro" }
+local STOP = { "stop", "done", "finish", "transcri", "confirm", "dictat", "microphone", "micro" }
+local function label(e)
+  local t = {}
+  for _, a in ipairs({ "AXDescription", "AXTitle", "AXHelp", "AXRoleDescription" }) do
+    local v = e:attributeValue(a); if type(v) == "string" and v ~= "" and a ~= "AXRoleDescription" then t[#t + 1] = v end
+  end
+  return table.concat(t, " "):lower()
+end
 local function claudeFront(after)
+  local f = hs.application.frontmostApplication()
+  if f and f:bundleID() == CLAUDE then return after() end
   local c = hs.application.get(CLAUDE)
   if c then c:activate() else hs.application.launchOrFocusByBundleID(CLAUDE) end
   local tries = 0
   hs.timer.waitUntil(function() tries = tries + 1; local f = hs.application.frontmostApplication(); return tries > 40 or (f and f:bundleID() == CLAUDE) end,
     function() hs.timer.doAfter(0.15, after) end, 0.05)
 end
+-- find Claude's mic button (words = what its label may contain), press it; done(ok)
+local function pressMic(words, done)
+  local c = hs.application.get(CLAUDE); if not c then return done(false) end
+  local app = ax.applicationElement(c)
+  pcall(function() app:setAttributeValue("AXManualAccessibility", true) end) -- Electron: show the page's buttons
+  local win = app:attributeValue("AXFocusedWindow") or app
+  win:elementSearch(function(_, found)
+    local best, all = nil, {}
+    for i = 1, (found and #found or 0) do
+      local e = found[i]; local l = label(e)
+      if l ~= "" then all[#all + 1] = l end
+      if not l:find("voice mode") then
+        for rank, w in ipairs(words) do
+          if l:find(w, 1, true) and (not best or rank < best.rank) then best = { e = e, rank = rank } end
+        end
+      end
+    end
+    if best then best.e:performAction("AXPress"); return done(true) end
+    local f = io.open(DIR .. "/claude_buttons.txt", "w"); if f then f:write(table.concat(all, "\n")); f:close() end
+    hs.alert.show("🎙 Can't find Claude's mic button (button names saved in ~/.claude-voice/claude_buttons.txt)", 5)
+    done(false)
+  end, ax.searchCriteriaFunction({ attribute = "AXRole", value = "AXButton" }))
+end
 function M.native()
   if state ~= "idle" then return end -- the front-button recorder is busy: don't mix the two
   if nState == "idle" then
+    nState = "busy"
     nPrev = hs.application.frontmostApplication()
     claudeFront(function()
-      hs.eventtap.keyStroke({ "cmd" }, "d", 0)
-      nState = "on"; hs.sound.getByName("Tink"):play()
-      show("🎙  Claude dictation   ·   back button again = SEND", { red = 0.2, green = 0.45, blue = 0.9, alpha = 0.95 })
-      nTimer = hs.timer.doAfter(300, function() if nState == "on" then nState = "idle"; hide() end end)
+      pressMic(START, function(ok)
+        if not ok then nState = "idle"; return end
+        nState = "on"; hs.sound.getByName("Tink"):play()
+        show("🎙  Claude mic ON   ·   back button again = SEND", { red = 0.2, green = 0.45, blue = 0.9, alpha = 0.95 })
+        hs.timer.doAfter(3, function() if nState == "on" then hide() end end)
+        nTimer = hs.timer.doAfter(300, function() if nState == "on" then nState = "idle"; hide() end end)
+      end)
     end)
   elseif nState == "on" then
     nState = "busy"; if nTimer then nTimer:stop(); nTimer = nil end
     claudeFront(function()
-      hs.eventtap.keyStroke({ "cmd" }, "d", 0)
-      show("✍️  Sending…", { red = 0.4, green = 0.3, blue = 0.65, alpha = 0.95 })
-      hs.timer.doAfter(1.4, function()
-        hs.eventtap.keyStroke({}, "return", 0)
-        hs.sound.getByName("Pop"):play(); hide(); nState = "idle"
-        hs.timer.doAfter(0.4, function() if nPrev and nPrev:bundleID() ~= CLAUDE then nPrev:activate() end end)
+      pressMic(STOP, function()
+        show("✍️  Sending…", { red = 0.4, green = 0.3, blue = 0.65, alpha = 0.95 })
+        hs.timer.doAfter(1.8, function()
+          hs.eventtap.keyStroke({}, "return", 0)
+          hs.sound.getByName("Pop"):play(); hide(); nState = "idle"
+          hs.timer.doAfter(0.4, function() if nPrev and nPrev:bundleID() ~= CLAUDE then nPrev:activate() end end)
+        end)
       end)
     end)
   end

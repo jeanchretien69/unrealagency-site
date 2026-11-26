@@ -1,6 +1,6 @@
 -- Claude Voice
 -- FRONT thumb button (Ctrl+Option+Cmd+D): press = record, press = stop (text goes into Claude), press = send.
--- BACK thumb button (Ctrl+Option+Cmd+S): Claude's own mic, pressed directly: press = start, press again = stop and send.
+-- BACK thumb button (Ctrl+Option+Cmd+S): clicks Claude's own mic button, nothing else: press = mic on, press again = mic off.
 -- Click the pink bubble while talking = cancel.
 local M = {}
 local HOME = os.getenv("HOME")
@@ -198,33 +198,17 @@ local function pressMic(words, done)
     done(false)
   end, ax.searchCriteriaFunction({ attribute = "AXRole", value = "AXButton" }))
 end
+-- BACK thumb = exactly like clicking Claude's own mic button: no bubble, no sound, no auto-send.
+-- press = Claude's mic on · press again = Claude's mic off (Claude writes the text; you send it yourself).
+local micOn = false
 function M.native()
   if state ~= "idle" then return end -- the front-button recorder is busy: don't mix the two
-  if nState == "idle" then
-    nState = "busy"
-    nPrev = hs.application.frontmostApplication()
-    claudeFront(function()
-      pressMic(START, function(ok)
-        if not ok then nState = "idle"; return end
-        nState = "on"; hs.sound.getByName("Tink"):play()
-        show("🎙  Claude mic ON   ·   back button again = SEND", { red = 0.2, green = 0.45, blue = 0.9, alpha = 0.95 })
-        hs.timer.doAfter(3, function() if nState == "on" then hide() end end)
-        nTimer = hs.timer.doAfter(300, function() if nState == "on" then nState = "idle"; hide() end end)
-      end)
+  claudeFront(function()
+    pressMic(micOn and STOP or START, function(ok)
+      if ok then micOn = not micOn
+      elseif micOn then micOn = false; pressMic(START, function(ok2) if ok2 then micOn = true end end) end
     end)
-  elseif nState == "on" then
-    nState = "busy"; if nTimer then nTimer:stop(); nTimer = nil end
-    claudeFront(function()
-      pressMic(STOP, function()
-        show("✍️  Sending…", { red = 0.4, green = 0.3, blue = 0.65, alpha = 0.95 })
-        hs.timer.doAfter(1.8, function()
-          hs.eventtap.keyStroke({}, "return", 0)
-          hs.sound.getByName("Pop"):play(); hide(); nState = "idle"
-          hs.timer.doAfter(0.4, function() if nPrev and nPrev:bundleID() ~= CLAUDE then nPrev:activate() end end)
-        end)
-      end)
-    end)
-  end
+  end)
 end
 M.enterKey = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "s", M.native)
 hs.autoLaunch(true)

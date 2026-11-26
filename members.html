@@ -1100,6 +1100,7 @@ const can = p => me && (me.role === 'admin' || (me.perms || []).includes(p));
 async function boot(session){
   $('#boot').hidden = true;
   ['#auth','#pending','#app'].forEach(s => $(s).hidden = true);
+  { const { data: locked } = await sb.rpc('site_locked'); if (locked === true) return lockScreen(); }
   if (!session){ $('#auth').hidden = false; return; }
   const { data: prof } = await sb.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
   me = prof;
@@ -1203,6 +1204,22 @@ function focusStart(){
   if (!me || me.role !== 'admin') return;
   try { if ('Notification' in window && Notification.permission === 'default') document.addEventListener('pointerdown', () => Notification.requestPermission(), { once:true }); } catch(e){}
   focusCheck(); clearInterval(focusTimer); focusTimer = setInterval(focusCheck, 30000);
+}
+
+// 🔒 Panic lock screen: everything is blocked until the secret unlock code is entered
+function lockScreen(){
+  let d = document.getElementById('lockScr');
+  if (!d) { d = document.createElement('div'); d.id = 'lockScr'; document.body.appendChild(d); }
+  d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:var(--surface,#120a0f);padding:20px';
+  d.innerHTML = `<form class="card" style="max-width:360px;width:100%;padding:26px;text-align:center"><div style="font-size:46px">🔒</div><h2 style="margin:6px 0">Locked</h2><p class="muted" style="font-size:14px">The panic button was used. Everything is blocked and all devices were signed out.</p><input id="lkC" autocomplete="off" autocapitalize="characters" placeholder="Unlock code" style="width:100%;text-align:center;letter-spacing:2px;font-size:17px;margin:8px 0"><button class="btn" style="width:100%">Unlock</button><p id="lkM" class="muted" style="font-size:13px;min-height:18px;margin:10px 0 0"></p></form>`;
+  d.querySelector('form').onsubmit = async e => { e.preventDefault();
+    const { data, error } = await sb.rpc('panic_unlock', { code: $('#lkC').value.trim().toUpperCase() });
+    const m = $('#lkM');
+    if (error) { m.textContent = error.message; return; }
+    if (data === 'unlocked' || data === 'not_locked') { m.textContent = 'Unlocked ✅ Sign in again.'; setTimeout(() => location.reload(), 900); }
+    else if (data === 'wait') m.textContent = 'Too many wrong tries. Wait 15 minutes.';
+    else m.textContent = 'Wrong code.';
+  };
 }
 
 let lastSession;

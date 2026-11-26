@@ -1395,15 +1395,24 @@ async function ntLibs(){
   if (!NT.libs){ const [m, p] = await Promise.all([import('https://esm.sh/marked@12'), import('https://esm.sh/dompurify@3')]); NT.libs = { marked:m.marked, purify:p.default }; NT.libs.marked.setOptions({ gfm:true, breaks:true }); }
   return NT.libs;
 }
-const ntKids = id => NT.all.filter(n => (n.parent_id || null) === (id || null)).sort((a,b) => (b.pinned - a.pinned) || a.sort - b.sort || a.title.localeCompare(b.title));
-const ntGet = id => NT.all.find(n => n.id === id);
+function ntIndex(){
+  if (NT.idx) return NT.idx;
+  const byId = new Map(), kids = new Map();
+  for (const n of NT.all) { byId.set(n.id, n); const k = n.parent_id || ''; if (!kids.has(k)) kids.set(k, []); kids.get(k).push(n); }
+  for (const a of kids.values()) a.sort((a,b) => (b.pinned - a.pinned) || a.sort - b.sort || (a.title || '').localeCompare(b.title || ''));
+  return NT.idx = { byId, kids };
+}
+const ntDirty = () => { NT.idx = null; };
+const ntKids = id => ntIndex().kids.get(id || '') || [];
+const ntGet = id => ntIndex().byId.get(id);
 const ntName = n => (n.icon ? n.icon + ' ' : '') + (n.title || 'Untitled');
 function ntPath(n){ const p = []; let x = n; while (x){ p.unshift(x); x = x.parent_id ? ntGet(x.parent_id) : null; } return p; }
 async function notesView(){
   const v = $('#view');
-  const { data, error } = await sb.from('notes').select('*').order('sort');
+  let data = [], from = 0, error = null;
+  for (;;) { const r = await sb.from('notes').select('id,parent_id,title,icon,sort,pinned,src,updated_at').order('sort').range(from, from + 999); if (r.error) { error = r.error; break; } data = data.concat(r.data); if (r.data.length < 1000) break; from += 1000; }
   if (error) { v.innerHTML = `<div class="card empty">${esc(error.message)}</div>`; return; }
-  NT.all = data || [];
+  NT.all = data; ntDirty();
   try { NT.open = new Set(JSON.parse(localStorage.getItem('unreal-nt-open') || '[]')); } catch(e){}
   v.innerHTML = `<div class="nt" id="nt"><aside class="card nt-side"><input id="ntQ" type="search" placeholder="🔎 Search all pages" value="${esc(NT.q)}"><button class="btn sm" id="ntNew" style="width:100%;margin-bottom:8px">+ New page</button><div id="ntHits" class="nt-hits"></div><ul class="nt-tree" id="ntTree"></ul></aside><article class="card nt-page" id="ntPage"></article></div>`;
   $('#ntQ').oninput = e => { NT.q = e.target.value; ntDrawHits(); };
@@ -1422,11 +1431,25 @@ function ntDrawTree(){
   t.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { const id = b.dataset.t; NT.open.has(id) ? NT.open.delete(id) : NT.open.add(id); ntSaveOpen(); ntDrawTree(); });
   t.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ntOpen(b.dataset.o, true));
 }
+let ntSearchT = null;
 function ntDrawHits(){
   const h = $('#ntHits'), q = NT.q.trim().toLowerCase();
   $('#ntTree').hidden = !!q;
   if (!q) { h.innerHTML = ''; return; }
-  const hits = NT.all.map(n => { const t = (n.title || '').toLowerCase(), b = (n.body || '').toLowerCase(); const i = b.indexOf(q); return { n, score: t.includes(q) ? 2 : i >= 0 ? 1 : 0, snip: i >= 0 ? n.body.slice(Math.max(0, i - 30), i + 60).replace(/\s+/g,' ') : '' }; }).filter(x => x.score).sort((a,b) => b.score - a.score).slice(0, 60);
+  const tHits = NT.all.filter(n => (n.title || '').toLowerCase().includes(q)).slice(0, 40).map(n => ({ n, snip:'' }));
+  ntShowHits(tHits);
+  clearTimeout(ntSearchT);
+  if (q.length < 3) return;
+  ntSearchT = setTimeout(async () => {
+    const { data } = await sb.from('notes').select('id,body').ilike('body', '%' + q.replace(/[%_]/g, '') + '%').limit(40);
+    if (NT.q.trim().toLowerCase() !== q) return;
+    const seen = new Set(tHits.map(x => x.n.id));
+    const bHits = (data || []).filter(r => !seen.has(r.id) && ntGet(r.id)).map(r => { const i = r.body.toLowerCase().indexOf(q); return { n: ntGet(r.id), snip: r.body.slice(Math.max(0, i - 30), i + 60).replace(/\s+/g,' ') }; });
+    ntShowHits(tHits.concat(bHits));
+  }, 350);
+}
+function ntShowHits(hits){
+  const h = $('#ntHits');
   h.innerHTML = hits.length ? hits.map(x => `<button data-o="${x.n.id}">${esc(ntName(x.n))}<small>${esc(x.snip || ntPath(x.n).slice(0,-1).map(p => p.title).join(' / '))}</small></button>`).join('') : '<p class="muted" style="font-size:13px">Nothing found.</p>';
   h.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ntOpen(b.dataset.o, true));
 }
@@ -1436,6 +1459,7 @@ async function ntOpen(id, show){
   ntPath(n).slice(0,-1).forEach(p => NT.open.add(p.id)); ntSaveOpen(); ntDrawTree();
   if (show) $('#nt').classList.add('open');
   const { marked, purify } = await ntLibs();
+  if (n.body === undefined) { const { data } = await sb.from('notes').select('body').eq('id', id).maybeSingle(); n.body = data?.body || ''; if (NT.cur !== id) return; }
   const kids = ntKids(id), path = ntPath(n);
   const pg = $('#ntPage');
   pg.innerHTML = `<button class="btn ghost sm nt-back" id="ntBack" style="margin-bottom:10px">← All pages</button>
@@ -1443,7 +1467,7 @@ async function ntOpen(id, show){
     <div class="nt-h"><h1>${esc(ntName(n))}</h1><div class="nt-tools"><button class="btn sm" id="ntEdit">✏️ Edit</button><button class="btn ghost sm" id="ntSub">+ Sub-page</button><button class="btn ghost sm" id="ntMore">⋯</button></div></div>
     <p class="muted" style="font-size:12px;margin:4px 0 16px">Updated ${date(n.updated_at)}${n.src ? ' · from Notion' : ''}</p>
     <div class="nt-body" id="ntBody">${n.body.trim() ? purify.sanitize(marked.parse(n.body), { ADD_TAGS:['details','summary'] }) : '<p class="muted">Empty page. Click ✏️ Edit to write.</p>'}</div>
-    ${kids.length ? `<div class="nt-kids">${kids.map(k => `<button data-o="${k.id}">${esc(ntName(k))}</button>`).join('')}</div>` : ''}`;
+    ${kids.length ? `<div class="nt-kids">${kids.slice(0, 300).map(k => `<button data-o="${k.id}">${esc(ntName(k))}</button>`).join('')}</div>${kids.length > 300 ? `<p class="muted" style="font-size:12px">+ ${kids.length - 300} more pages, use the search to find them.</p>` : ''}` : ''}`;
   pg.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ntOpen(b.dataset.o, true));
   pg.querySelectorAll('.nt-body pre, .nt-body blockquote').forEach(el => { const c = document.createElement('button'); c.className = 'nt-cp'; c.textContent = 'Copy'; c.onclick = async () => { await navigator.clipboard.writeText(el.innerText.replace(/Copy$/, '').trim()); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy', 1200); }; el.appendChild(c); });
   pg.querySelectorAll('.nt-body a[href]').forEach(a => { const h = a.getAttribute('href'); if (h.startsWith('#n-')) { a.onclick = e => { e.preventDefault(); ntGet(h.slice(3)) ? ntOpen(h.slice(3), true) : toast('Page not found'); }; } else { a.target = '_blank'; a.rel = 'noopener'; } });
@@ -1473,20 +1497,20 @@ async function ntCreate(parent){
   const sort = Math.max(0, ...ntKids(parent).map(k => k.sort)) + 1;
   const { data, error } = await sb.from('notes').insert({ parent_id: parent, title: 'Untitled', sort }).select().single();
   if (error) return toast(error.message);
-  NT.all.push(data); if (parent) NT.open.add(parent);
+  NT.all.push(data); ntDirty(); if (parent) NT.open.add(parent);
   await ntOpen(data.id, true); ntEdit(data); $('#ntT').select();
 }
 function ntMore(n){
-  const others = NT.all.filter(x => x.id !== n.id && !ntPath(x).some(p => p.id === n.id)).sort((a,b) => ntPath(a).map(p=>p.title).join('/').localeCompare(ntPath(b).map(p=>p.title).join('/')));
+  const others = NT.all.filter(x => x.id !== n.id && ntKids(x.id).length && x.src !== 'notion-db' && ntPath(x).length <= 4 && !ntPath(x).some(p => p.id === n.id)).sort((a,b) => ntPath(a).map(p=>p.title).join('/').localeCompare(ntPath(b).map(p=>p.title).join('/')));
   const pg = $('#ntPage');
   const box = document.createElement('div'); box.className = 'card'; box.style.cssText = 'margin:0 0 14px;padding:12px';
   box.innerHTML = `<b>Page options</b><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
     <label style="font-size:13px">Move into <select id="ntMv" style="max-width:260px"><option value="">— Top level —</option>${others.map(x => `<option value="${x.id}"${x.id === n.parent_id ? ' selected' : ''}>${esc(ntPath(x).map(p => p.title).join(' / '))}</option>`).join('')}</select></label>
     <button class="btn sm" id="ntMvGo">Move</button><button class="btn ghost sm" id="ntPin">${n.pinned ? '📌 Unpin' : '📌 Pin to top'}</button><button class="btn ghost sm" id="ntDel" style="color:#e5484d">🗑 Delete</button></div>`;
   pg.prepend(box);
-  $('#ntMvGo').onclick = async () => { const parent_id = $('#ntMv').value || null; const { error } = await sb.from('notes').update({ parent_id }).eq('id', n.id); if (error) return toast(error.message); n.parent_id = parent_id; toast('Moved'); ntOpen(n.id); };
-  $('#ntPin').onclick = async () => { const { error } = await sb.from('notes').update({ pinned: !n.pinned }).eq('id', n.id); if (error) return toast(error.message); n.pinned = !n.pinned; ntOpen(n.id); };
-  $('#ntDel').onclick = async () => { const sub = NT.all.filter(x => ntPath(x).some(p => p.id === n.id)).length - 1; if (!confirm(`Delete “${n.title}”${sub ? ` and its ${sub} sub-page(s)` : ''}? This can't be undone.`)) return; const { error } = await sb.from('notes').delete().eq('id', n.id); if (error) return toast(error.message); const gone = new Set(NT.all.filter(x => ntPath(x).some(p => p.id === n.id)).map(x => x.id)); NT.all = NT.all.filter(x => !gone.has(x.id)); toast('Deleted'); const up = n.parent_id && ntGet(n.parent_id); if (up) ntOpen(up.id, true); else { $('#nt').classList.remove('open'); ntDrawTree(); $('#ntPage').innerHTML = ''; const f = ntKids(null)[0]; if (f && innerWidth > 820) ntOpen(f.id); } };
+  $('#ntMvGo').onclick = async () => { const parent_id = $('#ntMv').value || null; const { error } = await sb.from('notes').update({ parent_id }).eq('id', n.id); if (error) return toast(error.message); n.parent_id = parent_id; ntDirty(); toast('Moved'); ntOpen(n.id); };
+  $('#ntPin').onclick = async () => { const { error } = await sb.from('notes').update({ pinned: !n.pinned }).eq('id', n.id); if (error) return toast(error.message); n.pinned = !n.pinned; ntDirty(); ntOpen(n.id); };
+  $('#ntDel').onclick = async () => { const sub = NT.all.filter(x => ntPath(x).some(p => p.id === n.id)).length - 1; if (!confirm(`Delete “${n.title}”${sub ? ` and its ${sub} sub-page(s)` : ''}? This can't be undone.`)) return; const { error } = await sb.from('notes').delete().eq('id', n.id); if (error) return toast(error.message); const gone = new Set(NT.all.filter(x => ntPath(x).some(p => p.id === n.id)).map(x => x.id)); NT.all = NT.all.filter(x => !gone.has(x.id)); ntDirty(); toast('Deleted'); const up = n.parent_id && ntGet(n.parent_id); if (up) ntOpen(up.id, true); else { $('#nt').classList.remove('open'); ntDrawTree(); $('#ntPage').innerHTML = ''; const f = ntKids(null)[0]; if (f && innerWidth > 820) ntOpen(f.id); } };
 }
 
 // ---------- docs ----------

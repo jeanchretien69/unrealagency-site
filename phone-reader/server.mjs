@@ -391,6 +391,23 @@ server.on('upgrade', async (req, socket) => {
     wsAccept(req, socket, await pick(acc));
   } catch { socket.destroy(); }
 });
+// adb watchdog: if adb stops seeing the phones (its background service crashed, or the Mac slept),
+// restart it by itself, so the Phone control page never stays on "No phone found" (Nov 26, 2026)
+if (!CFG.FAKE_DEVICE_PORT) {
+  let misses = 0, restarting = false;
+  setInterval(async () => {
+    if (restarting) return;
+    const out = await sh(CFG.ADB, ['devices'], 8000).catch(() => null);
+    const n = out ? out.split('\n').slice(1).filter(l => /\tdevice$/.test(l.trim()) || /\sdevice$/.test(l.trim())).length : 0;
+    if (n > 0) { misses = 0; return; }
+    if (++misses < 2) return;
+    restarting = true; misses = 0;
+    log('watchdog: adb sees no phone, restarting adb');
+    await sh(CFG.ADB, ['kill-server'], 8000).catch(() => {});
+    await sh(CFG.ADB, ['start-server'], 15000).catch(() => {});
+    restarting = false;
+  }, 30000);
+}
 server.listen(CFG.PORT, CFG.HOST, () => log(`phone reader on http://${CFG.HOST}:${CFG.PORT}`, RTC.available ? '(webrtc on)' : '(webrtc off)', CFG.GATE_URL ? '(gate on)' : '(NO GATE: local test only)', CFG.FAKE_DEVICE_PORT ? '(fake phone)' : ''));
 const shutdown = () => { for (const S of SESSIONS.values()) teardown(S); process.exit(0); };
 process.on('SIGTERM', shutdown);

@@ -154,27 +154,42 @@ M.key = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "d", M.toggle)
 -- BACK thumb button (Mac Mouse Fix sends Ctrl+Option+Cmd+S): an instant real click on Claude's own mic button.
 -- One-time setup: put the mouse on Claude's mic button and press Ctrl+Option+Cmd+M (position saved, relative to the Claude window).
 -- Then the back thumb clicks that spot in a split second and the mouse jumps right back to where it was.
-local POS = DIR .. "/mic_pos.txt"
+local POS, POS2 = DIR .. "/mic_pos.txt", DIR .. "/mic_stop_pos.txt"
+local micOn, micTimer = false, nil
 local function claudeWin()
   local c = hs.application.get(CLAUDE); if not c then return nil, nil end
   return c, (c:focusedWindow() or c:mainWindow())
 end
-local function readPos()
-  local f = io.open(POS); if not f then return nil end
+local function readPos(file)
+  local f = io.open(file); if not f then return nil end
   local dx, dy = f:read("n", "n"); f:close()
   if dx and dy then return dx, dy end
 end
+-- Ctrl+Option+Cmd+M: mic OFF = save the mic button · mic ON (started with the back thumb) = save the button that stops it
 function M.saveMic()
   local _, w = claudeWin()
   if not w then hs.alert.show("🎙 Open Claude first", 2); return end
   local p, fr = hs.mouse.absolutePosition(), w:frame()
-  local f = io.open(POS, "w"); f:write(string.format("%d %d", math.floor(p.x - (fr.x + fr.w / 2)), math.floor(fr.y + fr.h - p.y))); f:close()
-  hs.alert.show("🎙 Claude mic saved ✅ — back thumb now clicks it", 2)
+  local file = micOn and POS2 or POS
+  local f = io.open(file, "w"); f:write(string.format("%d %d", math.floor(p.x - (fr.x + fr.w / 2)), math.floor(fr.y + fr.h - p.y))); f:close()
+  if micOn then
+    hs.alert.show("🎙 STOP button saved ✅ — back thumb again now finishes your voice", 3)
+  else
+    hs.alert.show("🎙 Claude mic saved ✅ — back thumb now clicks it", 2)
+  end
 end
 function M.native()
   if state ~= "idle" then return end -- the front-button recorder is busy: don't mix the two
-  local dx, dy = readPos()
+  local dx, dy = readPos(POS)
   if not dx then hs.alert.show("🎙 Setup: put your mouse on Claude's mic button, then press Ctrl+Option+Cmd+M", 4); return end
+  if micOn then
+    local sx, sy = readPos(POS2)
+    if not sx then
+      hs.alert.show("🎙 One more setup: put your mouse on the button that STOPS the mic, then press Ctrl+Option+Cmd+M", 5)
+      return
+    end
+    dx, dy = sx, sy
+  end
   local c, w = claudeWin()
   if not w then hs.application.launchOrFocusByBundleID(CLAUDE); return end
   local function click()
@@ -182,6 +197,9 @@ function M.native()
     local back = hs.mouse.absolutePosition()
     hs.eventtap.leftClick({ x = fr.x + fr.w / 2 + dx, y = fr.y + fr.h - dy }, 20000)
     hs.mouse.absolutePosition(back)
+    micOn = not micOn
+    if micTimer then micTimer:stop() end
+    micTimer = micOn and hs.timer.doAfter(600, function() micOn = false end) or nil
   end
   local f = hs.application.frontmostApplication()
   if f and f:bundleID() == CLAUDE then click() else w:focus(); hs.timer.doAfter(0.25, click) end

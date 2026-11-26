@@ -1410,7 +1410,7 @@ function ntPath(n){ const p = []; let x = n; while (x){ p.unshift(x); x = x.pare
 async function notesView(){
   const v = $('#view');
   let data = [], from = 0, error = null;
-  for (;;) { const r = await sb.from('notes').select('id,parent_id,title,icon,sort,pinned,src,updated_at').order('sort').range(from, from + 999); if (r.error) { error = r.error; break; } data = data.concat(r.data); if (r.data.length < 1000) break; from += 1000; }
+  for (;;) { const r = await sb.from('notes').select('id,parent_id,title,icon,sort,pinned,src,updated_at').order('id').range(from, from + 999); if (r.error) { error = r.error; break; } data = data.concat(r.data); if (r.data.length < 1000) break; from += 1000; }
   if (error) { v.innerHTML = `<div class="card empty">${esc(error.message)}</div>`; return; }
   NT.all = data; ntDirty();
   try { NT.open = new Set(JSON.parse(localStorage.getItem('unreal-nt-open') || '[]')); } catch(e){}

@@ -827,6 +827,7 @@
     display:grid;grid-template-columns:260px minmax(0,1fr);border:1px solid var(--n-line);border-radius:12px;overflow:clip;background:var(--n-bg);color:var(--n-ink);
     font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,"Apple Color Emoji",Arial,sans-serif;min-height:calc(100vh - 150px)}
   html[data-mode="dark"] .nt{--n-bg:#191919;--n-side:#202020;--n-ink:rgba(255,255,255,.81);--n-soft:rgba(255,255,255,.62);--n-mute:rgba(255,255,255,.44);--n-line:rgba(255,255,255,.09);--n-hov:rgba(255,255,255,.055);--n-on:rgba(255,255,255,.085);--n-code:rgba(135,131,120,.2);--n-red:#ff7369;--n-link:rgba(255,255,255,.81)}
+  .nt h1,.nt h2,.nt h3,.nt h4{font-family:inherit;text-transform:none}
   .nt-side{background:var(--n-side);border-right:1px solid var(--n-line);position:sticky;top:64px;align-self:start;height:calc(100vh - 150px);overflow:auto;padding:6px 6px 40px;font-size:14px;color:var(--n-soft)}
   .nt-ws{display:flex;align-items:center;gap:8px;padding:8px 8px 10px;font-weight:600;color:var(--n-ink);font-size:14px}
   .nt-ws i{width:22px;height:22px;border-radius:4px;background:var(--n-ink);color:var(--n-bg);display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:700}
@@ -1702,7 +1703,7 @@ async function ntReviewAct(a){
   const R = NT.rv; if (!R.stack.length || R.busy) return; R.busy = true;
   try {
     const id = R.stack.pop(), n = ntGet(id); let pushed = 0;
-    if (a === 'del') { if (!(await ntTrash(n))) { R.stack.push(id); return; } R.del++; ntDrawTree(); }
+    if (a === 'del') { const inside = ntSub(id).length - 1; if (inside > 50 && !confirm(`Delete “${n.title}” and the ${inside} pages inside it?\n(They go to Trash, you can restore.)`)) { R.stack.push(id); return; } if (!(await ntTrash(n))) { R.stack.push(id); return; } R.del++; ntDrawTree(); }
     else if (a === 'keep') { const k = ntKids(id).map(x => x.id).reverse(); R.stack.push(...k); pushed = k.length; }
     R.seen++; R.hist.push({ id, a, pushed }); if (R.hist.length > 200) R.hist.shift();
     ntReviewSave();

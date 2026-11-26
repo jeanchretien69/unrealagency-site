@@ -43,4 +43,4 @@ echo "✅ Claude Voice updated. Mouse front button = talk · again = text in Cla
 
 # reload Hammerspoon so the new buttons work right away
 osascript -e 'tell application "Hammerspoon" to quit' 2>/dev/null; sleep 1; open -g -a Hammerspoon
-echo "✅ Buttons updated: FRONT = record / stop / send (Claude Voice) · BACK = instant click on Claude's mic (setup once: mouse on Claude's mic + Ctrl+Option+Cmd+M)"   # reload Hammerspoon
+echo "✅ Buttons updated: FRONT = record / stop / send (Claude Voice) · BACK = Claude mic on · again = stop (fix the text if you want) · again = send"   # reload Hammerspoon

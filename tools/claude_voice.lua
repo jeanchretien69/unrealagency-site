@@ -155,7 +155,8 @@ M.key = hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "d", M.toggle)
 -- One-time setup: put the mouse on Claude's mic button and press Ctrl+Option+Cmd+M (position saved, relative to the Claude window).
 -- Then the back thumb clicks that spot in a split second and the mouse jumps right back to where it was.
 local POS, POS2 = DIR .. "/mic_pos.txt", DIR .. "/mic_stop_pos.txt"
-local micOn, micTimer = false, nil
+local micOn, micTimer, micReview, micEnterTap = false, nil, false, nil
+local function endMicReview() micReview = false; if micEnterTap then micEnterTap:stop(); micEnterTap = nil end end
 local function claudeWin()
   local c = hs.application.get(CLAUDE); if not c then return nil, nil end
   return c, (c:focusedWindow() or c:mainWindow())
@@ -180,6 +181,14 @@ function M.saveMic()
 end
 function M.native()
   if state ~= "idle" then return end -- the front-button recorder is busy: don't mix the two
+  -- 3rd press: the text is in Claude (fix it if you want) → send it
+  if micReview then
+    local f = hs.application.frontmostApplication()
+    local c = hs.application.get(CLAUDE)
+    local function send() hs.eventtap.keyStroke({}, "return", 0); endMicReview() end
+    if f and f:bundleID() == CLAUDE then send() elseif c then c:activate(); hs.timer.doAfter(0.25, send) end
+    return
+  end
   local dx, dy = readPos(POS)
   if not dx then hs.alert.show("🎙 Setup: put your mouse on Claude's mic button, then press Ctrl+Option+Cmd+M", 4); return end
   if micOn then
@@ -197,9 +206,22 @@ function M.native()
     local back = hs.mouse.absolutePosition()
     hs.eventtap.leftClick({ x = fr.x + fr.w / 2 + dx, y = fr.y + fr.h - dy }, 20000)
     hs.mouse.absolutePosition(back)
+    local wasOn = micOn
     micOn = not micOn
     if micTimer then micTimer:stop() end
     micTimer = micOn and hs.timer.doAfter(600, function() micOn = false end) or nil
+    if wasOn then
+      -- mic stopped: the text lands in Claude; next back press = SEND (or press Enter yourself)
+      micReview = true
+      micTimer = hs.timer.doAfter(300, endMicReview)
+      micEnterTap = hs.eventtap.new({ hs.eventtap.event.types.keyDown }, function(e)
+        if e:getKeyCode() == 36 or e:getKeyCode() == 76 then
+          local fa = hs.application.frontmostApplication()
+          if fa and fa:bundleID() == CLAUDE then hs.timer.doAfter(0, endMicReview) end
+        end
+        return false
+      end):start()
+    end
   end
   local f = hs.application.frontmostApplication()
   if f and f:bundleID() == CLAUDE then click() else w:focus(); hs.timer.doAfter(0.25, click) end

@@ -3220,7 +3220,7 @@ async function timeView(){
   const isToday = timeDay === today;
   const [fl, d, ppl, co] = await Promise.all([ sb.from('focus_callouts').select('ts,kind,msg').gte('ts', new Date(Date.now() - 18 * 3600e3).toISOString()).order('ts', { ascending:false }).limit(8), sb.rpc('focus_live', { p_day: timeDay }), sb.rpc('aw_day', { p_day: timeDay }), sb.from('aw_people').select('name,token,tz').order('id') ]).then(([c, ...r]) => [...r, c]);
   if (tab !== 'time') return;
-  if (fl.error) return v.innerHTML = `<div class="msg err">${esc(fl.error.message)}</div>`;
+  if (fl.error) { v.innerHTML = timeModes() + `<div class="msg err">${esc(fl.error.message)}</div>`; bindModes(); return; }
   const td = isToday ? await sb.from('my_todos').select('title,bucket,done,done_at,done_by').order('sort') : { data:[] };
   if (tab !== 'time') return;
   const f = fl.data || {}; timeLast = f;

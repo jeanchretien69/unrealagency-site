@@ -941,6 +941,12 @@
   .bg-bar{flex:1;max-width:180px;height:5px;background:var(--n-hov);border-radius:3px;overflow:hidden}.bg-bar i{display:block;height:100%;background:#eb5757}
   .bg-peek{margin-top:8px;font-size:13px;color:var(--n-soft);line-height:1.7}
   .bg-acts{display:flex;gap:6px;flex:none}
+  .nt-x{margin-left:auto;opacity:0;padding:0 6px;border-radius:5px;font-size:14px;cursor:pointer;flex:none}.nt-link:hover .nt-x,.nt-kids button:hover .nt-x{opacity:.7}.nt-x:hover{opacity:1!important;background:rgba(235,87,87,.18)}
+  .nt-kids button{display:flex;align-items:center}
+  @media (hover:none){.nt-x{opacity:.55}}
+  .nt-utoast{display:flex;gap:12px;align-items:center}.nt-utoast button{border:0;background:#fff;color:#111;font:inherit;font-weight:700;padding:4px 10px;border-radius:6px;cursor:pointer}
+  .bg-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.bg-all{font-size:13px;display:flex;gap:6px;align-items:center;cursor:pointer}.bg-all input{width:16px;height:16px;accent-color:#eb5757}
+  .bg-tools .nt-rv{flex:none;min-width:0;padding:10px 12px;font-size:14px}
   .bg-ph{font-size:11px;color:var(--n-mute);margin-bottom:4px}
   .bg-chip{display:inline-flex;align-items:center;background:var(--n-hov);border-radius:6px;margin:2px 4px 2px 0;font-size:14px;white-space:nowrap;max-width:100%}
   .bg-cn{padding:3px 4px 3px 8px;cursor:pointer;overflow:hidden;text-overflow:ellipsis}.bg-cn:hover{text-decoration:underline}
@@ -1637,8 +1643,20 @@ function ntKidsHTML(n, limit){
   const lim = limit || 300;
   return `<div class="nt-kids">${kids.slice(0, lim).map(k => `<button data-o="${k.id}"><span class="ic">${ntIc(k)}</span><b>${esc(k.title || 'Untitled')}</b></button>`).join('')}${kids.length > lim ? `<p class="nt-empty" style="font-size:13px">+ ${kids.length - lim} more pages — use Search to find them.</p>` : ''}</div>`;
 }
+function ntUndoToast(text, undo){
+  document.querySelectorAll('.nt-utoast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast nt-utoast'; t.innerHTML = `<span></span><button>Undo</button>`; t.querySelector('span').textContent = text;
+  t.querySelector('button').onclick = async () => { t.remove(); await undo(); toast('Restored'); };
+  document.body.appendChild(t); setTimeout(() => t.remove(), 6000);
+}
 function ntWire(pg, n){
   pg.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ntOpen(b.dataset.o, true));
+  if (NT.mode === 'page' && !ntInTrash(n)) pg.querySelectorAll('.nt-body a.nt-link, .nt-kids button[data-o]').forEach(row => {
+    const id = row.dataset.o || (row.getAttribute('href') || '').slice(3); if (!ntGet(id)) return;
+    const x = document.createElement('span'); x.className = 'nt-x'; x.title = 'Delete'; x.textContent = '🗑'; row.appendChild(x);
+    x.onclick = async e => { e.preventDefault(); e.stopPropagation(); const k = ntGet(id); if (!k || !(await ntTrash(k))) return; row.remove(); ntDrawTree();
+      ntUndoToast(`“${k.title || 'Untitled'}” → Trash`, async () => { await ntRestore(k, true); ntDrawTree(); ntOpen(n.id, true); }); };
+  });
   pg.querySelectorAll('.nt-body pre, .nt-body blockquote').forEach(el => { const c = document.createElement('button'); c.className = 'nt-cp'; c.textContent = 'Copy'; c.onclick = async () => { await navigator.clipboard.writeText(el.innerText.replace(/Copy$/, '').trim()); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy', 1200); }; el.appendChild(c); });
   const imgs = [...pg.querySelectorAll('.nt-body img')].filter(i => (i.getAttribute('src') || '').startsWith('#nf-'));
   const links = [...pg.querySelectorAll('.nt-body a')].filter(a => (a.getAttribute('href') || '').startsWith('#nf-'));
@@ -1797,13 +1815,18 @@ async function ntBig(rootId, keepScroll){
         <div class="bg-peek" hidden></div></div>
       <div class="bg-acts"><button class="bg-b" data-a="peek">👁</button>${kids ? '<button class="bg-b" data-a="in">Open →</button>' : ''}<button class="bg-b keep" data-a="keep">${k ? 'Unkeep' : '✓ Keep'}</button><button class="bg-b del" data-a="del">🗑${c > 1 ? ' all' : ''}</button></div></div>`; };
   pg.innerHTML = `<div class="bg-head"><div><div class="bg-h">${rn ? esc(rn.title || 'Untitled') : 'Big clean'}</div><div class="bg-s">${rows.length} sections · ${total.toLocaleString()} pages · biggest first. 🗑 sends a whole section (everything inside) to Trash. 👁 = peek inside.</div></div>
-      <button class="nt-rv del" id="bgDelSel" disabled>🗑 Delete selected</button></div>
+      <div class="bg-tools"><label class="bg-all"><input type="checkbox" id="bgAll"> Select all</label><button class="nt-rv keep" id="bgKeepSel" disabled>✓ Keep selected, delete the rest</button><button class="nt-rv del" id="bgDelSel" disabled>🗑 Delete selected</button></div></div>
     <div class="bg-list">${rows.map(row).join('') || '<p class="nt-empty">Nothing left here ✨</p>'}</div>`;
   const selBtn = $('#bgDelSel');
   const upd = () => { const sel = [...pg.querySelectorAll('.bg-ck:checked')].map(x => x.closest('.bg-row').dataset.id); const c = sel.reduce((t, id) => t + sz(id), 0); selBtn.disabled = !sel.length; selBtn.textContent = sel.length ? `🗑 Delete ${sel.length} selected (${c.toLocaleString()} pages)` : '🗑 Delete selected'; return { sel, c }; };
   pg.querySelectorAll('.bg-ck').forEach(x => x.onchange = upd);
   const del = async ids => { const c = ids.reduce((t, id) => t + sz(id), 0); const done = []; for (const id of ids) { const n = ntGet(id); if (n && await ntTrash(n)) done.push(id); } if (done.length) { NT.bigUndo.push(done); toast(`${c.toLocaleString()} pages → Trash`); } ntDrawTree(); ntBig(NT.bigRoot, scrollY || 1); };
   selBtn.onclick = () => del(upd().sel);
+  const keepBtn = $('#bgKeepSel'), allBox = $('#bgAll');
+  const upd2 = () => { const { sel } = upd(); const rest = rows.filter(r => !sel.includes(r.id)); const c = rest.reduce((t, r) => t + sz(r.id), 0); keepBtn.disabled = !sel.length || !rest.length; keepBtn.textContent = sel.length && rest.length ? `✓ Keep ${sel.length}, delete the other ${rest.length} (${c.toLocaleString()} pages)` : '✓ Keep selected, delete the rest'; allBox.checked = sel.length === rows.length && rows.length > 0; };
+  pg.querySelectorAll('.bg-ck').forEach(x => x.onchange = upd2);
+  allBox.onchange = () => { pg.querySelectorAll('.bg-ck').forEach(x => x.checked = allBox.checked); upd2(); };
+  keepBtn.onclick = () => { const { sel } = upd(); del(rows.filter(r => !sel.includes(r.id)).map(r => r.id)); };
   pg.querySelectorAll('.bg-row').forEach(el => { const id = el.dataset.id, n = ntGet(id);
     el.querySelectorAll('.bg-b').forEach(b => b.onclick = async () => { const a = b.dataset.a;
       if (a === 'del') del([id]);

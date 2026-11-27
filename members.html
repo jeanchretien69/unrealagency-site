@@ -912,6 +912,15 @@
   .nt-rv.keep{background:#2383e2;border-color:#2383e2;color:#fff}.nt-rv.keep:hover{background:#1a6fc4}
   .nt-rv kbd{font:600 11px ui-monospace,Menlo,monospace;opacity:.7;margin-left:4px;border:1px solid currentColor;border-radius:4px;padding:0 4px}
   .nt-rv-body{max-height:none}
+  .nt-body a.nt-link{display:flex;align-items:center;gap:8px;background:var(--n-row,#f1f1ef);color:var(--n-ink);text-decoration:none;border-radius:4px;padding:5px 8px;margin:3px 0;font-weight:500;line-height:1.35}
+  .nt-body a.nt-link:hover{background:var(--n-on)}
+  .nt-li{width:20px;text-align:center;flex:none;font-size:16px;display:flex;justify-content:center}.nt-li svg{width:18px;height:18px;opacity:.6}
+  .nt-lt{border-bottom:1px solid var(--n-line);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nt-body h2.nt-sh{background:var(--n-sec,#efe8f7);border-radius:6px;padding:6px 10px;font-size:24px;font-weight:700;margin:26px 0 12px;display:flex;align-items:center;gap:6px}
+  .nt-body h2.nt-sh::before{content:"";width:16px;height:16px;background:#2f7de1;transform:rotate(45deg) scale(.82);border-radius:2px;flex:none;margin-right:4px}
+  .nt-board{column-count:2;column-gap:44px;margin-top:8px}.nt-sec{break-inside:avoid;padding-top:1px}.nt-sec h2.nt-sh:first-child{margin-top:18px}
+  html[data-mode="dark"] .nt{--n-row:rgba(255,255,255,.055);--n-sec:rgba(155,120,220,.18)}
+  @media (max-width:820px){.nt-board{column-count:1}}
   .mg-drop{border:2px dashed var(--line,#f3c6d8);text-align:center;padding:26px 16px}.mg-drop.on{background:rgba(255,77,148,.06)}
   .mg-sub{font-size:13px;opacity:.65;margin-top:4px}
   .mg-row{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;border-bottom:1px solid rgba(0,0,0,.06)}
@@ -1591,9 +1600,36 @@ function ntShowHits(hits){
   h.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ntOpen(b.dataset.o, true));
 }
 async function ntLoadBody(n){ if (n.body === undefined) { const { data } = await sb.from('notes').select('body').eq('id', n.id).maybeSingle(); n.body = data?.body || ''; } }
+// Notion look: page links as icon rows, sections as lavender headers, link-only sections in 2 columns
+function ntPretty(html){
+  const t = document.createElement('div'); t.innerHTML = html;
+  t.querySelectorAll('p').forEach(p => {
+    const kids = [...p.childNodes].filter(x => !(x.nodeType === 3 && !x.textContent.trim()));
+    if (kids.length !== 1 || kids[0].tagName !== 'A') return;
+    const a = kids[0], h = a.getAttribute('href') || '';
+    if (!h.startsWith('#n-')) return;
+    const tg = ntGet(h.slice(3));
+    const r = document.createElement('a'); r.className = 'nt-link'; r.setAttribute('href', h);
+    r.innerHTML = `<span class="nt-li">${tg && tg.icon ? esc(tg.icon) : NT_DOC}</span><span class="nt-lt">${esc(a.textContent.trim() || (tg && tg.title) || 'Untitled')}</span>`;
+    p.replaceWith(r);
+  });
+  const h2s = [...t.children].filter(x => x.tagName === 'H2');
+  h2s.forEach(h => { h.classList.add('nt-sh'); h.textContent = h.textContent.replace(/^[\s🔹🔷]+/u, ''); });
+  if (h2s.length >= 3) {
+    const board = document.createElement('div'); board.className = 'nt-board';
+    let sec = null; const nodes = [...t.childNodes]; let started = false;
+    for (const x of nodes) {
+      if (x.tagName === 'H2') { started = true; sec = document.createElement('div'); sec.className = 'nt-sec'; board.appendChild(sec); }
+      if (started) sec.appendChild(x);
+    }
+    t.appendChild(board);
+  }
+  return t.innerHTML;
+}
 async function ntBodyHTML(n){
   const { marked, purify } = await ntLibs(); await ntLoadBody(n);
-  return n.body.trim() ? purify.sanitize(marked.parse(n.body.replace(/\]\(nf:/g, '](#nf-')), { ADD_TAGS:['details','summary'] }) : '<p class="nt-empty">Empty page</p>';
+  if (!n.body.trim()) return '<p class="nt-empty">Empty page</p>';
+  return ntPretty(purify.sanitize(marked.parse(n.body.replace(/\]\(nf:/g, '](#nf-')), { ADD_TAGS:['details','summary'] }));
 }
 function ntKidsHTML(n, limit){
   const kids = ntKids(n.id).filter(k => !(n.body || '').includes('#n-' + k.id));

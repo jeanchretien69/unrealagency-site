@@ -921,8 +921,13 @@
   .bg-k{font-size:11px;background:#2383e2;color:#fff;border-radius:4px;padding:1px 5px;vertical-align:middle}
   .bg-c{font-size:12px;color:var(--n-mute);display:flex;align-items:center;gap:8px}
   .bg-bar{flex:1;max-width:180px;height:5px;background:var(--n-hov);border-radius:3px;overflow:hidden}.bg-bar i{display:block;height:100%;background:#eb5757}
-  .bg-peek{margin-top:8px;font-size:13px;color:var(--n-soft);line-height:1.7;white-space:pre-wrap}
+  .bg-peek{margin-top:8px;font-size:13px;color:var(--n-soft);line-height:1.7}
   .bg-acts{display:flex;gap:6px;flex:none}
+  .bg-ph{font-size:11px;color:var(--n-mute);margin-bottom:4px}
+  .bg-chip{display:inline-flex;align-items:center;background:var(--n-hov);border-radius:6px;margin:2px 4px 2px 0;font-size:14px;white-space:nowrap;max-width:100%}
+  .bg-cn{padding:3px 4px 3px 8px;cursor:pointer;overflow:hidden;text-overflow:ellipsis}.bg-cn:hover{text-decoration:underline}
+  .bg-cx{border:0;background:none;color:var(--n-mute);font:inherit;font-size:12px;padding:3px 8px;cursor:pointer;border-radius:0 6px 6px 0}.bg-cx:hover{background:#eb5757;color:#fff}
+  .bg-pv{font-size:13px;color:var(--n-soft);background:var(--n-side);border-left:3px solid var(--n-line);padding:6px 10px;margin:4px 0 6px;white-space:pre-wrap}
   .bg-b{border:1px solid var(--n-line);background:var(--n-bg);color:var(--n-ink);font:inherit;font-size:13px;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;white-space:nowrap}.bg-b:hover{background:var(--n-hov)}
   .bg-b.del{background:#eb5757;border-color:#eb5757;color:#fff}.bg-b.keep{color:#2383e2}
   @media (max-width:820px){.bg-head{top:58px}.bg-row{flex-wrap:wrap}.bg-acts{width:100%;padding-left:28px}.bg-acts .bg-b{flex:1}.bg-head .nt-rv{width:100%}}
@@ -1720,7 +1725,8 @@ function ntMore(n){
 function ntSizes(){ const m = new Map(); const f = id => { if (m.has(id)) return m.get(id); let c = 1; for (const k of ntKids(id)) c += f(k.id); m.set(id, c); return c; }; return f; }
 function ntBigKept(){ try { return new Set(JSON.parse(localStorage.getItem('unreal-nt-kept') || '[]')); } catch(e){ return new Set(); } }
 function ntBigKeep(id, on){ const k = ntBigKept(); on ? k.add(id) : k.delete(id); try { localStorage.setItem('unreal-nt-kept', JSON.stringify([...k])); } catch(e){} }
-async function ntBig(rootId){
+async function ntBig(rootId, keepScroll){
+  if (!keepScroll || NT.bigRoot !== (rootId || null)) NT.bigOpen = new Set();
   ntReviewKeys(false); NT.mode = 'big'; NT.bigRoot = rootId || null;
   let root = rootId || null;
   if (!root) { const tops = ntRoot(); if (tops.length) { const sz = ntSizes(); const big = tops.slice().sort((a, b) => sz(b.id) - sz(a.id))[0]; if (sz(big.id) > 50) root = big.id, NT.bigRoot = root; } }
@@ -1737,7 +1743,7 @@ async function ntBig(rootId){
   $('#bgX').onclick = () => { $('#nt').classList.remove('rv'); NT.mode = 'page'; ntOpen(root || ntRoot()[0]?.id, true); };
   $('#bgHome').onclick = () => ntBig();
   top.querySelectorAll('[data-b]').forEach(a => a.onclick = () => ntBig(a.dataset.b));
-  $('#bgUndo').onclick = async () => { const ids = NT.bigUndo.pop(); if (!ids) return; for (const id of ids) { const n = ntGet(id); if (n) await ntRestore(n, true); } ntDrawTree(); toast('Restored'); ntBig(NT.bigRoot); };
+  $('#bgUndo').onclick = async () => { const ids = NT.bigUndo.pop(); if (!ids) return; for (const id of ids) { const n = ntGet(id); if (n) await ntRestore(n, true); } ntDrawTree(); toast('Restored'); ntBig(NT.bigRoot, scrollY || 1); };
   const row = r => { const c = sz(r.id), k = kept.has(r.id), kids = ntKids(r.id).length;
     return `<div class="bg-row${k ? ' kept' : ''}" data-id="${r.id}">
       <input type="checkbox" class="bg-ck" title="Select">
@@ -1751,19 +1757,27 @@ async function ntBig(rootId){
   const selBtn = $('#bgDelSel');
   const upd = () => { const sel = [...pg.querySelectorAll('.bg-ck:checked')].map(x => x.closest('.bg-row').dataset.id); const c = sel.reduce((t, id) => t + sz(id), 0); selBtn.disabled = !sel.length; selBtn.textContent = sel.length ? `🗑 Delete ${sel.length} selected (${c.toLocaleString()} pages)` : '🗑 Delete selected'; return { sel, c }; };
   pg.querySelectorAll('.bg-ck').forEach(x => x.onchange = upd);
-  const del = async ids => { const c = ids.reduce((t, id) => t + sz(id), 0); if (c > 300 && !confirm(`Send ${c.toLocaleString()} pages to Trash?\n(You can Undo or restore from Trash.)`)) return; const done = []; for (const id of ids) { const n = ntGet(id); if (n && await ntTrash(n)) done.push(id); } if (done.length) { NT.bigUndo.push(done); toast(`${c.toLocaleString()} pages → Trash`); } ntDrawTree(); ntBig(NT.bigRoot); };
+  const del = async ids => { const c = ids.reduce((t, id) => t + sz(id), 0); if (c > 300 && !confirm(`Send ${c.toLocaleString()} pages to Trash?\n(You can Undo or restore from Trash.)`)) return; const done = []; for (const id of ids) { const n = ntGet(id); if (n && await ntTrash(n)) done.push(id); } if (done.length) { NT.bigUndo.push(done); toast(`${c.toLocaleString()} pages → Trash`); } ntDrawTree(); ntBig(NT.bigRoot, scrollY || 1); };
   selBtn.onclick = () => del(upd().sel);
   pg.querySelectorAll('.bg-row').forEach(el => { const id = el.dataset.id, n = ntGet(id);
     el.querySelectorAll('.bg-b').forEach(b => b.onclick = async () => { const a = b.dataset.a;
       if (a === 'del') del([id]);
       else if (a === 'in') ntBig(id);
-      else if (a === 'keep') { ntBigKeep(id, !kept.has(id)); ntBig(NT.bigRoot); }
-      else if (a === 'peek') { const pk = el.querySelector('.bg-peek'); if (!pk.hidden) { pk.hidden = true; return; } pk.hidden = false; pk.innerHTML = 'Loading…';
-        const kids = ntKids(id).slice().sort((x, y) => sz(y.id) - sz(x.id));
-        if (kids.length) pk.innerHTML = kids.slice(0, 40).map(k => `<span class="rv-sub">${k.icon ? esc(k.icon) : '📄'} ${esc(k.title || 'Untitled')}${sz(k.id) > 1 ? ` · ${sz(k.id).toLocaleString()}` : ''}</span>`).join(' ') + (kids.length > 40 ? ` <span class="bg-c">+${kids.length - 40} more</span>` : '');
-        else { await ntLoadBody(n); const t = (n.body || '').replace(/!\[[^\]]*\]\([^)]*\)/g, '🖼').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[#*_>`]/g, '').trim(); pk.textContent = t ? t.slice(0, 600) + (t.length > 600 ? '…' : '') : 'Empty page'; } } });
+      else if (a === 'keep') { ntBigKeep(id, !kept.has(id)); ntBig(NT.bigRoot, scrollY || 1); }
+      else if (a === 'peek') { const pk = el.querySelector('.bg-peek'); if (!pk.hidden) { pk.hidden = true; NT.bigOpen.delete(id); return; } NT.bigOpen.add(id); peek(el, id); } });
   });
-  window.scrollTo(0, 0);
+  pg.querySelectorAll('.bg-row').forEach(el => { if (NT.bigOpen.has(el.dataset.id)) peek(el, el.dataset.id); });
+  if (keepScroll) window.scrollTo(0, keepScroll); else window.scrollTo(0, 0);
+  async function peek(el, id){
+    const n = ntGet(id), pk = el.querySelector('.bg-peek'); pk.hidden = false; pk.innerHTML = 'Loading…';
+    const kids = ntKids(id).slice().sort((x, y) => sz(y.id) - sz(x.id));
+    if (!kids.length) { await ntLoadBody(n); const t = (n.body || '').replace(/!\[[^\]]*\]\([^)]*\)/g, '🖼').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[#*_>`]/g, '').trim(); pk.textContent = t ? t.slice(0, 600) + (t.length > 600 ? '…' : '') : 'Empty page'; return; }
+    pk.innerHTML = `<div class="bg-ph">✕ = delete that one · click a name to see inside</div>` + kids.slice(0, 300).map(k => `<span class="bg-chip" data-k="${k.id}"><span class="bg-cn">${k.icon ? esc(k.icon) : '📄'} ${esc(k.title || 'Untitled')}${sz(k.id) > 1 ? ` · ${sz(k.id).toLocaleString()}` : ''}</span><button class="bg-cx" title="Delete">✕</button></span>`).join('') + (kids.length > 300 ? ` <span class="bg-c">+${kids.length - 300} more — use Open →</span>` : '');
+    pk.querySelectorAll('.bg-chip').forEach(c => { const kid = c.dataset.k;
+      c.querySelector('.bg-cx').onclick = async e => { e.stopPropagation(); const kn = ntGet(kid), cnt = sz(kid); if (cnt > 300 && !confirm(`Delete “${kn.title}” and its ${cnt.toLocaleString()} pages?`)) return; c.style.opacity = .3; if (await ntTrash(kn)) { NT.bigUndo.push([kid]); toast(`${cnt.toLocaleString()} page${cnt > 1 ? 's' : ''} → Trash`); ntDrawTree(); ntBig(NT.bigRoot, scrollY); } else c.style.opacity = 1; };
+      c.querySelector('.bg-cn').onclick = () => { if (ntKids(kid).length) ntBig(kid); else { const row = c; if (row.nextElementSibling?.classList.contains('bg-pv')) { row.nextElementSibling.remove(); return; } const kn = ntGet(kid); const d = document.createElement('div'); d.className = 'bg-pv'; d.textContent = 'Loading…'; row.after(d); ntLoadBody(kn).then(() => { const t = (kn.body || '').replace(/!\[[^\]]*\]\([^)]*\)/g, '🖼').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[#*_>`]/g, '').trim(); d.textContent = t ? t.slice(0, 500) + (t.length > 500 ? '…' : '') : 'Empty page'; }); } };
+    });
+  }
 }
 // ---- Review & clean: go page by page, Keep or Delete (to Trash) ----
 function ntReviewSave(){ try { localStorage.setItem('unreal-nt-rv', JSON.stringify({ root: NT.rv.root, stack: NT.rv.stack, seen: NT.rv.seen, del: NT.rv.del })); } catch(e){} }

@@ -986,6 +986,7 @@
         <div class="grp" data-g="team"><div class="gh" role="button" tabindex="0" aria-expanded="true">Team & accounts<i>▾</i></div><div class="gb">
           <button data-tab="growth" class="adm" hidden>🌱 Growth</button>
           <button data-tab="twitter" data-perm="twitter" hidden>🐦 Twitter</button>
+          <button data-tab="discord" class="adm" hidden>💬 Discord bot</button>
           <button data-tab="prompts" data-perm="prompts" hidden>🎨 Prompt studio</button>
           <button data-tab="sms" data-perm="sms" hidden>📱 SMS phone<span class="nb" id="nbSms" hidden></span></button>
           <button data-tab="phone" data-perm="phone" hidden>🕹 Phone control</button>
@@ -1256,7 +1257,7 @@ document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.datas
   });
 })();
 const AI_SUBS = [['train','🧠 Train AI',() => me?.role === 'admin'],['brains','⚡ AI brains',() => me?.role === 'admin'],['personas','🎀 Personas',() => can('personas')]];
-const titles = { notes:['Notes','Your Notion, rebuilt here: guides, scripts, courses, contracts and notes. Search, edit and add pages.'], growth:['Growth','Kaya on Instagram, Facebook and Snapchat: what was done, the men we reached and where they\'re from, and what runs next.'], aimsgs:['AI messages','Every message your AI wrote, with what the client said before. Sent ones and the ones waiting.'], shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], drafts:['Saved site work','Parts of the website we built and put aside. Only you can see this.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { notes:['Notes','Your Notion, rebuilt here: guides, scripts, courses, contracts and notes. Search, edit and add pages.'], growth:['Growth','Kaya on Instagram, Facebook and Snapchat: what was done, the men we reached and where they\'re from, and what runs next.'], aimsgs:['AI messages','Every message your AI wrote, with what the client said before. Sent ones and the ones waiting.'], shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], drafts:['Saved site work','Parts of the website we built and put aside. Only you can see this.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], discord:['Discord bot','Every message the Unreal Bot sent on Discord. Edit or delete it here, or send a new one.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function mnavClose(){ document.body.classList.remove('mopen'); $('#mnav').setAttribute('aria-expanded', 'false'); }
 $('#mnav').onclick = () => { const o = document.body.classList.toggle('mopen'); $('#mnav').setAttribute('aria-expanded', String(o)); };
@@ -1276,7 +1277,7 @@ function show(t){
   { const sb = document.querySelector(`#side button[data-tab="${inAi ? 'aistudio' : t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }
   mnavClose(); window.scrollTo(0, 0);
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ notes:notesView, aimsgs:aiMsgsView, shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(me.role === 'admin' ? ['contract','tool','doc','script','site'] : ['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, growth:growthView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ notes:notesView, aimsgs:aiMsgsView, shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(me.role === 'admin' ? ['contract','tool','doc','script','site'] : ['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, discord:discordView, growth:growthView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
@@ -2772,6 +2773,38 @@ async function teamView(){
     e.preventDefault();
     const { error } = await sb.from('team_tasks').insert({ section: $('#ttS').value, daily: $('#ttD').value === '1', text: $('#ttT').value.trim(), hint: $('#ttH').value.trim() || null, sort: Date.now() % 100000 });
     toast(error ? error.message : 'Added'); teamView();
+  });
+}
+
+// ---------- Discord bot messages: edit / delete / send (webhook "Unreal Bot") ----------
+async function discordCall(body){
+  const { data: ss } = await sb.auth.getSession();
+  const r = await fetch('https://ljhpdqttcxwgufcejfor.supabase.co/functions/v1/discord-msg', { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + (ss?.session?.access_token || ''), apikey:'sb_publishable_Nu7S4SnvuTFRg1ODn4VVrA_hCH5X1wY' }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ('error ' + r.status));
+  return j;
+}
+async function discordView(){
+  const v = $('#view');
+  const { data, error } = await sb.rpc('discord_list');
+  if (tab !== 'discord') return;
+  if (error) return v.innerHTML = `<div class="msg err">${esc(error.message)}</div>`;
+  const when = d => new Date(d).toLocaleString([], { weekday:'short', day:'numeric', month:'short', hour:'numeric', minute:'2-digit' });
+  v.innerHTML = `<form class="card" id="dcNew"><h2>Send a new message</h2>
+      <textarea id="dcNewT" rows="4" maxlength="2000" placeholder="Message to the Discord channel. Tag Gian with <@1112219717541830658>" style="width:100%"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px"><button class="btn">Send as Unreal Bot</button><span class="muted" id="dcN">0/2000</span></div></form>
+    ${(data || []).map(m => `<div class="card" style="margin-top:12px" data-dc="${m.id}">
+      <div class="muted" style="font-size:12px;margin-bottom:6px">${when(m.sent_at)}${m.edited_at ? ' · edited ' + when(m.edited_at) : ''}${m.message_id ? '' : ' · <b>not editable</b> (sent before this page existed)'}</div>
+      <textarea rows="${Math.min(14, Math.max(3, (m.content.match(/\n/g) || []).length + 2))}" maxlength="2000" style="width:100%" ${m.message_id ? '' : 'disabled'}>${esc(m.content)}</textarea>
+      ${m.message_id ? `<div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" data-save>Save edit</button><button class="btn ghost sm" data-del>Delete on Discord</button></div>` : ''}
+    </div>`).join('') || '<p class="muted" style="margin-top:12px">No bot messages yet.</p>'}`;
+  const t = $('#dcNewT'); t.oninput = () => $('#dcN').textContent = t.value.length + '/2000';
+  $('#dcNew').onsubmit = async e => { e.preventDefault(); if (!t.value.trim()) return; try { await discordCall({ action:'send', content: t.value }); toast('Sent'); discordView(); } catch (er) { toast(er.message); } };
+  v.querySelectorAll('[data-dc]').forEach(card => {
+    const id = Number(card.dataset.dc), ta = card.querySelector('textarea');
+    const s = card.querySelector('[data-save]'), d = card.querySelector('[data-del]');
+    s && (s.onclick = async () => { s.disabled = true; try { await discordCall({ action:'edit', id, content: ta.value }); toast('Edited on Discord'); discordView(); } catch (er) { toast(er.message); s.disabled = false; } });
+    d && (d.onclick = async () => { if (!confirm('Delete this message on Discord?')) return; try { await discordCall({ action:'delete', id }); toast('Deleted'); discordView(); } catch (er) { toast(er.message); } });
   });
 }
 

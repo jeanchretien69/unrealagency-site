@@ -894,6 +894,12 @@
   .nt-kids button b{font-weight:500;text-decoration:underline;text-decoration-color:var(--n-mute);text-underline-offset:2px}
   .nt-kids .ic{width:22px;text-align:center}.nt-kids .ic svg{width:18px;height:18px;opacity:.6;vertical-align:-3px}
   .nt-empty{color:var(--n-mute)}
+  .nt-file{position:relative;display:inline-block;max-width:100%}
+  .nt-fdel{position:absolute;top:6px;right:6px;border:0;border-radius:6px;background:rgba(0,0,0,.6);color:#fff;font-size:14px;padding:4px 7px;cursor:pointer;opacity:0;transition:opacity .12s}
+  .nt-file:hover .nt-fdel{opacity:1}
+  .nt-file a + .nt-fdel{position:static;opacity:.55;background:none;color:var(--n-mute);margin-left:6px;padding:0 4px}
+  .nt-file a + .nt-fdel:hover{opacity:1;color:var(--n-red)}
+  @media (hover:none){.nt-fdel{opacity:1}}
   .nt-ed{width:100%;min-height:60vh;font:14px/1.6 ui-monospace,Menlo,monospace;padding:14px;border-radius:6px;border:1px solid var(--n-line);background:var(--n-bg);color:var(--n-ink);box-sizing:border-box}
   .nt-edh{display:flex;gap:8px;align-items:center;margin-bottom:12px}
   .nt-edh input{border:1px solid var(--n-line);background:var(--n-bg);color:var(--n-ink);border-radius:6px;padding:8px;font:inherit}
@@ -1556,12 +1562,19 @@ function ntKidsHTML(n, limit){
   const lim = limit || 300;
   return `<div class="nt-kids">${kids.slice(0, lim).map(k => `<button data-o="${k.id}"><span class="ic">${ntIc(k)}</span><b>${esc(k.title || 'Untitled')}</b></button>`).join('')}${kids.length > lim ? `<p class="nt-empty" style="font-size:13px">+ ${kids.length - lim} more pages — use Search to find them.</p>` : ''}</div>`;
 }
-function ntWire(pg){
+function ntWire(pg, n){
   pg.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ntOpen(b.dataset.o, true));
   pg.querySelectorAll('.nt-body pre, .nt-body blockquote').forEach(el => { const c = document.createElement('button'); c.className = 'nt-cp'; c.textContent = 'Copy'; c.onclick = async () => { await navigator.clipboard.writeText(el.innerText.replace(/Copy$/, '').trim()); c.textContent = 'Copied'; setTimeout(() => c.textContent = 'Copy', 1200); }; el.appendChild(c); });
   const imgs = [...pg.querySelectorAll('.nt-body img')].filter(i => (i.getAttribute('src') || '').startsWith('#nf-'));
   const links = [...pg.querySelectorAll('.nt-body a')].filter(a => (a.getAttribute('href') || '').startsWith('#nf-'));
   imgs.forEach(i => { i.dataset.nk = i.getAttribute('src').slice(4); i.loading = 'lazy'; i.removeAttribute('src'); });
+  if (n && !ntInTrash(n)) {
+    const addDel = (el, key) => { const w = document.createElement('span'); w.className = 'nt-file'; el.parentNode.insertBefore(w, el); w.appendChild(el);
+      const b = document.createElement('button'); b.className = 'nt-fdel'; b.title = 'Delete this file'; b.textContent = '🗑'; w.appendChild(b);
+      b.onclick = e => { e.preventDefault(); e.stopPropagation(); ntDelFile(n, key, w); }; };
+    imgs.forEach(i => addDel(i, i.dataset.nk));
+    links.forEach(a => addDel(a, a.getAttribute('href').slice(4)));
+  }
   if (imgs.length || links.length) (async () => {
     const { data: { session } } = await sb.auth.getSession();
     const H = { Authorization: 'Bearer ' + (session?.access_token || '') };
@@ -1572,6 +1585,21 @@ function ntWire(pg){
     for (const a of links) { const k = a.getAttribute('href').slice(4); a.onclick = async e => { e.preventDefault(); const u = await get(k); u ? window.open(u, '_blank') : toast('File not found'); }; }
   })();
   pg.querySelectorAll('.nt-body a[href]').forEach(a => { const h = a.getAttribute('href'); if (h.startsWith('#n-')) { a.onclick = e => { e.preventDefault(); ntGet(h.slice(3)) ? ntOpen(h.slice(3), true) : toast('Page not found'); }; } else if (!h.startsWith('#nf-')) { a.target = '_blank'; a.rel = 'noopener'; } });
+}
+// delete one picture / video / file from a page (and from storage if no other page uses it)
+async function ntDelFile(n, key, el){
+  if (!confirm('Delete this file from the page? This can\'t be undone.')) return;
+  const esc2 = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const body = (n.body || '').replace(new RegExp('!?\\[[^\\]]*\\]\\(nf:' + esc2 + '\\)\\n?', 'g'), '');
+  const { error } = await sb.from('notes').update({ body, updated_at: new Date().toISOString() }).eq('id', n.id);
+  if (error) return toast(error.message);
+  n.body = body; el.remove();
+  const { data: still } = await sb.from('notes').select('id').ilike('body', '%nf:' + key + '%').limit(1);
+  if (!still || !still.length) {
+    const { data: { session } } = await sb.auth.getSession();
+    await fetch('/api/files/' + encodeURIComponent(key), { method: 'DELETE', headers: { Authorization: 'Bearer ' + (session?.access_token || '') } });
+  }
+  toast('File deleted');
 }
 function ntCrumbs(n){
   return ntPath(n).map(p => `<a data-o="${p.id}">${p.icon ? esc(p.icon) + ' ' : ''}${esc(p.title || 'Untitled')}</a>`).join('<span>/</span>');
@@ -1590,7 +1618,7 @@ async function ntOpen(id, show){
   pg.innerHTML = `${trashed ? '<div class="nt-box" style="background:rgba(235,87,87,.1);border-color:rgba(235,87,87,.3)">This page is in Trash.</div>' : ''}${n.icon ? `<div class="nt-icon">${esc(n.icon)}</div>` : ''}<h1 class="nt-title">${esc(n.title || 'Untitled')}</h1>
     <div class="nt-meta">${n.src && n.src.startsWith('notion') ? 'Imported from Notion · ' : ''}${ntKids(id).length ? ntSub(id).length - 1 + ' pages inside' : ''}</div>
     <div class="nt-body" id="ntBody">${html}</div>${ntKidsHTML(n)}`;
-  ntWire(pg); ntWire($('#ntTop'));
+  ntWire(pg, n); ntWire($('#ntTop'));
   $('#ntBack').onclick = () => $('#nt').classList.remove('open');
   if ($('#ntEdit')) $('#ntEdit').onclick = () => ntEdit(n);
   if ($('#ntRes')) $('#ntRes').onclick = () => ntRestore(n);
@@ -1710,7 +1738,7 @@ async function ntReviewShow(){
       <button class="nt-rv" id="rvU"${R.hist.length ? '' : ' disabled'}>↩ Undo <kbd>U</kbd></button>
     </div>
     <div class="nt-body nt-rv-body">${html}</div>${ntKidsHTML(n, 60)}`;
-  ntWire(pg);
+  ntWire(pg, n);
   $('#rvD').onclick = () => ntReviewAct('del'); $('#rvK').onclick = () => ntReviewAct('keep'); $('#rvU').onclick = ntReviewUndo;
   if ($('#rvS')) $('#rvS').onclick = () => ntReviewAct('skip');
   window.scrollTo(0, 0);

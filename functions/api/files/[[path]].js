@@ -116,3 +116,12 @@ export async function onRequestPost({ request, env, params }) {
   }
   return new Response('bad request', { status: 400 });
 }
+
+// DELETE /api/files/<key>  -> admin only
+export async function onRequestDelete({ request, env, params }) {
+  const key = keyFrom(params);
+  if (!key) return new Response('bad key', { status: 400 });
+  if (!(await isAdmin(request))) return new Response('forbidden', { status: 403 });
+  await env.FILES.delete(key);
+  return new Response('deleted');
+}

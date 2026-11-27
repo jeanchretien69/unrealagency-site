@@ -3151,7 +3151,7 @@ async function askAdminView(){
 let timeDay = null, timePoll = null, timeTick = null, timeWhole = false, timeLast = null, timeMode = 'live';
 // a work day runs 05:00 -> 04:59 Bangkok, so late nights count for the day they belong to
 const workday = (t = Date.now()) => new Date(t - 5 * 3600e3).toLocaleDateString('en-CA', { timeZone:'Asia/Bangkok' });
-const timeModes = () => `<div class="stats" style="margin-bottom:12px"><button class="btn sm ${timeMode === 'live' ? '' : 'ghost'}" data-tmode="live">⚡ Live</button><button class="btn sm ${timeMode === 'history' ? '' : 'ghost'}" data-tmode="history">📈 History, weeks & money</button></div>`;
+const timeModes = () => `<div class="stats" style="margin-bottom:12px"><button class="btn sm ${timeMode === 'live' ? '' : 'ghost'}" data-tmode="live">⚡ Live</button><button class="btn sm ${timeMode === 'history' ? '' : 'ghost'}" data-tmode="history">📈 History, weeks & money</button><button class="btn sm ${timeMode === 'staff' ? '' : 'ghost'}" data-tmode="staff">🧑‍💻 Gian</button></div>`;
 const bindModes = () => document.querySelectorAll('[data-tmode]').forEach(b => b.onclick = () => { timeMode = b.dataset.tmode; if (timeMode === 'live') timeDay = workday(); timeView(); });
 const TK = { work:'var(--ok)', music:'#8b5cf6', break:'var(--bad)', other:'#9b8aa0', handsoff:'#f59e0b', away:'var(--line)' };
 const hm = m => { m = Math.round(Number(m) || 0); return m >= 60 ? Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0') : m + 'm'; };
@@ -3159,6 +3159,56 @@ const hms = s => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600
 const clk = d => new Date(d).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', timeZone:'Asia/Bangkok' });
 const segCol = b => b.cls === 'away' ? TK.away : b.cls === 'handsoff' ? TK.handsoff : (TK[b.kind] || TK.other);
 const kindName = b => b.cls === 'away' ? 'Away' : b.cls === 'handsoff' ? 'Hands-off' : ({ work:'Working', music:'Music (working)', break:'Break', other:'Not work' })[b.kind] || 'Other';
+// ---------- staff work tracker (Unreal Work extension: time per site + task timer) ----------
+async function staffView(person){
+  timeStop();
+  const v = $('#view'), today = workday();
+  if (!timeDay) timeDay = today;
+  const isToday = timeDay === today;
+  const [fl, tl] = await Promise.all([ sb.rpc('focus_live', { p_day: timeDay, p_person: person }), sb.rpc('staff_task_day', { p_person: person, p_day: timeDay }) ]);
+  if (tab !== 'time' || timeMode !== 'staff') return;
+  if (fl.error) return v.innerHTML = timeModes() + `<div class="msg err">${esc(fl.error.message)}</div>`;
+  const f = fl.data || {}, ss = f.since_start || {}, cur = f.current || {}, tasks = tl.data || [];
+  const lastTs = f.last ? new Date(f.last.ts).getTime() : 0, live = isToday && lastTs && Date.now() - lastTs < 95000;
+  const blocks = f.blocks || [], acts = f.activities || [];
+  const sum = k => blocks.filter(b => b.cls === k).reduce((a, b) => a + Number(b.min || 0), 0);
+  const act = sum('active'), hof = sum('handsoff'), away = sum('away');
+  const amax = Math.max(1, ...acts.map(a => Number(a.min)));
+  const shift = n => { const t = new Date(timeDay + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); timeDay = t.toISOString().slice(0, 10); staffView(person); };
+  // time per task (from Start → Pause/Done/next Start)
+  const perTask = {}; tasks.filter(t => t.action === 'start').forEach(t => perTask[t.task] = (perTask[t.task] || 0) + Number(t.min || 0));
+  const pt = Object.entries(perTask).sort((a, b) => b[1] - a[1]);
+  const A = { start:'▶ started', stop:'⏸ paused', done:'✓ done', undo:'↩ undo' };
+  v.innerHTML = timeModes() + `
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost sm" id="sPrev">‹</button><b style="flex:1;text-align:center">${esc(person)} · ${isToday ? 'today' : esc(timeDay)}</b><button class="btn ghost sm" id="sNext" ${isToday ? 'disabled' : ''}>›</button>
+    </div>
+    <p style="margin:12px 0 4px;font-size:16px">${!isToday ? '📅 Day view' : live ? (cur.cls === 'handsoff' ? '🟠 Hands-off on' : '🟢 Working on') + ' <b>' + esc(cur.label || '') + '</b>' : `⚫ Offline${lastTs ? ' · last seen ' + clk(lastTs) : ' · no data yet'}`}</p>
+    ${live && cur.since ? `<p class="muted" style="margin:0">since ${clk(cur.since)} (Bangkok time)</p>` : ''}
+    <div class="stats" style="margin-top:12px">
+      <div class="stat"><b>${hm(act)}</b><span>active</span></div>
+      <div class="stat"><b>${hm(hof)}</b><span>hands-off</span></div>
+      <div class="stat"><b>${hm(away)}</b><span>away</span></div>
+      <div class="stat"><b>${f.day_start ? clk(f.day_start) : '–'}</b><span>started</span></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px"><h2>Tasks</h2>
+    ${pt.length ? pt.map(([t, m]) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)"><span>${esc(t)}</span><b>${hm(m)}</b></div>`).join('') : '<p class="muted">No task started yet. He presses ▶ Start in the extension.</p>'}
+    ${tasks.length ? `<details style="margin-top:8px"><summary class="muted">Task log (${tasks.length})</summary>${tasks.map(t => `<div class="muted" style="font-size:13px;padding:3px 0">${clk(t.ts)} · ${A[t.action] || t.action} · ${esc(t.task)}${t.min != null ? ' · ' + hm(t.min) : ''}</div>`).join('')}</details>` : ''}
+  </div>
+  <div class="card" style="margin-top:12px"><h2>Where the time went</h2>
+    ${acts.length ? acts.map(a => `<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;gap:8px;font-size:14px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.label)}</span><b>${hm(a.min)}</b></div>
+      <div style="height:6px;background:var(--line);border-radius:4px;margin-top:3px"><div style="height:6px;border-radius:4px;width:${Math.round(100 * a.min / amax)}%;background:${TK[a.kind] || TK.other}"></div></div></div>`).join('') : '<p class="muted">Nothing tracked yet.</p>'}
+  </div>
+  <div class="card" style="margin-top:12px"><h2>Timeline</h2>
+    ${blocks.length ? blocks.slice(-40).reverse().map(b => `<div style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;flex:none;background:${segCol(b)}"></span><span class="muted" style="flex:none">${clk(b.s)}–${clk(b.e)}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.label)}</span><b>${hm(b.min)}</b></div>`).join('') : '<p class="muted">Nothing yet.</p>'}
+    <p class="muted" style="margin-top:8px;font-size:12px">Only his Unreal Chrome profile is tracked (sites, page titles, activity counts). Times in Bangkok time.</p>
+  </div>`;
+  bindModes();
+  $('#sPrev').onclick = () => shift(-1); $('#sNext').onclick = () => !isToday && shift(1);
+  if (isToday) timePoll = setInterval(() => { if (tab === 'time' && timeMode === 'staff' && !document.hidden) staffView(person); }, 60000);
+}
 function timeStop(){ clearInterval(timePoll); clearInterval(timeTick); timePoll = timeTick = null; }
 async function timeView(){
   timeStop();
@@ -3166,6 +3216,7 @@ async function timeView(){
   const today = workday();
   if (!timeDay) timeDay = today;
   if (timeMode === 'history') return timeHistory();
+  if (timeMode === 'staff') return staffView('Gian');
   const isToday = timeDay === today;
   const [fl, d, ppl, co] = await Promise.all([ sb.from('focus_callouts').select('ts,kind,msg').gte('ts', new Date(Date.now() - 18 * 3600e3).toISOString()).order('ts', { ascending:false }).limit(8), sb.rpc('focus_live', { p_day: timeDay }), sb.rpc('aw_day', { p_day: timeDay }), sb.from('aw_people').select('name,token,tz').order('id') ]).then(([c, ...r]) => [...r, c]);
   if (tab !== 'time') return;

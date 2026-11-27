@@ -1,0 +1,39 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Unreal Work</title>
+<style>
+  :root { --pink:#ec4899; --ink:#111827; --mut:#6b7280; --line:#e5e7eb; }
+  * { box-sizing:border-box; }
+  body { margin:0; width:340px; font:13px/1.4 -apple-system,Segoe UI,Roboto,sans-serif; color:var(--ink); background:#fff; }
+  body.page { width:auto; max-width:420px; margin:40px auto; }
+  header { display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--line); }
+  header img { width:22px; height:22px; }
+  header b { font-size:14px; flex:1; }
+  .dot { width:9px; height:9px; border-radius:50%; background:#d1d5db; }
+  .dot.on { background:#16a34a; box-shadow:0 0 0 3px #dcfce7; }
+  .dot.err { background:#ef4444; }
+  main { padding:12px 14px 14px; }
+  .stat { display:flex; gap:8px; margin-bottom:12px; }
+  .stat div { flex:1; background:#fdf2f8; border-radius:10px; padding:8px 10px; }
+  .stat b { display:block; font-size:18px; }
+  .stat span { color:var(--mut); font-size:11px; }
+  .cur { background:var(--ink); color:#fff; border-radius:10px; padding:10px 12px; margin-bottom:12px; }
+  .cur small { color:#f9a8d4; display:block; font-size:11px; }
+  .cur .t { font-weight:600; margin:2px 0 6px; }
+  .sec { font-size:11px; font-weight:700; color:var(--mut); text-transform:uppercase; letter-spacing:.04em; margin:10px 0 6px; }
+  .task { border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:6px; }
+  .task.done { opacity:.55; }
+  .task .t { font-weight:600; }
+  .task .h { color:var(--mut); font-size:12px; margin-top:2px; }
+  .row { display:flex; gap:6px; margin-top:7px; }
+  button { border:0; border-radius:8px; padding:6px 10px; font:600 12px inherit; font-family:inherit; cursor:pointer; background:var(--pink); color:#fff; }
+  button.ghost { background:#f3f4f6; color:var(--ink); }
+  button.dark { background:#fff; color:var(--ink); }
+  input { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; font:inherit; margin:6px 0 10px; }
+  .mut { color:var(--mut); font-size:12px; }
+  .msg { font-size:12px; color:#b91c1c; margin-top:6px; }
+</style></head>
+<body>
+<header><img src="icons/i32.png" alt=""><b>Unreal Work</b><span class="dot" id="dot" title=""></span></header>
+<main id="m"><p class="mut">Loading…</p></main>
+<script src="popup.js"></script>
+</body></html>

@@ -912,6 +912,15 @@
   .nt-rv.keep{background:#2383e2;border-color:#2383e2;color:#fff}.nt-rv.keep:hover{background:#1a6fc4}
   .nt-rv kbd{font:600 11px ui-monospace,Menlo,monospace;opacity:.7;margin-left:4px;border:1px solid currentColor;border-radius:4px;padding:0 4px}
   .nt-rv-body{max-height:none}
+  .mg-drop{border:2px dashed var(--line,#f3c6d8);text-align:center;padding:26px 16px}.mg-drop.on{background:rgba(255,77,148,.06)}
+  .mg-sub{font-size:13px;opacity:.65;margin-top:4px}
+  .mg-row{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;border-bottom:1px solid rgba(0,0,0,.06)}
+  .mg-ic{font-size:26px;line-height:1}.mg-main{flex:1;min-width:0}.mg-n{font-weight:600;word-break:break-word}
+  .mg-acts{display:flex;gap:6px;flex:none}.mg-acts .btn{padding:7px 11px}
+  .mg-pv video,.mg-pv img,.mg-pv iframe{width:100%;max-width:720px;max-height:70vh;border-radius:10px;margin-top:10px;background:#000}.mg-pv iframe{height:70vh;background:#fff}.mg-pv audio{width:100%;margin-top:10px}
+  .mg-prog{display:flex;gap:10px;align-items:center;font-size:13px;margin-top:10px;text-align:left}.mg-prog span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mg-bar{width:40%;height:6px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden}.mg-bar i{display:block;height:100%;width:0;background:#ff4d94;transition:width .3s}
+  @media (max-width:640px){.mg-row{flex-wrap:wrap}.mg-acts{width:100%;padding-left:38px}.mg-acts .btn{flex:1}}
   .bg-head{display:flex;gap:14px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin:0 0 14px;position:sticky;top:66px;z-index:3;background:var(--n-bg);padding:8px 0;border-bottom:1px solid var(--n-line)}
   .bg-head .nt-rv{flex:none;min-width:200px}
   .bg-h{font-size:26px;font-weight:700}.bg-s{font-size:13px;color:var(--n-mute);max-width:560px}
@@ -1000,6 +1009,7 @@
           <button data-tab="todo" class="adm" hidden>🎯 My to-do</button>
           <button data-tab="plan" class="adm" hidden>📋 My plan</button>
           <button data-tab="notes" class="adm" hidden>📓 Notes</button>
+          <button data-tab="mega" class="adm" hidden>🗄 Mega</button>
           <button data-tab="shop" class="adm" hidden>👕 papagael.com</button>
         </div></div>
         <div class="grp" data-g="team"><div class="gh" role="button" tabindex="0" aria-expanded="true">Team & accounts<i>▾</i></div><div class="gb">
@@ -1275,7 +1285,7 @@ document.querySelectorAll('#side button').forEach(b => b.onclick = () => b.datas
   });
 })();
 const AI_SUBS = [['train','🧠 Train AI',() => me?.role === 'admin'],['brains','⚡ AI brains',() => me?.role === 'admin'],['personas','🎀 Personas',() => can('personas')]];
-const titles = { notes:['Notes','Your Notion, rebuilt here: guides, scripts, courses, contracts and notes. Search, edit and add pages.'], growth:['Growth','Kaya on Instagram, Facebook and Snapchat: what was done, the men we reached and where they\'re from, and what runs next.'], aimsgs:['AI messages','Every message your AI wrote, with what the client said before. Sent ones and the ones waiting.'], shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], drafts:['Saved site work','Parts of the website we built and put aside. Only you can see this.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], discord:['Discord bot','Every message the Unreal Bot sent on Discord. Edit or delete it here, or send a new one.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
+const titles = { mega:['Mega','Your private storage. Upload big files (videos, courses, zips), watch, download or delete them.'], notes:['Notes','Your Notion, rebuilt here: guides, scripts, courses, contracts and notes. Search, edit and add pages.'], growth:['Growth','Kaya on Instagram, Facebook and Snapchat: what was done, the men we reached and where they\'re from, and what runs next.'], aimsgs:['AI messages','Every message your AI wrote, with what the client said before. Sent ones and the ones waiting.'], shop:['papagael.com','Visitors, orders and what stops people from buying a shirt.'], core:['Unreal Autopilot','Everything your AI is connected to and what it does for you, live.'], todo:['My to-do','Personal + business in one list. It ticks itself from what you do, and from what Claude does for you.'], photos:['Photos','Every model\'s pictures in one place. Upload, sort by model, download, and pair them with a quote.'], drafts:['Saved site work','Parts of the website we built and put aside. Only you can see this.'], prompts:['Prompt studio','Chat with the AI to get Kaya prompts. Drop the photos here to save and schedule them.'], quotes:['Quotes','Post captions for the models, in English and Italian. Click to copy.'], plan:['My plan','Your private business plan — only you can see this.'], personas:['Personas','Who each model is — feed this to the chatbot and chatters.'], docs:['Docs & scripts','Playbooks, scripts and guides.'], bot:['AI chatbot','How the Unreal AI chatter works.'], wallet:['Wallet','Top up your AI with crypto.'], members:['Access board','Tick what each person can see. New accounts start with nothing.'], dropp:['Dropp','Upload content, make payment links, follow sales and the wallet. Straight from here.'], team:['Team to-do','Daily posting tasks. Daily items reset every morning.'], time:['Time','Live: what you\'re working on right now, and everything since you started. Updates every 15 seconds.'], asklog:['Ask log','What the team asks the Ask helper, and the notes it knows.'], discord:['Discord bot','Every message the Unreal Bot sent on Discord. Edit or delete it here, or send a new one.'], twitter:['Twitter','Today\'s work on each X account. It checks itself from the Chrome extension while you work.'], topups:['Top-ups','Confirm crypto payments after checking the transaction.'], sales:['Sales & fees','Record AI sales — the fee comes off their wallet.'], edit:['Edit docs','Add or change personas, docs and scripts.'], train:['Train AI','Edit how each model talks, then test her right here.'], brains:['AI brains','Which AI answers on each channel, and who takes over when it can\'t.'], settings:['Settings','Wallet address and fee.'], phone:['Phone control','A real phone, live on your screen. Tap, swipe and type on it from anywhere.'], sms:['SMS phone','Every text on the model phone, live. Read and answer from here.'] };
 
 function mnavClose(){ document.body.classList.remove('mopen'); $('#mnav').setAttribute('aria-expanded', 'false'); }
 $('#mnav').onclick = () => { const o = document.body.classList.toggle('mopen'); $('#mnav').setAttribute('aria-expanded', String(o)); };
@@ -1295,7 +1305,7 @@ function show(t){
   { const sb = document.querySelector(`#side button[data-tab="${inAi ? 'aistudio' : t}"]`); $('#mnavT').textContent = sb ? sb.childNodes[0].textContent.trim() : titles[t][0]; }
   mnavClose(); window.scrollTo(0, 0);
   const v = $('#view'); v.innerHTML = '<p class="muted">Loading…</p>';
-  ({ notes:notesView, aimsgs:aiMsgsView, shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(me.role === 'admin' ? ['contract','tool','doc','script','site'] : ['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, discord:discordView, growth:growthView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
+  ({ mega:megaView, notes:notesView, aimsgs:aiMsgsView, shop:shopView, phone:phoneView, core:coreView, photos:photosView, quotes:quotesView, prompts:promptsView, drafts:draftsView, plan:planView, todo:todoView, personas:()=>docList(['persona']), docs:()=>docList(me.role === 'admin' ? ['contract','tool','doc','script','site'] : ['tool','doc','script','site']), members:membersView, settings:settingsView, train:trainView, brains:brainsView, sms:smsView, team:teamView, twitter:twitterView, discord:discordView, growth:growthView, asklog:askAdminView, time:timeView, dropp:droppView })[t]();
 }
 
 
@@ -2854,6 +2864,65 @@ async function teamView(){
   });
 }
 
+// ---------- Mega: private file storage (R2, prefix mega/) ----------
+const megaFmt = b => b > 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b > 1e6 ? (b / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1e3)) + ' KB';
+const megaIcon = n => /\.(mp4|mov|m4v|webm|mkv)$/i.test(n) ? '🎬' : /\.(jpe?g|png|gif|webp|heic)$/i.test(n) ? '🖼' : /\.(mp3|wav|m4a)$/i.test(n) ? '🎵' : /\.(zip|rar|7z|tar|gz)$/i.test(n) ? '📦' : /\.pdf$/i.test(n) ? '📕' : '📄';
+async function megaAuth(){ const { data: { session } } = await sb.auth.getSession(); return { Authorization: 'Bearer ' + (session?.access_token || '') }; }
+async function megaView(){
+  const v = $('#view');
+  v.innerHTML = `<div class="card mg-drop" id="mgDrop"><div><b>Drop files here</b> or <label class="btn" style="display:inline-block;cursor:pointer">Choose files<input type="file" id="mgIn" multiple hidden></label></div><div class="mg-sub">Any size. Big videos upload in pieces, keep this tab open until it says done.</div><div id="mgUp"></div></div><div class="card" id="mgList"><p class="mg-sub">Loading…</p></div>`;
+  const drop = $('#mgDrop');
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('on'); };
+  drop.ondragleave = () => drop.classList.remove('on');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); megaUpload([...e.dataTransfer.files]); };
+  $('#mgIn').onchange = e => megaUpload([...e.target.files]);
+  megaList();
+}
+async function megaList(){
+  const box = $('#mgList'); if (!box) return;
+  const r = await fetch('/api/mega', { headers: await megaAuth() });
+  if (!r.ok) return box.innerHTML = `<div class="msg err">Could not load (${r.status})</div>`;
+  const files = await r.json(), total = files.reduce((t, f) => t + f.size, 0);
+  box.innerHTML = `<div class="mg-sub" style="margin-bottom:8px">${files.length} file${files.length === 1 ? '' : 's'} · ${megaFmt(total)}</div>` + (files.map(f => { const name = f.key.replace(/^mega\/\d+-/, ''); return `<div class="mg-row" data-k="${esc(f.key)}">
+      <div class="mg-ic">${megaIcon(name)}</div><div class="mg-main"><div class="mg-n">${esc(name)}</div><div class="mg-sub">${megaFmt(f.size)} · ${new Date(f.uploaded).toLocaleDateString()}</div><div class="mg-pv"></div></div>
+      <div class="mg-acts">${/\.(mp4|mov|m4v|webm|jpe?g|png|gif|webp|mp3|m4a|pdf)$/i.test(name) ? '<button class="btn ghost" data-a="view">▶ View</button>' : ''}<button class="btn ghost" data-a="dl">⬇</button><button class="btn ghost" data-a="del">🗑</button></div></div>`; }).join('') || '<p class="mg-sub">Empty. Upload your first file above.</p>');
+  box.querySelectorAll('.mg-row').forEach(row => { const key = row.dataset.k, name = key.replace(/^mega\/\d+-/, '');
+    const link = async () => { const r = await fetch('/api/mega', { method: 'POST', headers: { ...(await megaAuth()), 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) }); if (!r.ok) throw new Error('link failed'); return (await r.json()).url; };
+    row.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => { const a = b.dataset.a;
+      try {
+        if (a === 'dl') { const u = await link(); const x = document.createElement('a'); x.href = u; x.download = name; document.body.appendChild(x); x.click(); x.remove(); }
+        else if (a === 'view') { const pv = row.querySelector('.mg-pv'); if (pv.innerHTML) { pv.innerHTML = ''; return; } const u = (await link()) + '&inline';
+          pv.innerHTML = /\.(mp4|mov|m4v|webm)$/i.test(name) ? `<video src="${u}" controls playsinline autoplay></video>` : /\.(mp3|m4a)$/i.test(name) ? `<audio src="${u}" controls autoplay></audio>` : /\.pdf$/i.test(name) ? `<iframe src="${u}"></iframe>` : `<img src="${u}">`; }
+        else if (a === 'del') { if (!confirm(`Delete “${name}” for good?`)) return; const r = await fetch('/api/files/' + key.split('/').map(encodeURIComponent).join('/'), { method: 'DELETE', headers: await megaAuth() }); if (!r.ok) throw new Error('delete failed'); toast('Deleted'); megaList(); }
+      } catch (e) { toast(e.message); } });
+  });
+}
+async function megaUpload(files){
+  const up = $('#mgUp');
+  for (const f of files) {
+    const key = 'mega/' + Date.now() + '-' + f.name.replace(/[\/\\?#%]/g, '_');
+    const path = '/api/files/' + key.split('/').map(encodeURIComponent).join('/');
+    const row = document.createElement('div'); row.className = 'mg-prog'; row.innerHTML = `<span>${esc(f.name)}</span><span class="mg-bar"><i></i></span><b>0%</b>`; up.appendChild(row);
+    const set = p => { row.querySelector('i').style.width = p + '%'; row.querySelector('b').textContent = p + '%'; };
+    const type = f.type || 'application/octet-stream';
+    try {
+      if (f.size < 90e6) {
+        const r = await fetch(path, { method: 'PUT', headers: { ...(await megaAuth()), 'Content-Type': type }, body: f }); if (!r.ok) throw new Error(r.status);
+      } else {
+        const PART = 50 * 1024 * 1024, n = Math.ceil(f.size / PART);
+        const c = await fetch(path + '?mpu=create', { method: 'POST', headers: { ...(await megaAuth()), 'Content-Type': type } }); if (!c.ok) throw new Error(c.status);
+        const { uploadId } = await c.json(); const parts = new Array(n); let done = 0, next = 0;
+        const worker = async () => { while (next < n) { const i = next++; const blob = f.slice(i * PART, Math.min(f.size, (i + 1) * PART));
+          for (let t = 0; ; t++) { try { const r = await fetch(`${path}?mpu=${encodeURIComponent(uploadId)}&part=${i + 1}`, { method: 'PUT', headers: await megaAuth(), body: blob }); if (!r.ok) throw new Error(r.status); const j = await r.json(); parts[i] = { partNumber: i + 1, etag: j.etag }; break; } catch (e) { if (t >= 3) throw e; await new Promise(z => setTimeout(z, 2000 * (t + 1))); } }
+          done++; set(Math.round(done / n * 100)); } };
+        await Promise.all([worker(), worker(), worker()]);
+        const fin = await fetch(`${path}?mpu=${encodeURIComponent(uploadId)}&complete`, { method: 'POST', headers: { ...(await megaAuth()), 'Content-Type': 'application/json' }, body: JSON.stringify(parts) }); if (!fin.ok) throw new Error(fin.status);
+      }
+      set(100); row.querySelector('b').textContent = '✓ done';
+    } catch (e) { row.querySelector('b').textContent = '✗ failed'; toast(f.name + ': upload failed (' + e.message + ')'); }
+  }
+  megaList();
+}
 // ---------- Discord bot messages: edit / delete / send (webhook "Unreal Bot") ----------
 async function discordCall(body){
   const { data: ss } = await sb.auth.getSession();

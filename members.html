@@ -912,6 +912,20 @@
   .nt-rv.keep{background:#2383e2;border-color:#2383e2;color:#fff}.nt-rv.keep:hover{background:#1a6fc4}
   .nt-rv kbd{font:600 11px ui-monospace,Menlo,monospace;opacity:.7;margin-left:4px;border:1px solid currentColor;border-radius:4px;padding:0 4px}
   .nt-rv-body{max-height:none}
+  .bg-head{display:flex;gap:14px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin:0 0 14px;position:sticky;top:66px;z-index:3;background:var(--n-bg);padding:8px 0;border-bottom:1px solid var(--n-line)}
+  .bg-head .nt-rv{flex:none;min-width:200px}
+  .bg-h{font-size:26px;font-weight:700}.bg-s{font-size:13px;color:var(--n-mute);max-width:560px}
+  .bg-row{display:flex;gap:10px;align-items:flex-start;padding:10px 8px;border-bottom:1px solid var(--n-line);border-radius:8px}.bg-row:hover{background:var(--n-hov)}
+  .bg-row.kept{opacity:.55}.bg-ck{margin-top:5px;width:18px;height:18px;flex:none;accent-color:#eb5757}
+  .bg-main{flex:1;min-width:0}.bg-t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bg-k{font-size:11px;background:#2383e2;color:#fff;border-radius:4px;padding:1px 5px;vertical-align:middle}
+  .bg-c{font-size:12px;color:var(--n-mute);display:flex;align-items:center;gap:8px}
+  .bg-bar{flex:1;max-width:180px;height:5px;background:var(--n-hov);border-radius:3px;overflow:hidden}.bg-bar i{display:block;height:100%;background:#eb5757}
+  .bg-peek{margin-top:8px;font-size:13px;color:var(--n-soft);line-height:1.7;white-space:pre-wrap}
+  .bg-acts{display:flex;gap:6px;flex:none}
+  .bg-b{border:1px solid var(--n-line);background:var(--n-bg);color:var(--n-ink);font:inherit;font-size:13px;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;white-space:nowrap}.bg-b:hover{background:var(--n-hov)}
+  .bg-b.del{background:#eb5757;border-color:#eb5757;color:#fff}.bg-b.keep{color:#2383e2}
+  @media (max-width:820px){.bg-head{top:58px}.bg-row{flex-wrap:wrap}.bg-acts{width:100%;padding-left:28px}.bg-acts .bg-b{flex:1}.bg-head .nt-rv{width:100%}}
   .nt.rv{grid-template-columns:minmax(0,1fr)}.nt.rv .nt-side{display:none}
   .rv-card{position:sticky;top:66px;z-index:3;background:var(--n-bg);border:1px solid var(--n-line);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:14px;margin:0 -10px 20px}
   .rv-where{font-size:12px;color:var(--n-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1510,6 +1524,7 @@ async function notesView(){
       <div class="nt-ws"><i>G</i>Gael's workspace</div>
       <button class="nt-it" id="ntS">${NT_SVG.search}Search</button>
       <input id="ntQ" class="nt-q" type="search" placeholder="Search all pages…" value="${esc(NT.q)}"${NT.q ? '' : ' hidden'}>
+      <button class="nt-it" id="ntBig">${NT_SVG.trash}Big clean <span style="margin-left:auto;font-size:11px;color:var(--n-mute)">fast</span></button>
       <button class="nt-it" id="ntR">${NT_SVG.broom}Review &amp; clean</button>
       <button class="nt-it" id="ntNew">${NT_SVG.plus}New page</button>
       <div id="ntHits" class="nt-hits"></div>
@@ -1520,6 +1535,7 @@ async function notesView(){
   $('#ntQ').oninput = e => { NT.q = e.target.value; ntDrawHits(); };
   $('#ntNew').onclick = () => ntCreate(null);
   $('#ntR').onclick = () => ntReviewStart();
+  $('#ntBig').onclick = () => ntBig();
   $('#ntTr').onclick = () => ntTrashView();
   ntDrawTree(); ntDrawHits();
   let start = null; try { start = localStorage.getItem('unreal-nt-cur'); } catch(e){}
@@ -1699,6 +1715,55 @@ function ntMore(n){
   $('#ntPin').onclick = async () => { const { error } = await sb.from('notes').update({ pinned: !n.pinned }).eq('id', n.id); if (error) return toast(error.message); n.pinned = !n.pinned; ntDirty(); ntOpen(n.id); };
   $('#ntRv').onclick = () => ntReviewStart(n.id);
   $('#ntDel').onclick = async () => { const up = n.parent_id; if (!(await ntTrash(n))) return; toast('Moved to Trash'); ntDrawTree(); const p = up && ntGet(up); if (p) ntOpen(p.id, true); else { const f = ntRoot()[0]; f ? ntOpen(f.id, innerWidth > 820) : ($('#ntPage').innerHTML = ''); } };
+}
+// ---- Big clean: whole sections at once, biggest first ----
+function ntSizes(){ const m = new Map(); const f = id => { if (m.has(id)) return m.get(id); let c = 1; for (const k of ntKids(id)) c += f(k.id); m.set(id, c); return c; }; return f; }
+function ntBigKept(){ try { return new Set(JSON.parse(localStorage.getItem('unreal-nt-kept') || '[]')); } catch(e){ return new Set(); } }
+function ntBigKeep(id, on){ const k = ntBigKept(); on ? k.add(id) : k.delete(id); try { localStorage.setItem('unreal-nt-kept', JSON.stringify([...k])); } catch(e){} }
+async function ntBig(rootId){
+  ntReviewKeys(false); NT.mode = 'big'; NT.bigRoot = rootId || null;
+  let root = rootId || null;
+  if (!root) { const tops = ntRoot(); if (tops.length) { const sz = ntSizes(); const big = tops.slice().sort((a, b) => sz(b.id) - sz(a.id))[0]; if (sz(big.id) > 50) root = big.id, NT.bigRoot = root; } }
+  NT.bigUndo = NT.bigUndo || [];
+  $('#nt').classList.add('open', 'rv');
+  const sz = ntSizes(), kept = ntBigKept();
+  const rows = (root ? ntKids(root) : ntRoot()).slice().sort((a, b) => sz(b.id) - sz(a.id) || (a.title || '').localeCompare(b.title || ''));
+  const total = rows.reduce((t, r) => t + sz(r.id), 0);
+  const top = $('#ntTop'), pg = $('#ntPage'), rn = root && ntGet(root);
+  const up = rn ? rn.parent_id : undefined;
+  top.innerHTML = `<button class="nt-tb nt-back" id="ntBack">←</button><div class="nt-crumb"><a id="bgHome">🗑 Big clean</a>${rn ? ntPath(rn).map(p => `<span>/</span><a data-b="${p.id}">${esc(p.title || 'Untitled')}</a>`).join('') : ''}</div>
+    <button class="nt-tb" id="bgUndo"${NT.bigUndo.length ? '' : ' disabled'}>↩ Undo</button><button class="nt-tb" id="bgX">Done</button>`;
+  $('#bgX').onclick = $('#ntBack').onclick = () => { if (up !== undefined && rn && rn.parent_id) ntBig(rn.parent_id); else { $('#nt').classList.remove('rv'); NT.mode = 'page'; const f = ntRoot()[0]; f && ntOpen(f.id, true); } };
+  $('#bgX').onclick = () => { $('#nt').classList.remove('rv'); NT.mode = 'page'; ntOpen(root || ntRoot()[0]?.id, true); };
+  $('#bgHome').onclick = () => ntBig();
+  top.querySelectorAll('[data-b]').forEach(a => a.onclick = () => ntBig(a.dataset.b));
+  $('#bgUndo').onclick = async () => { const ids = NT.bigUndo.pop(); if (!ids) return; for (const id of ids) { const n = ntGet(id); if (n) await ntRestore(n, true); } ntDrawTree(); toast('Restored'); ntBig(NT.bigRoot); };
+  const row = r => { const c = sz(r.id), k = kept.has(r.id), kids = ntKids(r.id).length;
+    return `<div class="bg-row${k ? ' kept' : ''}" data-id="${r.id}">
+      <input type="checkbox" class="bg-ck" title="Select">
+      <div class="bg-main"><div class="bg-t">${r.icon ? esc(r.icon) + ' ' : ''}${esc(r.title || 'Untitled')}${k ? ' <span class="bg-k">kept</span>' : ''}</div>
+        <div class="bg-c">${c > 1 ? `<b>${c.toLocaleString()} pages</b>` : 'single page'} <span class="bg-bar"><i style="width:${Math.max(2, Math.round(c / Math.max(1, sz(rows[0].id)) * 100))}%"></i></span></div>
+        <div class="bg-peek" hidden></div></div>
+      <div class="bg-acts"><button class="bg-b" data-a="peek">👁</button>${kids ? '<button class="bg-b" data-a="in">Open →</button>' : ''}<button class="bg-b keep" data-a="keep">${k ? 'Unkeep' : '✓ Keep'}</button><button class="bg-b del" data-a="del">🗑${c > 1 ? ' all' : ''}</button></div></div>`; };
+  pg.innerHTML = `<div class="bg-head"><div><div class="bg-h">${rn ? esc(rn.title || 'Untitled') : 'Big clean'}</div><div class="bg-s">${rows.length} sections · ${total.toLocaleString()} pages · biggest first. 🗑 sends a whole section (everything inside) to Trash. 👁 = peek inside.</div></div>
+      <button class="nt-rv del" id="bgDelSel" disabled>🗑 Delete selected</button></div>
+    <div class="bg-list">${rows.map(row).join('') || '<p class="nt-empty">Nothing left here ✨</p>'}</div>`;
+  const selBtn = $('#bgDelSel');
+  const upd = () => { const sel = [...pg.querySelectorAll('.bg-ck:checked')].map(x => x.closest('.bg-row').dataset.id); const c = sel.reduce((t, id) => t + sz(id), 0); selBtn.disabled = !sel.length; selBtn.textContent = sel.length ? `🗑 Delete ${sel.length} selected (${c.toLocaleString()} pages)` : '🗑 Delete selected'; return { sel, c }; };
+  pg.querySelectorAll('.bg-ck').forEach(x => x.onchange = upd);
+  const del = async ids => { const c = ids.reduce((t, id) => t + sz(id), 0); if (c > 300 && !confirm(`Send ${c.toLocaleString()} pages to Trash?\n(You can Undo or restore from Trash.)`)) return; const done = []; for (const id of ids) { const n = ntGet(id); if (n && await ntTrash(n)) done.push(id); } if (done.length) { NT.bigUndo.push(done); toast(`${c.toLocaleString()} pages → Trash`); } ntDrawTree(); ntBig(NT.bigRoot); };
+  selBtn.onclick = () => del(upd().sel);
+  pg.querySelectorAll('.bg-row').forEach(el => { const id = el.dataset.id, n = ntGet(id);
+    el.querySelectorAll('.bg-b').forEach(b => b.onclick = async () => { const a = b.dataset.a;
+      if (a === 'del') del([id]);
+      else if (a === 'in') ntBig(id);
+      else if (a === 'keep') { ntBigKeep(id, !kept.has(id)); ntBig(NT.bigRoot); }
+      else if (a === 'peek') { const pk = el.querySelector('.bg-peek'); if (!pk.hidden) { pk.hidden = true; return; } pk.hidden = false; pk.innerHTML = 'Loading…';
+        const kids = ntKids(id).slice().sort((x, y) => sz(y.id) - sz(x.id));
+        if (kids.length) pk.innerHTML = kids.slice(0, 40).map(k => `<span class="rv-sub">${k.icon ? esc(k.icon) : '📄'} ${esc(k.title || 'Untitled')}${sz(k.id) > 1 ? ` · ${sz(k.id).toLocaleString()}` : ''}</span>`).join(' ') + (kids.length > 40 ? ` <span class="bg-c">+${kids.length - 40} more</span>` : '');
+        else { await ntLoadBody(n); const t = (n.body || '').replace(/!\[[^\]]*\]\([^)]*\)/g, '🖼').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[#*_>`]/g, '').trim(); pk.textContent = t ? t.slice(0, 600) + (t.length > 600 ? '…' : '') : 'Empty page'; } } });
+  });
+  window.scrollTo(0, 0);
 }
 // ---- Review & clean: go page by page, Keep or Delete (to Trash) ----
 function ntReviewSave(){ try { localStorage.setItem('unreal-nt-rv', JSON.stringify({ root: NT.rv.root, stack: NT.rv.stack, seen: NT.rv.seen, del: NT.rv.del })); } catch(e){} }
